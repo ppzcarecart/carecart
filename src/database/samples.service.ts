@@ -206,7 +206,7 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 130,
         stock: 0,
         categorySlug: 'home',
-        imageUrls: [u('photo-1514228742587-6b1558fcf93a')],
+        imageUrls: [u('photo-1485955900006-10f4d324d411')],
         variants: [
           { name: 'Color: White', stock: 30 },
           { name: 'Color: Charcoal', stock: 25 },
@@ -221,7 +221,7 @@ export class SamplesService implements OnApplicationBootstrap {
         // No points price — purchasable only with cash
         stock: 0,
         categorySlug: 'home',
-        imageUrls: [u('photo-1602874801006-a7e5c0c43eaf')],
+        imageUrls: [u('photo-1603006905003-be475563bc59')],
         variants: [
           { name: 'Scent: Lavender', stock: 20 },
           { name: 'Scent: Eucalyptus', stock: 20 },
@@ -234,14 +234,23 @@ export class SamplesService implements OnApplicationBootstrap {
     for (const spec of specs) {
       const exists = await this.products.findOne({ where: { slug: spec.slug } });
       if (exists) {
-        // Upgrade-in-place for older seeds: backfill images and featured flag
-        // if they were missing the first time the product was inserted.
+        // Resync images and featured flag for older seeds. We compare the
+        // current image URLs against the spec; if they differ at all (e.g.
+        // a previous seed had broken Unsplash IDs that have since been
+        // replaced), we replace the image set entirely.
         let dirty = false;
-        if ((!exists.images || exists.images.length === 0) && spec.imageUrls?.length) {
-          exists.images = spec.imageUrls.map((url, i) =>
-            this.images.create({ url, position: i, productId: exists.id }),
-          );
-          dirty = true;
+        if (spec.imageUrls?.length) {
+          const currentUrls = (exists.images || []).map((i) => i.url);
+          const same =
+            currentUrls.length === spec.imageUrls.length &&
+            currentUrls.every((u, i) => u === spec.imageUrls![i]);
+          if (!same) {
+            await this.images.delete({ productId: exists.id });
+            exists.images = spec.imageUrls.map((url, i) =>
+              this.images.create({ url, position: i, productId: exists.id }),
+            );
+            dirty = true;
+          }
         }
         if (spec.featured && !exists.featured) {
           exists.featured = true;

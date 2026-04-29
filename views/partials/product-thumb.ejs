@@ -1,6 +1,7 @@
 <%
 // Renders the thumbnail block for a product card / detail.
-// Falls back to a colored gradient placeholder using the product's first letter.
+// If the image URL fails to load, ppz.imgFallback (in /static/app.js) swaps
+// the <img> for a gradient placeholder using the product's first letter.
 const palettes = [
   ['#0f766e', '#14b8a6'],
   ['#0369a1', '#0ea5e9'],
@@ -18,7 +19,12 @@ const initial = (product.name || 'x').trim().charAt(0).toUpperCase();
 const bg = `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 100%)`;
 %>
 <% if (product.images && product.images[0]) { %>
-  <img src="<%= product.images[0].url %>" alt="<%= product.name %>">
+  <img src="<%= product.images[0].url %>"
+       alt="<%= product.name %>"
+       loading="lazy"
+       data-fallback-bg="<%= bg %>"
+       data-fallback-initial="<%= initial %>"
+       onerror="ppz.imgFallback(this)">
 <% } else { %>
   <div class="cc-placeholder" style="background: <%= bg %>; height: 100%; width: 100%;">
     <span><%= initial %></span>

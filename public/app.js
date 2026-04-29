@@ -15,7 +15,20 @@ window.ppz = (function () {
     return res.json();
   }
 
+  function imgFallback(img) {
+    if (img.dataset.ppzFallback === '1') return;
+    img.dataset.ppzFallback = '1';
+    const bg = img.dataset.fallbackBg || '#cbd5e1';
+    const init = (img.dataset.fallbackInitial || '?').replace(/[<>&"]/g, '');
+    const div = document.createElement('div');
+    div.className = 'cc-placeholder';
+    div.style.cssText = `background:${bg};height:100%;width:100%;`;
+    div.innerHTML = `<span>${init}</span>`;
+    img.replaceWith(div);
+  }
+
   return {
+    imgFallback,
     async logout() {
       await api('/api/auth/logout', { method: 'POST' });
       location.href = '/';
