@@ -66,7 +66,7 @@ export class PaymentsService {
       currency: order.currency,
       customerEmail: customer?.email,
       customerName: customer?.name,
-      description: `ppzshop ${order.number}`,
+      description: `carecart ${order.number}`,
     });
 
     await this.orders.setPayment(order.id, result.reference, 'awaiting_payment');

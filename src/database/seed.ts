@@ -14,10 +14,10 @@ async function main() {
   const categories = dataSource.getRepository(Category);
   const products = dataSource.getRepository(Product);
 
-  let admin = await users.findOne({ where: { email: 'admin@ppzshop.local' } });
+  let admin = await users.findOne({ where: { email: 'admin@carecart.local' } });
   if (!admin) {
     admin = users.create({
-      email: 'admin@ppzshop.local',
+      email: 'admin@carecart.local',
       passwordHash: await bcrypt.hash('ChangeMe!123', 10),
       name: 'Administrator',
       role: Role.ADMIN,
@@ -25,10 +25,10 @@ async function main() {
     await users.save(admin);
   }
 
-  let vendor = await users.findOne({ where: { email: 'vendor@ppzshop.local' } });
+  let vendor = await users.findOne({ where: { email: 'vendor@carecart.local' } });
   if (!vendor) {
     vendor = users.create({
-      email: 'vendor@ppzshop.local',
+      email: 'vendor@carecart.local',
       passwordHash: await bcrypt.hash('ChangeMe!123', 10),
       name: 'Demo Vendor',
       vendorStoreName: 'Demo Vendor Store',
@@ -61,7 +61,7 @@ async function main() {
   }
 
   // eslint-disable-next-line no-console
-  console.log('Seed complete. Admin: admin@ppzshop.local / ChangeMe!123');
+  console.log('Seed complete. Admin: admin@carecart.local / ChangeMe!123');
   await dataSource.destroy();
 }
 

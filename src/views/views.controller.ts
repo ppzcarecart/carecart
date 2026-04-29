@@ -1,6 +1,5 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
   Param,
   Render,
@@ -39,7 +38,7 @@ export class ViewsController {
     const products = await this.products.list({ activeOnly: true });
     const categories = await this.categories.list();
     return {
-      title: 'ppzshop',
+      title: 'carecart',
       user: (req as any).user || null,
       products,
       categories,

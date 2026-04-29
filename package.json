@@ -1,5 +1,5 @@
 {
-  "name": "ppzshop",
+  "name": "carecart",
   "version": "0.1.0",
   "private": true,
   "description": "Multi-vendor e-commerce platform with admin/manager/vendor roles, points and Stripe PayNow",

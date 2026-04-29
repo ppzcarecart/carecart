@@ -1,4 +1,4 @@
-# ppzshop
+# carecart
 
 Multi-vendor e-commerce on NestJS + PostgreSQL with admin/manager/vendor/customer roles, optional points-based pricing, Stripe PayNow checkout, and a pluggable payment provider for a future second gateway. Designed to deploy on Railway with a Postgres add-on and a mounted volume for uploads.
 
@@ -105,7 +105,7 @@ GET    /uploads/:filename                  (public)
 Edit [`src/points/points.client.ts`](src/points/points.client.ts) to match the integrator's endpoints. The three methods to implement are `getBalance`, `redeem`, and `reverse`. Then:
 
 1. Set `POINTS_API_BASE_URL` and `POINTS_API_KEY` in Railway.
-2. Set each customer's `pointsAccountId` (via `PATCH /api/users/:id`) so we can map ppzshop user → external account.
+2. Set each customer's `pointsAccountId` (via `PATCH /api/users/:id`) so we can map carecart user → external account.
 
 Until configured, points purchases still complete; the local `points_transactions` table records each redemption as `pending` so the integrator can reconcile.
 
@@ -115,7 +115,7 @@ Implement [`src/payments/providers/manual.provider.ts`](src/payments/providers/m
 
 ## Deploying to Railway
 
-1. Create a new Railway project, add the GitHub repo `jeremiahng11/ppzshop`.
+1. Create a new Railway project, add the GitHub repo `ppzcarecart/carecart`.
 2. Add the **PostgreSQL** plugin. Railway injects `DATABASE_URL` automatically.
 3. Add a **Volume** and mount it at e.g. `/data`. Set env var `UPLOAD_DIR=/data`.
 4. Set the rest of the env vars (see `.env.example`):
