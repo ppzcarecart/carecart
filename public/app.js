@@ -293,6 +293,24 @@ window.ppz = (function () {
     } catch (e) { alert(e.message); }
   }
 
+  async function refreshPoints(btn) {
+    if (!btn) return;
+    btn.classList.add('is-loading');
+    try {
+      const data = await api('/api/points/balance');
+      if (data && typeof data.balance === 'number') {
+        const v = btn.querySelector('.cc-points-value');
+        if (v) v.textContent = Number(data.balance).toLocaleString();
+        btn.classList.add('is-flash');
+        setTimeout(() => btn.classList.remove('is-flash'), 600);
+      }
+    } catch (e) {
+      // Silent failure — keep cached value visible.
+    } finally {
+      btn.classList.remove('is-loading');
+    }
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -307,6 +325,7 @@ window.ppz = (function () {
 
   return {
     imgFallback,
+    refreshPoints,
     bindImageUpload,
     addVariantRow,
     saveVariantRow,
