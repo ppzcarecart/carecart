@@ -15,6 +15,7 @@ import { PointsModule } from './points/points.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ViewsModule } from './views/views.module';
 import { BootstrapService } from './bootstrap.service';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -26,6 +27,8 @@ import { BootstrapService } from './bootstrap.service';
         url: config.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: true, // dev convenience; switch to migrations for prod
+        retryAttempts: 10,
+        retryDelay: 3000,
         ssl:
           config.get<string>('DATABASE_SSL') === 'true'
             ? { rejectUnauthorized: false }
@@ -47,6 +50,7 @@ import { BootstrapService } from './bootstrap.service';
     UploadsModule,
     ViewsModule,
   ],
+  controllers: [HealthController],
   providers: [BootstrapService],
 })
 export class AppModule {}
