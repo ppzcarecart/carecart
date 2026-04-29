@@ -16,6 +16,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ViewsModule } from './views/views.module';
 import { BootstrapService } from './bootstrap.service';
 import { HealthController } from './health.controller';
+import { SamplesService } from './database/samples.service';
 
 @Module({
   imports: [
@@ -51,6 +52,6 @@ import { HealthController } from './health.controller';
     ViewsModule,
   ],
   controllers: [HealthController],
-  providers: [BootstrapService],
+  providers: [BootstrapService, SamplesService],
 })
 export class AppModule {}
