@@ -100,6 +100,13 @@ export class ProductsController {
     return this.products.removeVariant(id, variantId, { id: user.id, role: user.role });
   }
 
+  // Featured (admin/manager only, max 8)
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Patch(':id/featured')
+  setFeatured(@Param('id') id: string, @Body() body: { featured: boolean }) {
+    return this.products.setFeatured(id, !!body?.featured);
+  }
+
   // Stock
   @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
   @Patch(':id/stock')

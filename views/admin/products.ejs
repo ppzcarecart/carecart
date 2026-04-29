@@ -1,24 +1,48 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Products</h1>
-  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newProduct">+ New product</button>
-  <table class="table">
-    <thead><tr><th>Name</th><th>Vendor</th><th>Price</th><th>Points</th><th>Stock</th><th>Active</th><th></th></tr></thead>
-    <tbody>
-    <% products.forEach(p => { %>
-      <tr>
-        <td><a href="/p/<%= p.slug %>"><%= p.name %></a></td>
-        <td><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
-        <td>$<%= (p.priceCents/100).toFixed(2) %></td>
-        <td><%= p.pointsPrice ?? '-' %></td>
-        <td><%= p.stock %></td>
-        <td><%= p.active %></td>
-        <td><button class="btn btn-sm btn-outline-danger" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
-      </tr>
-    <% }); %>
-    </tbody>
-  </table>
+<div class="container admin-shell">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Products</h1>
+    <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newProduct">+ New product</button>
+  </div>
+  <p class="text-muted">Toggle <strong>Featured</strong> to highlight a product on the storefront. Up to 8 can be featured at once.</p>
+
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Vendor</th>
+          <th>Price</th>
+          <th>Points</th>
+          <th>Stock</th>
+          <th>Active</th>
+          <th>Featured</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      <% products.forEach(p => { %>
+        <tr>
+          <td><a href="/p/<%= p.slug %>"><%= p.name %></a></td>
+          <td><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
+          <td>$<%= (p.priceCents/100).toFixed(2) %></td>
+          <td><%= p.pointsPrice ?? '-' %></td>
+          <td><%= p.stock %></td>
+          <td><%= p.active %></td>
+          <td>
+            <label class="cc-switch">
+              <input type="checkbox" <%= p.featured ? 'checked' : '' %>
+                onchange="ppz.setFeatured('<%= p.id %>', this.checked, this)">
+              <span class="cc-switch-slider"></span>
+            </label>
+          </td>
+          <td><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div class="modal fade" id="newProduct" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
@@ -40,9 +64,9 @@
           <% categories.forEach(c => { %><option value="<%= c.id %>"><%= c.name %></option><% }); %>
         </select>
       </div>
-      <div class="mb-2"><label>Image URLs (comma-sep, optional)</label><input class="form-control" name="imageUrls"></div>
+      <div class="mb-2"><label>Image URLs (comma-sep, optional)</label><input class="form-control" name="imageUrls" placeholder="https://..."></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create</button></div>
   </form>
 </div></div></div>
 

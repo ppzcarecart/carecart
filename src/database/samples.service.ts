@@ -8,6 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Product } from '../products/entities/product.entity';
 import { ProductVariant } from '../products/entities/product-variant.entity';
+import { ProductImage } from '../products/entities/product-image.entity';
 import { Role } from '../common/enums/role.enum';
 
 interface VariantSpec {
@@ -26,6 +27,8 @@ interface ProductSpec {
   stock: number;
   categorySlug: string;
   variants?: VariantSpec[];
+  imageUrls?: string[];
+  featured?: boolean;
 }
 
 /**
@@ -46,6 +49,7 @@ export class SamplesService implements OnApplicationBootstrap {
     @InjectRepository(Category) private categories: Repository<Category>,
     @InjectRepository(Product) private products: Repository<Product>,
     @InjectRepository(ProductVariant) private variants: Repository<ProductVariant>,
+    @InjectRepository(ProductImage) private images: Repository<ProductImage>,
     private config: ConfigService,
   ) {}
 
@@ -97,6 +101,11 @@ export class SamplesService implements OnApplicationBootstrap {
     vendor: User,
     cats: Record<string, Category>,
   ): Promise<number> {
+    // Image URLs use Unsplash's public CDN. The placeholder partial in the
+    // views falls back to a gradient if any URL fails to load.
+    const u = (id: string) =>
+      `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
+
     const specs: ProductSpec[] = [
       {
         slug: 'carecart-classic-tee',
@@ -106,6 +115,8 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 200,
         stock: 0,
         categorySlug: 'apparel',
+        featured: true,
+        imageUrls: [u('photo-1521572163474-6864f9cf17ab')],
         variants: [
           { name: 'Size: S / Color: Black', stock: 20 },
           { name: 'Size: M / Color: Black', stock: 25 },
@@ -123,6 +134,8 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 500,
         stock: 0,
         categorySlug: 'apparel',
+        featured: true,
+        imageUrls: [u('photo-1556821840-3a63f95609a7')],
         variants: [
           { name: 'Size: S', stock: 10 },
           { name: 'Size: M', stock: 15 },
@@ -138,6 +151,8 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 150,
         stock: 0,
         categorySlug: 'accessories',
+        featured: true,
+        imageUrls: [u('photo-1601924994987-69e26d50dc26')],
         variants: [
           { name: 'Color: Natural', stock: 40 },
           { name: 'Color: Black', stock: 30 },
@@ -151,6 +166,7 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 190,
         stock: 35,
         categorySlug: 'accessories',
+        imageUrls: [u('photo-1588850561407-ed78c282e89b')],
       },
       {
         slug: 'multivitamin-daily',
@@ -160,6 +176,8 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 300,
         stock: 0,
         categorySlug: 'wellness',
+        featured: true,
+        imageUrls: [u('photo-1607619056574-7b8d3ee536b2')],
         variants: [
           { name: '30 tablets', stock: 50 },
           { name: '60 tablets', stock: 40, priceCentsOverride: 4990, pointsPriceOverride: 500 },
@@ -174,6 +192,7 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 350,
         stock: 0,
         categorySlug: 'wellness',
+        imageUrls: [u('photo-1620916566398-39f1143ab7be')],
         variants: [
           { name: '50ml', stock: 25 },
           { name: '100ml', stock: 20, priceCentsOverride: 5490, pointsPriceOverride: 550 },
@@ -187,6 +206,7 @@ export class SamplesService implements OnApplicationBootstrap {
         pointsPrice: 130,
         stock: 0,
         categorySlug: 'home',
+        imageUrls: [u('photo-1514228742587-6b1558fcf93a')],
         variants: [
           { name: 'Color: White', stock: 30 },
           { name: 'Color: Charcoal', stock: 25 },
@@ -201,6 +221,7 @@ export class SamplesService implements OnApplicationBootstrap {
         // No points price — purchasable only with cash
         stock: 0,
         categorySlug: 'home',
+        imageUrls: [u('photo-1602874801006-a7e5c0c43eaf')],
         variants: [
           { name: 'Scent: Lavender', stock: 20 },
           { name: 'Scent: Eucalyptus', stock: 20 },
@@ -212,7 +233,23 @@ export class SamplesService implements OnApplicationBootstrap {
     let inserted = 0;
     for (const spec of specs) {
       const exists = await this.products.findOne({ where: { slug: spec.slug } });
-      if (exists) continue;
+      if (exists) {
+        // Upgrade-in-place for older seeds: backfill images and featured flag
+        // if they were missing the first time the product was inserted.
+        let dirty = false;
+        if ((!exists.images || exists.images.length === 0) && spec.imageUrls?.length) {
+          exists.images = spec.imageUrls.map((url, i) =>
+            this.images.create({ url, position: i, productId: exists.id }),
+          );
+          dirty = true;
+        }
+        if (spec.featured && !exists.featured) {
+          exists.featured = true;
+          dirty = true;
+        }
+        if (dirty) await this.products.save(exists);
+        continue;
+      }
 
       const variants = (spec.variants || []).map((v) =>
         this.variants.create({
@@ -230,6 +267,10 @@ export class SamplesService implements OnApplicationBootstrap {
         ? variants.reduce((sum, v) => sum + v.stock, 0)
         : spec.stock;
 
+      const productImages = (spec.imageUrls || []).map((url, i) =>
+        this.images.create({ url, position: i }),
+      );
+
       const product = this.products.create({
         slug: spec.slug,
         name: spec.name,
@@ -239,10 +280,11 @@ export class SamplesService implements OnApplicationBootstrap {
         currency: 'SGD',
         stock: aggregateStock,
         active: true,
+        featured: spec.featured ?? false,
         vendorId: vendor.id,
         categoryId: cats[spec.categorySlug].id,
         variants,
-        images: [],
+        images: productImages,
       });
       await this.products.save(product);
       inserted++;

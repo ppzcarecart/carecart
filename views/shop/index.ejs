@@ -3,10 +3,18 @@
 <div class="container">
 
   <section class="cc-hero">
-    <div class="cc-orb"></div>
-    <h1>Thoughtful goods, by trusted vendors.</h1>
-    <p>Browse curated apparel, wellness essentials, and lifestyle picks. Pay with cash or redeem your points — your call.</p>
-    <a href="#catalogue" class="cc-btn cc-btn-primary">Shop now</a>
+    <div class="cc-hero-text">
+      <span class="cc-hero-eyebrow">Multi-vendor marketplace</span>
+      <h1>Thoughtful goods, by trusted vendors.</h1>
+      <p>Browse curated apparel, wellness essentials, and lifestyle picks. Pay with cash or redeem your points — your call.</p>
+      <a href="#catalogue" class="cc-btn cc-btn-primary">Shop now</a>
+    </div>
+    <div class="cc-hero-art" aria-hidden="true">
+      <div class="cc-hero-tile cc-hero-tile-1" style="background-image: url('https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80')"></div>
+      <div class="cc-hero-tile cc-hero-tile-2" style="background-image: url('https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=400&q=80')"></div>
+      <div class="cc-hero-tile cc-hero-tile-3" style="background-image: url('https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=400&q=80')"></div>
+      <div class="cc-hero-tile cc-hero-tile-4" style="background-image: url('https://images.unsplash.com/photo-1602874801006-a7e5c0c43eaf?auto=format&fit=crop&w=400&q=80')"></div>
+    </div>
   </section>
 
   <% if (categories && categories.length) { %>
@@ -21,8 +29,20 @@
     </div>
   <% } %>
 
+  <% if (featured && featured.length) { %>
+    <div class="cc-section-head">
+      <h2>Featured</h2>
+      <span class="muted">Hand-picked by the team</span>
+    </div>
+    <div class="cc-grid">
+      <% featured.forEach(product => { %>
+        <%- include('../partials/product-card', { product }) %>
+      <% }); %>
+    </div>
+  <% } %>
+
   <div class="cc-section-head" id="catalogue">
-    <h2>All products</h2>
+    <h2><%= activeCategorySlug && activeCategorySlug !== 'all' ? 'Filtered products' : 'All products' %></h2>
     <span class="muted"><%= products.length %> item<%= products.length === 1 ? '' : 's' %></span>
   </div>
 
@@ -30,22 +50,8 @@
     <div class="cc-empty">No products yet. Sign in as admin and add some, or set <code>SEED_SAMPLES=true</code>.</div>
   <% } else { %>
     <div class="cc-grid">
-      <% products.forEach(p => { %>
-        <a href="/p/<%= p.slug %>" class="cc-card text-decoration-none text-reset">
-          <div class="cc-thumb">
-            <%- include('../partials/product-thumb', { product: p }) %>
-          </div>
-          <div class="cc-body">
-            <span class="cc-vendor"><%= p.vendor && (p.vendor.vendorStoreName || p.vendor.name) || 'Vendor' %></span>
-            <h3 class="cc-name"><%= p.name %></h3>
-            <div class="cc-price">
-              <span class="amount">$<%= (p.priceCents / 100).toFixed(2) %></span>
-              <% if (p.pointsPrice) { %>
-                <span class="points"><%= p.pointsPrice %> pts</span>
-              <% } %>
-            </div>
-          </div>
-        </a>
+      <% products.forEach(product => { %>
+        <%- include('../partials/product-card', { product }) %>
       <% }); %>
     </div>
   <% } %>

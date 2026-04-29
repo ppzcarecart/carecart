@@ -75,6 +75,18 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
+    async setFeatured(id, featured, checkbox) {
+      try {
+        await api('/api/products/' + id + '/featured', {
+          method: 'PATCH',
+          body: JSON.stringify({ featured }),
+        });
+      } catch (e) {
+        // revert the toggle if the server rejected (e.g. 8-cap)
+        if (checkbox) checkbox.checked = !featured;
+        alert(e.message);
+      }
+    },
     async updateUser(id, patch) {
       await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify(patch) });
     },

@@ -1,0 +1,23 @@
+<%
+const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const isNew = product.createdAt && (Date.now() - new Date(product.createdAt).getTime() < NEW_WINDOW_MS);
+%>
+<a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
+  <div class="cc-thumb">
+    <%- include('product-thumb', { product }) %>
+    <div class="cc-thumb-badges">
+      <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
+      <% if (isNew) { %><span class="cc-badge cc-badge-new">New</span><% } %>
+    </div>
+  </div>
+  <div class="cc-body">
+    <span class="cc-vendor"><%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></span>
+    <h3 class="cc-name"><%= product.name %></h3>
+    <div class="cc-price">
+      <span class="amount">$<%= (product.priceCents / 100).toFixed(2) %></span>
+      <% if (product.pointsPrice) { %>
+        <span class="points"><%= product.pointsPrice %> pts</span>
+      <% } %>
+    </div>
+  </div>
+</a>

@@ -46,6 +46,9 @@ export class Product {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ default: false })
+  featured: boolean;
+
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vendorId' })
   vendor: User;

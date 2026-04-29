@@ -40,14 +40,22 @@ export class ViewsController {
     const activeCategory = categorySlug
       ? categories.find((c) => c.slug === categorySlug)
       : undefined;
-    const products = await this.products.list({
-      activeOnly: true,
-      categoryId: activeCategory?.id,
-    });
+    const [products, featured] = await Promise.all([
+      this.products.list({
+        activeOnly: true,
+        categoryId: activeCategory?.id,
+      }),
+      // Only show the Featured rail when there is no category filter applied,
+      // otherwise it would compete with the filtered grid below it.
+      activeCategory
+        ? Promise.resolve([])
+        : this.products.list({ activeOnly: true, featuredOnly: true, limit: 8 }),
+    ]);
     return {
       title: 'carecart',
       user: (req as any).user || null,
       products,
+      featured,
       categories,
       activeCategorySlug: categorySlug || 'all',
     };

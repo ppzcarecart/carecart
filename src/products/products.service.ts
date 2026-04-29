@@ -34,13 +34,36 @@ export class ProductsService {
     categoryId?: string;
     vendorId?: string;
     activeOnly?: boolean;
+    featuredOnly?: boolean;
+    limit?: number;
   }) {
     const where: any = {};
     if (opts.activeOnly) where.active = true;
+    if (opts.featuredOnly) where.featured = true;
     if (opts.categoryId) where.categoryId = opts.categoryId;
     if (opts.vendorId) where.vendorId = opts.vendorId;
     if (opts.q) where.name = ILike(`%${opts.q}%`);
-    return this.products.find({ where, order: { createdAt: 'DESC' } });
+    return this.products.find({
+      where,
+      order: { createdAt: 'DESC' },
+      take: opts.limit,
+    });
+  }
+
+  /** Toggle featured flag. Admin/Manager only. Caps total featured at 8. */
+  async setFeatured(id: string, value: boolean): Promise<Product> {
+    const product = await this.findById(id);
+    if (!product) throw new NotFoundException('Product not found');
+    if (value && !product.featured) {
+      const count = await this.products.count({ where: { featured: true } });
+      if (count >= 8) {
+        throw new BadRequestException(
+          'You already have 8 featured products. Unfeature one first.',
+        );
+      }
+    }
+    product.featured = value;
+    return this.products.save(product);
   }
 
   findById(id: string) {
