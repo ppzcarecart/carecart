@@ -1,22 +1,25 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container">
-    <a class="navbar-brand" href="/">carecart</a>
-    <div class="d-flex">
-      <a href="/" class="btn btn-outline-light btn-sm me-2">Shop</a>
+<nav class="cc-nav">
+  <div class="container d-flex align-items-center justify-content-between">
+    <a href="/" class="cc-brand">
+      <span class="cc-brand-mark">c</span>
+      <span>carecart</span>
+    </a>
+    <div class="cc-links">
+      <a href="/" class="cc-pill">Shop</a>
       <% if (user) { %>
-        <a href="/cart" class="btn btn-outline-light btn-sm me-2">Cart</a>
-        <a href="/orders" class="btn btn-outline-light btn-sm me-2">Orders</a>
+        <a href="/cart" class="cc-pill">Cart</a>
+        <a href="/orders" class="cc-pill">Orders</a>
         <% if (user.role === 'admin' || user.role === 'manager') { %>
-          <a href="/admin" class="btn btn-warning btn-sm me-2">Admin</a>
+          <a href="/admin" class="cc-pill cc-pill-outline">Admin</a>
         <% } %>
         <% if (user.role === 'vendor') { %>
-          <a href="/vendor" class="btn btn-info btn-sm me-2">Vendor</a>
+          <a href="/vendor" class="cc-pill cc-pill-outline">Vendor</a>
         <% } %>
-        <span class="navbar-text text-light me-2"><%= user.name %> (<%= user.role %>)</span>
-        <button class="btn btn-outline-light btn-sm" onclick="ppz.logout()">Logout</button>
+        <span class="cc-user d-none d-md-inline ms-2"><%= user.name %></span>
+        <button class="cc-pill" onclick="ppz.logout()">Logout</button>
       <% } else { %>
-        <a href="/login" class="btn btn-outline-light btn-sm me-2">Login</a>
-        <a href="/register" class="btn btn-light btn-sm">Sign up</a>
+        <a href="/login" class="cc-pill">Sign in</a>
+        <a href="/register" class="cc-pill cc-pill-primary">Sign up</a>
       <% } %>
     </div>
   </div>

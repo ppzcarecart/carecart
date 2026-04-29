@@ -1,31 +1,53 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1 class="mb-4">All products</h1>
-  <div class="row g-4">
-    <% products.forEach(p => { %>
-      <div class="col-md-3">
-        <div class="card h-100">
-          <% if (p.images && p.images[0]) { %>
-            <img src="<%= p.images[0].url %>" class="card-img-top" style="height:160px;object-fit:cover">
-          <% } %>
-          <div class="card-body">
-            <h6 class="card-title"><a href="/p/<%= p.slug %>" class="text-decoration-none"><%= p.name %></a></h6>
-            <div class="text-muted small">by <%= p.vendor && (p.vendor.vendorStoreName || p.vendor.name) || 'Vendor' %></div>
-            <div class="mt-2">
-              <strong>$<%= (p.priceCents / 100).toFixed(2) %></strong>
+<div class="container">
+
+  <section class="cc-hero">
+    <div class="cc-orb"></div>
+    <h1>Thoughtful goods, by trusted vendors.</h1>
+    <p>Browse curated apparel, wellness essentials, and lifestyle picks. Pay with cash or redeem your points — your call.</p>
+    <a href="#catalogue" class="cc-btn cc-btn-primary">Shop now</a>
+  </section>
+
+  <% if (categories && categories.length) { %>
+    <div class="cc-section-head">
+      <h2>Browse categories</h2>
+    </div>
+    <div class="cc-chips">
+      <a class="cc-chip <%= activeCategorySlug === 'all' ? 'is-active' : '' %>" href="/">All</a>
+      <% categories.forEach(c => { %>
+        <a class="cc-chip <%= activeCategorySlug === c.slug ? 'is-active' : '' %>" href="/?category=<%= c.slug %>"><%= c.name %></a>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <div class="cc-section-head" id="catalogue">
+    <h2>All products</h2>
+    <span class="muted"><%= products.length %> item<%= products.length === 1 ? '' : 's' %></span>
+  </div>
+
+  <% if (!products.length) { %>
+    <div class="cc-empty">No products yet. Sign in as admin and add some, or set <code>SEED_SAMPLES=true</code>.</div>
+  <% } else { %>
+    <div class="cc-grid">
+      <% products.forEach(p => { %>
+        <a href="/p/<%= p.slug %>" class="cc-card text-decoration-none text-reset">
+          <div class="cc-thumb">
+            <%- include('../partials/product-thumb', { product: p }) %>
+          </div>
+          <div class="cc-body">
+            <span class="cc-vendor"><%= p.vendor && (p.vendor.vendorStoreName || p.vendor.name) || 'Vendor' %></span>
+            <h3 class="cc-name"><%= p.name %></h3>
+            <div class="cc-price">
+              <span class="amount">$<%= (p.priceCents / 100).toFixed(2) %></span>
               <% if (p.pointsPrice) { %>
-                <span class="badge bg-info ms-2"><%= p.pointsPrice %> pts</span>
+                <span class="points"><%= p.pointsPrice %> pts</span>
               <% } %>
             </div>
-            <a href="/p/<%= p.slug %>" class="btn btn-sm btn-primary mt-2 w-100">View</a>
           </div>
-        </div>
-      </div>
-    <% }); %>
-    <% if (!products.length) { %>
-      <p class="text-muted">No products yet.</p>
-    <% } %>
-  </div>
+        </a>
+      <% }); %>
+    </div>
+  <% } %>
 </div>
 <%- include('../partials/foot') %>

@@ -1,19 +1,34 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>My orders</h1>
-  <table class="table">
-    <thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Created</th></tr></thead>
-    <tbody>
-      <% orders.forEach(o => { %>
-        <tr>
-          <td><%= o.number %></td>
-          <td><span class="badge bg-secondary"><%= o.status %></span></td>
-          <td>$<%= (o.totalCents/100).toFixed(2) %><% if (o.pointsTotal) { %> + <%= o.pointsTotal %> pts<% } %></td>
-          <td><%= new Date(o.createdAt).toLocaleString() %></td>
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
+<div class="container">
+  <h1 class="mt-4 mb-1" style="font-weight:700; letter-spacing:-0.01em;">Your orders</h1>
+  <p class="text-muted">Recent purchases and their status.</p>
+
+  <% if (!orders.length) { %>
+    <div class="cc-empty mt-3">No orders yet. <a href="/">Start shopping</a>.</div>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="table align-middle mt-2" style="background: var(--surface); border-radius: var(--radius); overflow: hidden;">
+        <thead>
+          <tr>
+            <th class="ps-3">Order</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th class="pe-3">Placed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% orders.forEach(o => { %>
+            <tr>
+              <td class="ps-3"><strong><%= o.number %></strong></td>
+              <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
+              <td>$<%= (o.totalCents/100).toFixed(2) %><% if (o.pointsTotal) { %> + <%= o.pointsTotal %> pts<% } %></td>
+              <td class="pe-3 text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
 </div>
 <%- include('../partials/foot') %>

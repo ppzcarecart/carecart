@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Param,
+  Query,
   Render,
   Req,
   UseGuards,
@@ -34,14 +35,21 @@ export class ViewsController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
   @Render('shop/index')
-  async home(@Req() req: Request) {
-    const products = await this.products.list({ activeOnly: true });
+  async home(@Req() req: Request, @Query('category') categorySlug?: string) {
     const categories = await this.categories.list();
+    const activeCategory = categorySlug
+      ? categories.find((c) => c.slug === categorySlug)
+      : undefined;
+    const products = await this.products.list({
+      activeOnly: true,
+      categoryId: activeCategory?.id,
+    });
     return {
       title: 'carecart',
       user: (req as any).user || null,
       products,
       categories,
+      activeCategorySlug: categorySlug || 'all',
     };
   }
 

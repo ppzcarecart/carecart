@@ -1,44 +1,66 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Your cart</h1>
+<div class="container">
+  <h1 class="mt-4 mb-1" style="font-weight:700; letter-spacing:-0.01em;">Your cart</h1>
+  <p class="text-muted">Review your items before checkout.</p>
+
   <% if (!summary.cart.items.length) { %>
-    <p class="text-muted">Empty.</p>
+    <div class="cc-empty mt-4">
+      Your cart is empty. <a href="/">Continue shopping</a>.
+    </div>
   <% } else { %>
-    <table class="table align-middle">
-      <thead><tr><th>Item</th><th>Qty</th><th>Mode</th><th class="text-end">Line</th><th></th></tr></thead>
-      <tbody>
-      <% summary.lines.forEach(l => { %>
-        <tr>
-          <td>
-            <%= l.item.product.name %><% if (l.item.variant) { %> &mdash; <%= l.item.variant.name %><% } %>
-          </td>
-          <td>
-            <input type="number" min="1" value="<%= l.item.quantity %>" style="width:80px"
-              onchange="ppz.updateCart('<%= l.item.id %>', this.value)">
-          </td>
-          <td><%= l.item.pricingMode %></td>
-          <td class="text-end">
-            <% if (l.item.pricingMode === 'price') { %>
-              $<%= (l.lineCents/100).toFixed(2) %>
-            <% } else { %>
-              <%= l.linePoints %> pts
-            <% } %>
-          </td>
-          <td><button class="btn btn-sm btn-outline-danger" onclick="ppz.removeCart('<%= l.item.id %>')">Remove</button></td>
-        </tr>
-      <% }); %>
-      </tbody>
-    </table>
-    <div class="d-flex justify-content-between">
-      <div></div>
-      <div class="text-end">
-        <div>Cash subtotal: <strong>$<%= (summary.subtotalCents/100).toFixed(2) %></strong></div>
-        <% if (summary.pointsTotal) { %>
-          <div>Points subtotal: <strong><%= summary.pointsTotal %> pts</strong></div>
-        <% } %>
-        <button class="btn btn-success mt-3" onclick="ppz.checkout()">Checkout (PayNow)</button>
+    <div class="cc-cart-grid">
+      <div class="cc-cart-list">
+        <% summary.lines.forEach(l => { %>
+          <div class="cc-cart-row">
+            <div class="thumb">
+              <%- include('../partials/product-thumb', { product: l.item.product }) %>
+            </div>
+            <div class="meta">
+              <div class="name"><%= l.item.product.name %></div>
+              <% if (l.item.variant) { %>
+                <div class="variant"><%= l.item.variant.name %></div>
+              <% } %>
+              <div class="variant text-uppercase" style="font-size:.7rem; letter-spacing:.06em;">
+                Pay with <%= l.item.pricingMode === 'points' ? 'points' : 'cash' %>
+              </div>
+            </div>
+            <div class="qty">
+              <input type="number" min="1" value="<%= l.item.quantity %>"
+                onchange="ppz.updateCart('<%= l.item.id %>', this.value)">
+            </div>
+            <div class="line">
+              <% if (l.item.pricingMode === 'price') { %>
+                $<%= (l.lineCents/100).toFixed(2) %>
+              <% } else { %>
+                <%= l.linePoints %> pts
+              <% } %>
+              <button class="cc-btn cc-btn-ghost" style="padding:4px 8px; font-size:.8rem; margin-left:8px;"
+                onclick="ppz.removeCart('<%= l.item.id %>')">Remove</button>
+            </div>
+          </div>
+        <% }); %>
       </div>
+
+      <aside class="cc-summary">
+        <h3>Order summary</h3>
+        <div class="row">
+          <span>Cash subtotal</span>
+          <span>$<%= (summary.subtotalCents/100).toFixed(2) %></span>
+        </div>
+        <% if (summary.pointsTotal) { %>
+          <div class="row">
+            <span>Points subtotal</span>
+            <span><%= summary.pointsTotal %> pts</span>
+          </div>
+        <% } %>
+        <div class="row total">
+          <span>Total</span>
+          <span>$<%= (summary.subtotalCents/100).toFixed(2) %><% if (summary.pointsTotal) { %> + <%= summary.pointsTotal %> pts<% } %></span>
+        </div>
+        <button class="cc-btn cc-btn-primary cc-btn-block mt-3" onclick="ppz.checkout()">Checkout · PayNow</button>
+        <p class="text-muted mt-3" style="font-size:.85rem;">Payments processed securely via Stripe PayNow.</p>
+      </aside>
     </div>
   <% } %>
 </div>
