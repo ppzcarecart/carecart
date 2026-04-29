@@ -41,6 +41,18 @@
     </div>
   <% } %>
 
+  <% if (newProducts && newProducts.length) { %>
+    <div class="cc-section-head">
+      <h2>New arrivals</h2>
+      <span class="muted">Added in the last 7 days</span>
+    </div>
+    <div class="cc-grid">
+      <% newProducts.forEach(product => { %>
+        <%- include('../partials/product-card', { product }) %>
+      <% }); %>
+    </div>
+  <% } %>
+
   <div class="cc-section-head" id="catalogue">
     <h2><%= activeCategorySlug && activeCategorySlug !== 'all' ? 'Filtered products' : 'All products' %></h2>
     <span class="muted"><%= products.length %> item<%= products.length === 1 ? '' : 's' %></span>

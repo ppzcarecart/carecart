@@ -1,47 +1,72 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
 <div class="container admin-shell">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Products</h1>
-    <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newProduct">+ New product</button>
-  </div>
-  <p class="text-muted">Toggle <strong>Featured</strong> to highlight a product on the storefront. Up to 8 can be featured at once.</p>
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
 
-  <div class="table-responsive">
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Vendor</th>
-          <th>Price</th>
-          <th>Points</th>
-          <th>Stock</th>
-          <th>Active</th>
-          <th>Featured</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-      <% products.forEach(p => { %>
-        <tr>
-          <td><a href="/p/<%= p.slug %>"><%= p.name %></a></td>
-          <td><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
-          <td>$<%= (p.priceCents/100).toFixed(2) %></td>
-          <td><%= p.pointsPrice ?? '-' %></td>
-          <td><%= p.stock %></td>
-          <td><%= p.active %></td>
-          <td>
-            <label class="cc-switch">
-              <input type="checkbox" <%= p.featured ? 'checked' : '' %>
-                onchange="ppz.setFeatured('<%= p.id %>', this.checked, this)">
-              <span class="cc-switch-slider"></span>
-            </label>
-          </td>
-          <td><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
-        </tr>
-      <% }); %>
-      </tbody>
-    </table>
+      <div class="admin-page-header">
+        <div>
+          <h1>Products</h1>
+          <p class="lede">Toggle <strong>Featured</strong> to highlight a product on the storefront — up to 8 at a time.</p>
+        </div>
+        <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newProduct">+ New product</button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!products.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No products yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Vendor</th>
+                  <th class="num">Price</th>
+                  <th class="num">Points</th>
+                  <th class="num">Stock</th>
+                  <th>Active</th>
+                  <th>Featured</th>
+                  <th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+              <% products.forEach(p => { %>
+                <tr>
+                  <td>
+                    <div class="row-thumb">
+                      <div class="thumb">
+                        <%- include('../partials/product-thumb', { product: p }) %>
+                      </div>
+                      <div class="meta">
+                        <strong><a href="/p/<%= p.slug %>" class="text-reset"><%= p.name %></a></strong>
+                        <% if (p.category) { %><div class="sub"><%= p.category.name %></div><% } %>
+                      </div>
+                    </div>
+                  </td>
+                  <td><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
+                  <td class="num">$<%= (p.priceCents/100).toFixed(2) %></td>
+                  <td class="num"><%= p.pointsPrice ?? '–' %></td>
+                  <td class="num"><%= p.stock %></td>
+                  <td><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
+                  <td>
+                    <label class="cc-switch">
+                      <input type="checkbox" <%= p.featured ? 'checked' : '' %>
+                        onchange="ppz.setFeatured('<%= p.id %>', this.checked, this)">
+                      <span class="cc-switch-slider"></span>
+                    </label>
+                  </td>
+                  <td class="actions"><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
+                </tr>
+              <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
   </div>
 </div>
 
@@ -49,24 +74,26 @@
   <form id="newProductForm">
     <div class="modal-header"><h5>New product</h5></div>
     <div class="modal-body">
-      <div class="mb-2"><label>Name</label><input class="form-control" name="name" required></div>
-      <div class="mb-2"><label>Description</label><textarea class="form-control" name="description"></textarea></div>
-      <div class="mb-2"><label>Price (cents)</label><input type="number" min="0" class="form-control" name="priceCents" required></div>
-      <div class="mb-2"><label>Points price (optional)</label><input type="number" min="0" class="form-control" name="pointsPrice"></div>
-      <div class="mb-2"><label>Stock</label><input type="number" min="0" class="form-control" name="stock" value="0"></div>
-      <div class="mb-2"><label>Vendor</label>
+      <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
+      <div class="mb-3"><label>Description</label><textarea class="form-control" name="description"></textarea></div>
+      <div class="row">
+        <div class="col-md-6 mb-3"><label>Price (cents)</label><input type="number" min="0" class="form-control" name="priceCents" required></div>
+        <div class="col-md-6 mb-3"><label>Points price (optional)</label><input type="number" min="0" class="form-control" name="pointsPrice"></div>
+      </div>
+      <div class="mb-3"><label>Stock</label><input type="number" min="0" class="form-control" name="stock" value="0"></div>
+      <div class="mb-3"><label>Vendor</label>
         <select class="form-select" name="vendorId" required>
           <% vendors.forEach(v => { %><option value="<%= v.id %>"><%= v.vendorStoreName || v.name %> (<%= v.email %>)</option><% }); %>
         </select>
       </div>
-      <div class="mb-2"><label>Category</label>
+      <div class="mb-3"><label>Category</label>
         <select class="form-select" name="categoryId"><option value="">— None —</option>
           <% categories.forEach(c => { %><option value="<%= c.id %>"><%= c.name %></option><% }); %>
         </select>
       </div>
-      <div class="mb-2"><label>Image URLs (comma-sep, optional)</label><input class="form-control" name="imageUrls" placeholder="https://..."></div>
+      <div class="mb-3"><label>Image URLs (comma-separated)</label><input class="form-control" name="imageUrls" placeholder="https://..."></div>
     </div>
-    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create</button></div>
+    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create product</button></div>
   </form>
 </div></div></div>
 

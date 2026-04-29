@@ -40,22 +40,34 @@ export class ViewsController {
     const activeCategory = categorySlug
       ? categories.find((c) => c.slug === categorySlug)
       : undefined;
-    const [products, featured] = await Promise.all([
+
+    // Featured and New rails only render when no category filter is active.
+    const newSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const skipRails = !!activeCategory;
+
+    const [products, featured, newProducts] = await Promise.all([
       this.products.list({
         activeOnly: true,
         categoryId: activeCategory?.id,
       }),
-      // Only show the Featured rail when there is no category filter applied,
-      // otherwise it would compete with the filtered grid below it.
-      activeCategory
+      skipRails
         ? Promise.resolve([])
         : this.products.list({ activeOnly: true, featuredOnly: true, limit: 8 }),
+      skipRails
+        ? Promise.resolve([])
+        : this.products.list({
+            activeOnly: true,
+            newSince,
+            excludeFeatured: true,
+            limit: 8,
+          }),
     ]);
     return {
       title: 'carecart',
       user: (req as any).user || null,
       products,
       featured,
+      newProducts,
       categories,
       activeCategorySlug: categorySlug || 'all',
     };
@@ -113,16 +125,33 @@ export class ViewsController {
       this.categories.list(),
       this.orders.listAll(),
     ]);
+    const vendorCount = users.filter((u) => u.role === Role.VENDOR).length;
+    const customerCount = users.filter((u) => u.role === Role.CUSTOMER).length;
+    const paidOrders = orders.filter(
+      (o) => o.status === 'paid' || o.status === 'fulfilled',
+    );
+    const pendingOrders = orders.filter(
+      (o) => o.status === 'awaiting_payment' || o.status === 'pending',
+    );
+    const revenueCents = paidOrders.reduce((sum, o) => sum + o.totalCents, 0);
+    const featuredCount = products.filter((p) => p.featured).length;
     return {
       title: 'Admin',
       user,
+      activePath: '/admin',
       counts: {
         users: users.length,
+        vendors: vendorCount,
+        customers: customerCount,
         products: products.length,
+        featured: featuredCount,
         categories: categories.length,
         orders: orders.length,
+        pending: pendingOrders.length,
+        paid: paidOrders.length,
+        revenueCents,
       },
-      orders: orders.slice(0, 20),
+      orders: orders.slice(0, 8),
     };
   }
 
@@ -131,7 +160,7 @@ export class ViewsController {
   @Render('admin/users')
   async adminUsers(@CurrentUser() user: any) {
     const users = await this.users.list();
-    return { title: 'Users', user, users };
+    return { title: 'Users', user, users, activePath: '/admin/users' };
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
@@ -141,7 +170,14 @@ export class ViewsController {
     const products = await this.products.list({});
     const categories = await this.categories.list();
     const vendors = await this.users.list({ role: Role.VENDOR });
-    return { title: 'Products', user, products, categories, vendors };
+    return {
+      title: 'Products',
+      user,
+      products,
+      categories,
+      vendors,
+      activePath: '/admin/products',
+    };
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
@@ -149,7 +185,7 @@ export class ViewsController {
   @Render('admin/categories')
   async adminCategories(@CurrentUser() user: any) {
     const categories = await this.categories.list();
-    return { title: 'Categories', user, categories };
+    return { title: 'Categories', user, categories, activePath: '/admin/categories' };
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
@@ -157,14 +193,14 @@ export class ViewsController {
   @Render('admin/orders')
   async adminOrders(@CurrentUser() user: any) {
     const orders = await this.orders.listAll();
-    return { title: 'Orders', user, orders };
+    return { title: 'Orders', user, orders, activePath: '/admin/orders' };
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/import')
   @Render('admin/import')
   importPage(@CurrentUser() user: any) {
-    return { title: 'Bulk import customers', user };
+    return { title: 'Bulk import customers', user, activePath: '/admin/import' };
   }
 
   // ---- Vendor dashboard ----
@@ -175,7 +211,29 @@ export class ViewsController {
     const products = await this.products.list({ vendorId: user.id });
     const sales = await this.orders.vendorSalesSummary(user.id);
     const orders = await this.orders.vendorOrders(user.id);
-    return { title: 'Vendor dashboard', user, products, sales, orders };
+    const totalRevenueCents = sales.reduce((s, r) => s + r.revenueCents, 0);
+    const totalUnits = sales.reduce((s, r) => s + r.unitsSold, 0);
+    const lowStock = products.filter((p) => {
+      if (p.variants && p.variants.length) {
+        return p.variants.some((v) => v.stock <= 5);
+      }
+      return p.stock <= 5;
+    });
+    return {
+      title: 'Vendor dashboard',
+      user,
+      products,
+      sales,
+      orders,
+      stats: {
+        productCount: products.length,
+        totalUnits,
+        totalRevenueCents,
+        orderCount: orders.length,
+        lowStockCount: lowStock.length,
+      },
+      activePath: '/vendor',
+    };
   }
 
   @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
@@ -184,6 +242,12 @@ export class ViewsController {
   async vendorProducts(@CurrentUser() user: any) {
     const products = await this.products.list({ vendorId: user.id });
     const categories = await this.categories.list();
-    return { title: 'My products', user, products, categories };
+    return {
+      title: 'My products',
+      user,
+      products,
+      categories,
+      activePath: '/vendor/products',
+    };
   }
 }

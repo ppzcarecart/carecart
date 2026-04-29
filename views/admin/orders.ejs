@@ -1,28 +1,57 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Orders</h1>
-  <table class="table">
-    <thead><tr><th>Number</th><th>Customer</th><th>Status</th><th>Total</th><th>Points</th><th>Created</th><th></th></tr></thead>
-    <tbody>
-    <% orders.forEach(o => { %>
-      <tr>
-        <td><%= o.number %></td>
-        <td><%= o.customer ? o.customer.email : '-' %></td>
-        <td>
-          <select onchange="ppz.setOrderStatus('<%= o.id %>', this.value)">
-            <% ['pending','awaiting_payment','paid','fulfilled','cancelled','refunded'].forEach(s => { %>
-              <option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s %></option>
-            <% }); %>
-          </select>
-        </td>
-        <td>$<%= (o.totalCents/100).toFixed(2) %></td>
-        <td><%= o.pointsTotal %></td>
-        <td><%= new Date(o.createdAt).toLocaleString() %></td>
-        <td></td>
-      </tr>
-    <% }); %>
-    </tbody>
-  </table>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Orders</h1>
+          <p class="lede">All orders across the marketplace. Update status to advance or cancel an order.</p>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!orders.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No orders yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th class="num">Total</th>
+                  <th class="num">Points</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+              <% orders.forEach(o => { %>
+                <tr>
+                  <td><strong><%= o.number %></strong></td>
+                  <td><%= o.customer ? o.customer.email : '-' %></td>
+                  <td>
+                    <select onchange="ppz.setOrderStatus('<%= o.id %>', this.value)">
+                      <% ['pending','awaiting_payment','paid','fulfilled','cancelled','refunded'].forEach(s => { %>
+                        <option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s %></option>
+                      <% }); %>
+                    </select>
+                  </td>
+                  <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
+                  <td class="num"><%= o.pointsTotal || '–' %></td>
+                  <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+                </tr>
+              <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
 </div>
 <%- include('../partials/foot') %>

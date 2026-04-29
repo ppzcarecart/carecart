@@ -1,0 +1,22 @@
+<%
+// activePath is set by the page including this partial.
+const items = [
+  { href: '/admin',            label: 'Dashboard',   icon: '◰' },
+  { href: '/admin/users',      label: 'Users',       icon: '◉' },
+  { href: '/admin/products',   label: 'Products',    icon: '▣' },
+  { href: '/admin/categories', label: 'Categories',  icon: '◇' },
+  { href: '/admin/orders',     label: 'Orders',      icon: '⌘' },
+  { href: '/admin/import',     label: 'Bulk import', icon: '↥' },
+];
+%>
+<aside class="admin-sidebar">
+  <div class="group-label">Admin</div>
+  <% items.forEach(it => { %>
+    <a href="<%= it.href %>" class="<%= activePath === it.href ? 'is-active' : '' %>">
+      <span class="icon"><%= it.icon %></span>
+      <span><%= it.label %></span>
+    </a>
+  <% }); %>
+  <div class="group-label">Storefront</div>
+  <a href="/"><span class="icon">↗</span><span>View shop</span></a>
+</aside>

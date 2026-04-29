@@ -1,34 +1,110 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Admin dashboard</h1>
-  <div class="row g-3 my-3">
-    <div class="col-md-3"><div class="card text-bg-light"><div class="card-body"><div class="text-muted small">Users</div><div class="h3"><%= counts.users %></div></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-light"><div class="card-body"><div class="text-muted small">Products</div><div class="h3"><%= counts.products %></div></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-light"><div class="card-body"><div class="text-muted small">Categories</div><div class="h3"><%= counts.categories %></div></div></div></div>
-    <div class="col-md-3"><div class="card text-bg-light"><div class="card-body"><div class="text-muted small">Orders</div><div class="h3"><%= counts.orders %></div></div></div></div>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="lede">Welcome back, <%= user.name %>. Here's what's happening across the marketplace.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/admin/products" class="cc-btn cc-btn-outline">Manage products</a>
+          <a href="/admin/users" class="cc-btn cc-btn-primary">Manage users</a>
+        </div>
+      </div>
+
+      <div class="admin-stats">
+        <div class="admin-stat">
+          <div class="stat-icon tone-brand">$</div>
+          <div>
+            <div class="stat-label">Revenue</div>
+            <div class="stat-value">$<%= (counts.revenueCents/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-blue">⌘</div>
+          <div>
+            <div class="stat-label">Orders</div>
+            <div class="stat-value"><%= counts.orders %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-amber">⏱</div>
+          <div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-value"><%= counts.pending %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-violet">▣</div>
+          <div>
+            <div class="stat-label">Products</div>
+            <div class="stat-value"><%= counts.products %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-rose">★</div>
+          <div>
+            <div class="stat-label">Featured</div>
+            <div class="stat-value"><%= counts.featured %> / 8</div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-blue">◉</div>
+          <div>
+            <div class="stat-label">Vendors</div>
+            <div class="stat-value"><%= counts.vendors %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-brand">◉</div>
+          <div>
+            <div class="stat-label">Customers</div>
+            <div class="stat-value"><%= counts.customers %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-violet">◇</div>
+          <div>
+            <div class="stat-label">Categories</div>
+            <div class="stat-value"><%= counts.categories %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Recent orders</h3>
+          <a href="/admin/orders" class="muted">View all →</a>
+        </div>
+        <div class="panel-body">
+          <% if (!orders.length) { %>
+            <div class="cc-empty" style="margin: 0; border: none; border-radius: 0;">No orders yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr><th>Number</th><th>Customer</th><th>Status</th><th class="num">Total</th><th>Created</th></tr>
+              </thead>
+              <tbody>
+                <% orders.forEach(o => { %>
+                  <tr>
+                    <td><strong><%= o.number %></strong></td>
+                    <td><%= o.customer ? o.customer.email : '-' %></td>
+                    <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
+                    <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
+                    <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
   </div>
-  <div class="d-flex gap-2 mb-3">
-    <a class="btn btn-outline-dark" href="/admin/users">Users</a>
-    <a class="btn btn-outline-dark" href="/admin/products">Products</a>
-    <a class="btn btn-outline-dark" href="/admin/categories">Categories</a>
-    <a class="btn btn-outline-dark" href="/admin/orders">Orders</a>
-    <a class="btn btn-outline-dark" href="/admin/import">Bulk import customers</a>
-  </div>
-  <h3>Recent orders</h3>
-  <table class="table">
-    <thead><tr><th>Number</th><th>Customer</th><th>Status</th><th>Total</th><th>Created</th></tr></thead>
-    <tbody>
-      <% orders.forEach(o => { %>
-        <tr>
-          <td><%= o.number %></td>
-          <td><%= o.customer ? o.customer.email : '-' %></td>
-          <td><span class="badge bg-secondary"><%= o.status %></span></td>
-          <td>$<%= (o.totalCents/100).toFixed(2) %></td>
-          <td><%= new Date(o.createdAt).toLocaleString() %></td>
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
 </div>
 <%- include('../partials/foot') %>

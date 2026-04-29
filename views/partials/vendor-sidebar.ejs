@@ -1,0 +1,17 @@
+<%
+const items = [
+  { href: '/vendor',          label: 'Dashboard',   icon: '◰' },
+  { href: '/vendor/products', label: 'My products', icon: '▣' },
+];
+%>
+<aside class="admin-sidebar">
+  <div class="group-label">Vendor</div>
+  <% items.forEach(it => { %>
+    <a href="<%= it.href %>" class="<%= activePath === it.href ? 'is-active' : '' %>">
+      <span class="icon"><%= it.icon %></span>
+      <span><%= it.label %></span>
+    </a>
+  <% }); %>
+  <div class="group-label">Storefront</div>
+  <a href="/"><span class="icon">↗</span><span>View shop</span></a>
+</aside>

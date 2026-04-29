@@ -1,49 +1,80 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Users</h1>
-  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newUser">+ New user / vendor</button>
-  <a class="btn btn-outline-secondary mb-3" href="/admin/import">Bulk import customers</a>
-  <table class="table">
-    <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead>
-    <tbody>
-      <% users.forEach(u => { %>
-        <tr>
-          <td><%= u.email %></td>
-          <td><%= u.name %></td>
-          <td>
-            <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
-              <% ['admin','manager','vendor','customer'].forEach(r => { %>
-                <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
-              <% }); %>
-            </select>
-          </td>
-          <td><%= u.active %></td>
-          <td><button class="btn btn-sm btn-outline-warning" onclick="ppz.toggleUser('<%= u.id %>', <%= !u.active %>)"><%= u.active ? 'Disable' : 'Enable' %></button></td>
-        </tr>
-      <% }); %>
-    </tbody>
-  </table>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Users</h1>
+          <p class="lede">Vendors, customers, managers, and admins.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/admin/import" class="cc-btn cc-btn-outline">Bulk import</a>
+          <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newUser">+ New user</button>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!users.length) { %>
+            <div class="cc-empty" style="margin: 0; border: none; border-radius: 0;">No users yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th class="actions">Actions</th></tr>
+              </thead>
+              <tbody>
+                <% users.forEach(u => { %>
+                  <tr>
+                    <td>
+                      <strong><%= u.name %></strong>
+                      <% if (u.vendorStoreName) { %><div class="text-muted" style="font-size:.82rem"><%= u.vendorStoreName %></div><% } %>
+                    </td>
+                    <td><%= u.email %></td>
+                    <td>
+                      <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
+                        <% ['admin','manager','vendor','customer'].forEach(r => { %>
+                          <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
+                        <% }); %>
+                      </select>
+                    </td>
+                    <td><span class="tag <%= u.active ? 'tag-active' : 'tag-inactive' %>"><%= u.active ? 'active' : 'disabled' %></span></td>
+                    <td class="actions">
+                      <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;"
+                        onclick="ppz.toggleUser('<%= u.id %>', <%= !u.active %>)"><%= u.active ? 'Disable' : 'Enable' %></button>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
 </div>
 
 <div class="modal fade" id="newUser" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
   <form id="newUserForm">
     <div class="modal-header"><h5>New user</h5></div>
     <div class="modal-body">
-      <div class="mb-2"><label>Name</label><input class="form-control" name="name" required></div>
-      <div class="mb-2"><label>Email</label><input type="email" class="form-control" name="email" required></div>
-      <div class="mb-2"><label>Password</label><input class="form-control" name="password" minlength="6" required></div>
-      <div class="mb-2"><label>Contact</label><input class="form-control" name="contact"></div>
-      <div class="mb-2"><label>Address</label><input class="form-control" name="address"></div>
-      <div class="mb-2"><label>Role</label><select class="form-select" name="role">
-        <option value="customer">customer</option>
-        <option value="vendor">vendor</option>
-        <option value="manager">manager</option>
-        <option value="admin">admin</option>
+      <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
+      <div class="mb-3"><label>Email</label><input type="email" class="form-control" name="email" required></div>
+      <div class="mb-3"><label>Password</label><input class="form-control" name="password" minlength="6" required></div>
+      <div class="mb-3"><label>Contact</label><input class="form-control" name="contact"></div>
+      <div class="mb-3"><label>Address</label><input class="form-control" name="address"></div>
+      <div class="mb-3"><label>Role</label><select class="form-select" name="role">
+        <option value="customer">Customer</option>
+        <option value="vendor">Vendor</option>
+        <option value="manager">Manager</option>
+        <option value="admin">Admin</option>
       </select></div>
-      <div class="mb-2"><label>Vendor store name (vendors)</label><input class="form-control" name="vendorStoreName"></div>
+      <div class="mb-3"><label>Vendor store name (vendors only)</label><input class="form-control" name="vendorStoreName"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create user</button></div>
   </form>
 </div></div></div>
 
@@ -52,7 +83,7 @@ document.getElementById('newUserForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd.entries());
-  const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const res = await fetch('/api/users', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (res.ok) location.reload();
   else alert((await res.json()).message);
 });

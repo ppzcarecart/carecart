@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, MoreThanOrEqual, Not, Repository } from 'typeorm';
 
 import { Product } from './entities/product.entity';
 import { ProductVariant } from './entities/product-variant.entity';
@@ -35,14 +35,18 @@ export class ProductsService {
     vendorId?: string;
     activeOnly?: boolean;
     featuredOnly?: boolean;
+    excludeFeatured?: boolean;
+    newSince?: Date;
     limit?: number;
   }) {
     const where: any = {};
     if (opts.activeOnly) where.active = true;
     if (opts.featuredOnly) where.featured = true;
+    if (opts.excludeFeatured) where.featured = Not(true);
     if (opts.categoryId) where.categoryId = opts.categoryId;
     if (opts.vendorId) where.vendorId = opts.vendorId;
     if (opts.q) where.name = ILike(`%${opts.q}%`);
+    if (opts.newSince) where.createdAt = MoreThanOrEqual(opts.newSince);
     return this.products.find({
       where,
       order: { createdAt: 'DESC' },

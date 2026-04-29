@@ -1,53 +1,97 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>My products</h1>
-  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newProduct">+ Add product</button>
-  <table class="table">
-    <thead><tr><th>Name</th><th>Price</th><th>Points</th><th>Stock</th><th>Active</th><th>Variants</th><th></th></tr></thead>
-    <tbody>
-    <% products.forEach(p => { %>
-      <tr>
-        <td><a href="/p/<%= p.slug %>"><%= p.name %></a></td>
-        <td>$<%= (p.priceCents/100).toFixed(2) %></td>
-        <td><%= p.pointsPrice ?? '-' %></td>
-        <td><input type="number" min="0" value="<%= p.stock %>" style="width:100px" onchange="ppz.updateStock('<%= p.id %>', null, this.value)"></td>
-        <td><%= p.active %></td>
-        <td>
-          <% (p.variants || []).forEach(v => { %>
-            <div class="small">
-              <%= v.name %> &middot; stock:
-              <input type="number" min="0" value="<%= v.stock %>" style="width:70px"
-                onchange="ppz.updateStock('<%= p.id %>','<%= v.id %>', this.value)">
-              <button class="btn btn-sm btn-link text-danger" onclick="ppz.deleteVariant('<%= p.id %>','<%= v.id %>')">x</button>
-            </div>
-          <% }); %>
-          <button class="btn btn-sm btn-outline-secondary mt-1" onclick="ppz.addVariantPrompt('<%= p.id %>')">+ variant</button>
-        </td>
-        <td><button class="btn btn-sm btn-outline-danger" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
-      </tr>
-    <% }); %>
-    </tbody>
-  </table>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/vendor-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>My products</h1>
+          <p class="lede">Manage stock, variants, and add new items. Only you can edit products that you own.</p>
+        </div>
+        <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newProduct">+ Add product</button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!products.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">You haven't added any products yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="num">Price</th>
+                  <th class="num">Points</th>
+                  <th class="num">Stock</th>
+                  <th>Variants</th>
+                  <th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+              <% products.forEach(p => { %>
+                <tr>
+                  <td>
+                    <div class="row-thumb">
+                      <div class="thumb"><%- include('../partials/product-thumb', { product: p }) %></div>
+                      <div class="meta">
+                        <strong><a href="/p/<%= p.slug %>" class="text-reset"><%= p.name %></a></strong>
+                        <% if (p.category) { %><div class="sub"><%= p.category.name %></div><% } %>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="num">$<%= (p.priceCents/100).toFixed(2) %></td>
+                  <td class="num"><%= p.pointsPrice ?? '–' %></td>
+                  <td class="num">
+                    <input type="number" min="0" value="<%= p.stock %>"
+                      onchange="ppz.updateStock('<%= p.id %>', null, this.value)">
+                  </td>
+                  <td>
+                    <% (p.variants || []).forEach(v => { %>
+                      <div class="variant-row">
+                        <span class="name"><%= v.name %></span>
+                        <input type="number" min="0" value="<%= v.stock %>"
+                          onchange="ppz.updateStock('<%= p.id %>','<%= v.id %>', this.value)">
+                        <button class="cc-btn cc-btn-ghost" style="padding:2px 8px; font-size:.78rem;"
+                          onclick="ppz.deleteVariant('<%= p.id %>','<%= v.id %>')">×</button>
+                      </div>
+                    <% }); %>
+                    <button class="cc-btn cc-btn-outline" style="padding:5px 12px; font-size:.8rem; margin-top:4px;"
+                      onclick="ppz.addVariantPrompt('<%= p.id %>')">+ Variant</button>
+                  </td>
+                  <td class="actions"><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
+                </tr>
+              <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
 </div>
 
 <div class="modal fade" id="newProduct" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
   <form id="newProductForm">
     <div class="modal-header"><h5>New product</h5></div>
     <div class="modal-body">
-      <div class="mb-2"><label>Name</label><input class="form-control" name="name" required></div>
-      <div class="mb-2"><label>Description</label><textarea class="form-control" name="description"></textarea></div>
-      <div class="mb-2"><label>Price (cents)</label><input type="number" min="0" class="form-control" name="priceCents" required></div>
-      <div class="mb-2"><label>Points price (optional)</label><input type="number" min="0" class="form-control" name="pointsPrice"></div>
-      <div class="mb-2"><label>Stock</label><input type="number" min="0" class="form-control" name="stock" value="0"></div>
-      <div class="mb-2"><label>Category</label>
+      <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
+      <div class="mb-3"><label>Description</label><textarea class="form-control" name="description"></textarea></div>
+      <div class="row">
+        <div class="col-md-6 mb-3"><label>Price (cents)</label><input type="number" min="0" class="form-control" name="priceCents" required></div>
+        <div class="col-md-6 mb-3"><label>Points price (optional)</label><input type="number" min="0" class="form-control" name="pointsPrice"></div>
+      </div>
+      <div class="mb-3"><label>Stock</label><input type="number" min="0" class="form-control" name="stock" value="0"></div>
+      <div class="mb-3"><label>Category</label>
         <select class="form-select" name="categoryId"><option value="">— None —</option>
           <% categories.forEach(c => { %><option value="<%= c.id %>"><%= c.name %></option><% }); %>
         </select>
       </div>
-      <div class="mb-2"><label>Image URLs (comma-sep, optional)</label><input class="form-control" name="imageUrls"></div>
+      <div class="mb-3"><label>Image URLs (comma-separated)</label><input class="form-control" name="imageUrls" placeholder="https://..."></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create product</button></div>
   </form>
 </div></div></div>
 

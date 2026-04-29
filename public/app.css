@@ -289,10 +289,201 @@ a:hover { color: var(--brand-dark); }
 }
 .cc-footer .container { display: flex; justify-content: space-between; align-items: center; }
 
-/* ---------- Admin / Vendor (light cleanup, mostly Bootstrap) ---------- */
-.admin-shell { padding: 24px 0; }
-.admin-shell h1 { font-weight: 700; letter-spacing: -0.01em; }
-.admin-shell .table { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+/* ---------- Admin / Vendor shell ---------- */
+.admin-shell { padding: 24px 0 80px; }
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } }
+
+.admin-sidebar {
+  position: sticky; top: 90px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.admin-sidebar .group-label {
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: .72rem;
+  color: var(--ink-soft);
+  padding: 14px 12px 6px;
+}
+.admin-sidebar a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: .92rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .12s ease, color .12s ease;
+}
+.admin-sidebar a:hover { background: #f1f5f9; color: var(--ink); }
+.admin-sidebar a.is-active { background: var(--brand-soft); color: var(--brand-dark); font-weight: 600; }
+.admin-sidebar .icon {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+
+.admin-main { min-width: 0; /* prevents grid blowout from wide tables */ }
+
+.admin-page-header {
+  display: flex; justify-content: space-between; align-items: end;
+  flex-wrap: wrap; gap: 16px;
+  margin-bottom: 22px;
+}
+.admin-page-header h1 {
+  font-weight: 700; letter-spacing: -0.01em; margin: 0;
+  font-size: 1.8rem;
+}
+.admin-page-header .lede {
+  color: var(--ink-soft); margin: 4px 0 0; font-size: .95rem;
+}
+
+/* ---------- Stat cards ---------- */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.admin-stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex; align-items: center; gap: 14px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.admin-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.admin-stat .stat-icon {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.admin-stat .stat-icon.tone-brand { background: linear-gradient(135deg, var(--brand) 0%, #14b8a6 100%); }
+.admin-stat .stat-icon.tone-blue { background: linear-gradient(135deg, #0369a1 0%, #38bdf8 100%); }
+.admin-stat .stat-icon.tone-amber { background: linear-gradient(135deg, #b45309 0%, #fbbf24 100%); }
+.admin-stat .stat-icon.tone-violet { background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%); }
+.admin-stat .stat-icon.tone-rose { background: linear-gradient(135deg, #be185d 0%, #f472b6 100%); }
+.admin-stat .stat-label { color: var(--ink-soft); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+.admin-stat .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--ink); }
+
+/* ---------- Section panels ---------- */
+.admin-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.admin-panel .panel-head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.admin-panel .panel-head h3 {
+  margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em;
+}
+.admin-panel .panel-head .muted { color: var(--ink-soft); font-size: .9rem; }
+.admin-panel .panel-body { padding: 0; }
+.admin-panel .panel-body.padded { padding: 20px; }
+
+/* ---------- Polished tables ---------- */
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: .94rem;
+}
+.admin-table thead th {
+  background: #f8fafc;
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: .82rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-bottom: 1px solid var(--line);
+}
+.admin-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover td { background: #fbfcfd; }
+.admin-table .num { font-variant-numeric: tabular-nums; }
+.admin-table .actions { text-align: right; }
+
+.admin-table select,
+.admin-table input[type=number],
+.admin-table input[type=text] {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: .9rem;
+  background: var(--surface);
+}
+.admin-table select:focus,
+.admin-table input:focus {
+  outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.tag {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+}
+.tag-admin    { background: #fee2e2; color: #991b1b; }
+.tag-manager  { background: #fef3c7; color: #92400e; }
+.tag-vendor   { background: #dbeafe; color: #1e40af; }
+.tag-customer { background: #f1f5f9; color: var(--ink-soft); }
+.tag-active   { background: #d1fae5; color: #065f46; }
+.tag-inactive { background: #f1f5f9; color: var(--ink-soft); }
+
+/* ---------- Vendor avatar/thumb in table ---------- */
+.row-thumb {
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.row-thumb .thumb {
+  width: 44px; height: 44px; border-radius: 10px; overflow: hidden;
+  background: #f1f5f9; flex-shrink: 0;
+}
+.row-thumb .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.row-thumb .meta strong { display: block; line-height: 1.2; }
+.row-thumb .meta .sub { color: var(--ink-soft); font-size: .82rem; }
+
+/* ---------- Modal polish (over Bootstrap) ---------- */
+.modal-content { border: none; border-radius: var(--radius); overflow: hidden; }
+.modal-header { border-bottom: 1px solid var(--line); padding: 18px 22px; }
+.modal-header h5 { font-weight: 700; letter-spacing: -.01em; margin: 0; font-size: 1.1rem; }
+.modal-body { padding: 22px; }
+.modal-footer { border-top: 1px solid var(--line); padding: 14px 22px; }
+.modal-body label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 6px; color: var(--ink); text-transform: uppercase; letter-spacing: .04em; }
+.modal-body .form-control,
+.modal-body .form-select { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: .95rem; }
+.modal-body .form-control:focus,
+.modal-body .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); outline: none; }
+
+/* ---------- Vendor product stock controls ---------- */
+.variant-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+  font-size: .88rem;
+  color: var(--ink-soft);
+}
+.variant-row input { width: 70px; }
+.variant-row .name { color: var(--ink); }
 
 .badge-status {
   display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 500;

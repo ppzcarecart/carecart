@@ -1,36 +1,110 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
-<div class="container py-4">
-  <h1>Vendor dashboard</h1>
-  <p class="text-muted">Welcome, <%= user.name %>.</p>
-  <div class="d-flex gap-2 mb-3">
-    <a class="btn btn-outline-dark" href="/vendor/products">Manage my products</a>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/vendor-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Vendor dashboard</h1>
+          <p class="lede">Welcome, <%= user.vendorStoreName || user.name %>. Track sales, stock, and orders for your products.</p>
+        </div>
+        <a href="/vendor/products" class="cc-btn cc-btn-primary">Manage products</a>
+      </div>
+
+      <div class="admin-stats">
+        <div class="admin-stat">
+          <div class="stat-icon tone-brand">$</div>
+          <div>
+            <div class="stat-label">Revenue</div>
+            <div class="stat-value">$<%= (stats.totalRevenueCents/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-blue">⌘</div>
+          <div>
+            <div class="stat-label">Orders</div>
+            <div class="stat-value"><%= stats.orderCount %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-violet">▣</div>
+          <div>
+            <div class="stat-label">Units sold</div>
+            <div class="stat-value"><%= stats.totalUnits %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-rose">▣</div>
+          <div>
+            <div class="stat-label">Active products</div>
+            <div class="stat-value"><%= stats.productCount %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-amber">⚠</div>
+          <div>
+            <div class="stat-label">Low stock</div>
+            <div class="stat-value"><%= stats.lowStockCount %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Sales by product</h3>
+          <span class="muted">From paid &amp; fulfilled orders</span>
+        </div>
+        <div class="panel-body">
+          <% if (!sales.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No sales yet — share your store to get started.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead>
+                <tr><th>Product</th><th class="num">Units sold</th><th class="num">Revenue</th><th class="num">Points collected</th></tr>
+              </thead>
+              <tbody>
+                <% sales.forEach(s => { %>
+                  <tr>
+                    <td><strong><%= s.productName %></strong></td>
+                    <td class="num"><%= s.unitsSold %></td>
+                    <td class="num">$<%= (s.revenueCents/100).toFixed(2) %></td>
+                    <td class="num"><%= s.pointsCollected || '–' %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Recent orders containing your items</h3>
+        </div>
+        <div class="panel-body">
+          <% if (!orders.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No orders yet.</div>
+          <% } else { %>
+            <table class="admin-table">
+              <thead><tr><th>Number</th><th>Status</th><th class="num">Total</th><th>Created</th></tr></thead>
+              <tbody>
+              <% orders.slice(0, 12).forEach(o => { %>
+                <tr>
+                  <td><strong><%= o.number %></strong></td>
+                  <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
+                  <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
+                  <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+                </tr>
+              <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
   </div>
-
-  <h3>Sales summary</h3>
-  <table class="table">
-    <thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th><th>Points collected</th></tr></thead>
-    <tbody>
-    <% if (!sales.length) { %><tr><td colspan="4" class="text-muted">No sales yet.</td></tr><% } %>
-    <% sales.forEach(s => { %>
-      <tr>
-        <td><%= s.productName %></td>
-        <td><%= s.unitsSold %></td>
-        <td>$<%= (s.revenueCents/100).toFixed(2) %></td>
-        <td><%= s.pointsCollected %></td>
-      </tr>
-    <% }); %>
-    </tbody>
-  </table>
-
-  <h3 class="mt-4">My orders</h3>
-  <table class="table">
-    <thead><tr><th>Number</th><th>Status</th><th>Created</th></tr></thead>
-    <tbody>
-    <% orders.forEach(o => { %>
-      <tr><td><%= o.number %></td><td><%= o.status %></td><td><%= new Date(o.createdAt).toLocaleString() %></td></tr>
-    <% }); %>
-    </tbody>
-  </table>
 </div>
 <%- include('../partials/foot') %>
