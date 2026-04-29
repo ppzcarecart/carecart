@@ -311,6 +311,51 @@ window.ppz = (function () {
     }
   }
 
+  // Sync the full profile (balance + lifetime + team + name + contact)
+  // from the partner app and update the displayed values in place.
+  async function syncProfile(btn) {
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    try {
+      const r = await api('/api/points/sync-profile', { method: 'POST' });
+      if (r.notLinked) {
+        alert('This account is not linked to the partner app.');
+        return;
+      }
+      if (r.notConfigured) {
+        alert('Partner API is not configured on this deploy.');
+        return;
+      }
+      const u = r.user || {};
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el && v != null) el.textContent = String(v);
+      };
+      set('pf-name', u.name);
+      set('pf-contact', u.contact || '—');
+      set('pf-team', u.team ?? '—');
+      if (u.ppzCurrency != null) {
+        set('pf-ppzCurrency', Number(u.ppzCurrency).toLocaleString());
+      }
+      if (u.lifetimePpzCurrency != null) {
+        set('pf-lifetime', Number(u.lifetimePpzCurrency).toLocaleString());
+      }
+      // Reflect new balance in the navbar pill, if visible.
+      const navPill = document.querySelector('.cc-points-pill .cc-points-value');
+      if (navPill && u.ppzCurrency != null) {
+        navPill.textContent = Number(u.ppzCurrency).toLocaleString();
+      }
+      btn.textContent = 'Synced ✓';
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1400);
+      return;
+    } catch (e) {
+      alert('Sync failed: ' + e.message);
+    }
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -326,6 +371,7 @@ window.ppz = (function () {
   return {
     imgFallback,
     refreshPoints,
+    syncProfile,
     bindImageUpload,
     addVariantRow,
     saveVariantRow,

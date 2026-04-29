@@ -1,0 +1,113 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<div class="container">
+
+  <div class="profile-header">
+    <%
+    const initial = (profile.name || 'U').trim().charAt(0).toUpperCase();
+    let hash = 0;
+    for (let i = 0; i < (profile.name || '').length; i++) hash = (hash * 31 + (profile.name || '').charCodeAt(i)) >>> 0;
+    const palettes = [['#0f766e','#14b8a6'],['#0369a1','#0ea5e9'],['#7c3aed','#a78bfa'],['#be185d','#ec4899'],['#b45309','#f59e0b'],['#15803d','#22c55e']];
+    const palette = palettes[hash % palettes.length];
+    %>
+    <div class="profile-avatar" style="background: linear-gradient(135deg, <%= palette[0] %> 0%, <%= palette[1] %> 100%);">
+      <%= initial %>
+    </div>
+    <div>
+      <h1 style="margin:0; font-weight:700; letter-spacing:-0.01em;"><%= profile.name %></h1>
+      <p class="text-muted mb-0"><%= profile.email %> · <%= profile.role %></p>
+      <p class="text-muted mb-0" style="font-size:.85rem;">Member since <%= new Date(profile.createdAt).toLocaleDateString() %></p>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+
+    <div class="admin-panel">
+      <div class="panel-head"><h3>Personal info</h3></div>
+      <div class="panel-body padded">
+        <dl class="profile-dl">
+          <dt>Full name</dt>
+          <dd id="pf-name"><%= profile.name %></dd>
+          <dt>Email</dt>
+          <dd><%= profile.email %></dd>
+          <dt>Contact</dt>
+          <dd id="pf-contact"><%= profile.contact || '—' %></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="admin-panel">
+      <div class="panel-head"><h3>Address</h3></div>
+      <div class="panel-body padded">
+        <% if (profile.addresses && profile.addresses.length) { %>
+          <% profile.addresses.forEach(a => { %>
+            <div class="profile-address">
+              <% if (a.isDefault) { %><span class="tag tag-active mb-2">Default</span><% } %>
+              <div><%= a.line1 %></div>
+              <% if (a.line2) { %><div><%= a.line2 %></div><% } %>
+              <% if (a.city || a.postalCode) { %>
+                <div class="text-muted"><%= [a.city, a.state, a.postalCode].filter(Boolean).join(' ') %></div>
+              <% } %>
+              <div class="text-muted"><%= a.country %></div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <p class="text-muted mb-0">No address on file.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (profile.role === 'customer') { %>
+      <div class="admin-panel profile-ppz">
+        <div class="panel-head">
+          <h3>PPZ Wallet</h3>
+          <% if (profile.ppzId) { %>
+            <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="ppz.syncProfile(this)">
+              Sync from partner app
+            </button>
+          <% } %>
+        </div>
+        <div class="panel-body padded">
+          <% if (!profile.ppzId) { %>
+            <p class="text-muted mb-0">This account isn't linked to the partner app yet. Sign in via the partner app's Shop button to link.</p>
+          <% } else { %>
+            <div class="ppz-stats">
+              <div class="ppz-stat">
+                <div class="ppz-stat-label">PPZ ID</div>
+                <div class="ppz-stat-value"><%= profile.ppzId %></div>
+              </div>
+              <div class="ppz-stat ppz-stat-primary">
+                <div class="ppz-stat-label">Current balance</div>
+                <div class="ppz-stat-value">
+                  <span id="pf-ppzCurrency"><%= Number(profile.ppzCurrency).toLocaleString() %></span>
+                  <span class="ppz-stat-unit">pts</span>
+                </div>
+              </div>
+              <div class="ppz-stat">
+                <div class="ppz-stat-label">Lifetime earned</div>
+                <div class="ppz-stat-value">
+                  <span id="pf-lifetime"><%= Number(profile.lifetimePpzCurrency).toLocaleString() %></span>
+                  <span class="ppz-stat-unit">pts</span>
+                </div>
+              </div>
+              <div class="ppz-stat">
+                <div class="ppz-stat-label">Team</div>
+                <div class="ppz-stat-value" id="pf-team"><%= profile.team ?? '—' %></div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="admin-panel">
+      <div class="panel-head"><h3>Activity</h3></div>
+      <div class="panel-body padded">
+        <p style="margin:0;">You've placed <strong><%= orderCount %></strong> order<%= orderCount === 1 ? '' : 's' %>.</p>
+        <a href="/orders" class="cc-btn cc-btn-outline mt-3" style="padding:8px 16px;">View order history</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+<%- include('partials/foot') %>

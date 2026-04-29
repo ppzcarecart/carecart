@@ -16,15 +16,13 @@
           <a href="/vendor" class="cc-pill cc-pill-outline">Vendor</a>
         <% } %>
         <% if (user.role === 'customer' && user.ppzCurrency != null) { %>
-          <button type="button" class="cc-points-pill" id="ppzBalancePill"
-            title="Refresh from partner app"
-            onclick="ppz.refreshPoints(this)">
+          <a href="/profile" class="cc-points-pill" title="View profile">
             <span class="cc-points-icon">★</span>
             <span class="cc-points-value"><%= Number(user.ppzCurrency).toLocaleString() %></span>
             <span class="cc-points-label">pts</span>
-          </button>
+          </a>
         <% } %>
-        <span class="cc-user d-none d-md-inline ms-2"><%= user.name %></span>
+        <a href="/profile" class="cc-user d-none d-md-inline ms-2 text-decoration-none"><%= user.name %></a>
         <button class="cc-pill" onclick="ppz.logout()">Logout</button>
       <% } else { %>
         <a href="/login" class="cc-pill">Sign in</a>

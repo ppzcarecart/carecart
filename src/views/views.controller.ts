@@ -116,6 +116,21 @@ export class ViewsController {
     return { title: 'My orders', user, orders };
   }
 
+  @Get('profile')
+  @Render('profile')
+  async profile(@CurrentUser() user: any) {
+    // user from JWT is enriched by JwtStrategy, but we want eager-loaded
+    // addresses and the latest order count to render here.
+    const fullUser = await this.users.findById(user.id);
+    const orders = await this.orders.listForUser(user.id);
+    return {
+      title: 'My profile',
+      user,
+      profile: fullUser,
+      orderCount: orders.length,
+    };
+  }
+
   // ---- Admin / Manager dashboard ----
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin')

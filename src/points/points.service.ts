@@ -138,4 +138,25 @@ export class PointsService {
     user.lifetimePpzCurrency = res.newLifetimePPZCurrency;
     await this.userRepo.save(user);
   }
+
+  /**
+   * Re-fetch the full profile from the partner app and update any
+   * fields that may have changed (balance, lifetime, team, contact,
+   * name). Returns the freshly-saved user plus the raw remote payload.
+   */
+  async syncProfile(userId: string) {
+    const user = await this.users.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.ppzId) return { user, notLinked: true as const };
+    if (!this.client.isConfigured()) return { user, notConfigured: true as const };
+
+    const remote = await this.client.getUser(user.ppzId);
+    user.ppzCurrency = remote.ppzcurrency;
+    user.lifetimePpzCurrency = remote.lifetimeppzcurrency;
+    user.team = remote.team;
+    if (remote.contact) user.contact = remote.contact;
+    if (remote.fullname) user.name = remote.fullname;
+    await this.userRepo.save(user);
+    return { user, remote };
+  }
 }
