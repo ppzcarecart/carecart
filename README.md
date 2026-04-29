@@ -100,14 +100,63 @@ POST   /api/uploads                        (multipart; admin/manager/vendor)
 GET    /uploads/:filename                  (public)
 ```
 
-## Wiring the points API later
+## PPZ Ecom API integration
 
-Edit [`src/points/points.client.ts`](src/points/points.client.ts) to match the integrator's endpoints. The three methods to implement are `getBalance`, `redeem`, and `reverse`. Then:
+Carecart talks to the partner app's PPZ Ecom API for two things:
 
-1. Set `POINTS_API_BASE_URL` and `POINTS_API_KEY` in Railway.
-2. Set each customer's `pointsAccountId` (via `PATCH /api/users/:id`) so we can map carecart user → external account.
+1. **H5 single sign-on handoff** — partner app deep-links a user into the
+   storefront and we look them up + sign them in.
+2. **Points redemption** — when a customer pays with points, we deduct the
+   amount from their PPZ balance.
 
-Until configured, points purchases still complete; the local `points_transactions` table records each redemption as `pending` so the integrator can reconcile.
+### H5 handoff URL
+
+The partner app's "shop" button should link to:
+
+```
+https://<carecart-host>/h5/login?ppzid=<PPZID>&email=<EMAIL>
+```
+
+Optional `&redirect=/p/some-product-slug` deep-links to a specific page
+(must be a same-origin path, validated server-side).
+
+What carecart does on hit:
+
+1. Calls `GET ecomgetuser?ppzid=<PPZID>` server-side with the `x-api-key` header.
+2. Verifies the supplied email matches the API record (case-insensitive).
+3. Upserts a local customer row — creates one if new (random password they
+   never need), refreshes `ppzId`, `ppzCurrency`, `lifetimePpzCurrency`,
+   `team`, `contact` if returning.
+4. Issues an HTTP-only JWT cookie and `302`s to the requested page.
+
+Errors redirect to `/login?error=<code>` so the front-end can render a
+friendly message:
+
+| code                  | meaning                                |
+| --------------------- | -------------------------------------- |
+| `ppz_not_configured`  | `PPZ_API_KEY` not set on the deploy   |
+| `ppzid_not_found`     | 404 from the partner API              |
+| `ppz_auth`            | 401 from the partner API              |
+| `email_mismatch`      | email in URL ≠ email on PPZ record    |
+| `account_disabled`    | local account marked inactive         |
+
+### Points redemption flow
+
+When `PaymentsService.start` runs for an order with `pointsTotal > 0`,
+`PointsService.redeem` `PATCH`es `ecomupdateppz` with `operation: deduct`.
+On payment failure (Stripe webhook), `reverse()` `PATCH`es with
+`operation: add`. Every call is recorded in `points_transactions` so
+it's auditable even if the partner API is offline.
+
+### Env vars
+
+```
+PPZ_API_KEY=...                                              # required
+PPZ_GET_USER_URL=https://ecomgetuser-grp3nuwoda-uc.a.run.app # default shown
+PPZ_UPDATE_PPZ_URL=https://ecomupdateppz-grp3nuwoda-uc.a.run.app
+```
+
+Keep `PPZ_API_KEY` server-side only — carecart never sends it to the browser.
 
 ## Wiring the second payment gateway later
 
@@ -123,7 +172,7 @@ Implement [`src/payments/providers/manual.provider.ts`](src/payments/providers/m
    - `DATABASE_SSL=true`
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CURRENCY=sgd`
    - `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD`
-   - `POINTS_API_BASE_URL`, `POINTS_API_KEY` (when ready)
+   - `PPZ_API_KEY` (when partner app is ready to integrate)
 5. Deploy. The Nixpacks build runs `npm ci && npm run build`; the start command is `node dist/main.js`.
 6. In Stripe, register a webhook endpoint pointing to `https://<your-app>.up.railway.app/api/payments/webhook/stripe` and copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 

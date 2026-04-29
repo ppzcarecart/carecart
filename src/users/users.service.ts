@@ -48,6 +48,10 @@ export class UsersService {
     return this.repo.findOne({ where: { email: email.toLowerCase() } });
   }
 
+  findByPpzId(ppzId: string) {
+    return this.repo.findOne({ where: { ppzId } });
+  }
+
   list(filter?: { role?: Role; active?: boolean }) {
     return this.repo.find({
       where: filter ?? {},

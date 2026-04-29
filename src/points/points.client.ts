@@ -1,82 +1,155 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
 /**
- * Thin client for the external Points system. The integrator will provide
- * the base URL, auth scheme, and exact endpoints later — fill them in here.
+ * Client for the PPZ Ecom API. Two endpoints:
+ *   GET  ecomgetuser?ppzid=X      → user profile + ppzcurrency
+ *   PATCH ecomupdateppz           → operation: 'add' | 'deduct'
  *
- * All methods are designed to be safe to call with no config: they return
- * a "not_configured" placeholder rather than throwing, so the rest of the
- * order flow keeps working before the integration is wired up.
+ * Authentication is via x-api-key header. The key MUST stay server-side.
+ *
+ * All methods are safe to call when the key is missing — they return
+ * `{ notConfigured: true }` so the rest of the order flow keeps working
+ * before the integration is wired up on Railway.
  */
+
+export interface PpzUser {
+  ppzid: string;
+  fullname: string;
+  email: string;
+  contact: string;
+  address: string;
+  ppzcurrency: number;
+  lifetimeppzcurrency: number;
+  team: number;
+}
+
+export interface PpzUpdateResult {
+  success: boolean;
+  ppzid: string;
+  newPPZCurrency: number;
+  newLifetimePPZCurrency: number;
+}
+
 @Injectable()
 export class PointsClient {
   private readonly logger = new Logger(PointsClient.name);
-  private http?: AxiosInstance;
+  private apiKey?: string;
+  private getUserUrl: string;
+  private updatePpzUrl: string;
+  private http: AxiosInstance;
 
   constructor(private config: ConfigService) {
-    const baseURL = this.config.get<string>('POINTS_API_BASE_URL');
-    const apiKey = this.config.get<string>('POINTS_API_KEY');
-    if (baseURL) {
-      this.http = axios.create({
-        baseURL,
-        timeout: 10_000,
-        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-      });
-    }
+    // Accept either PPZ_* (canonical) or POINTS_* (legacy) for back-compat.
+    this.apiKey =
+      this.config.get<string>('PPZ_API_KEY') ||
+      this.config.get<string>('POINTS_API_KEY');
+
+    this.getUserUrl =
+      this.config.get<string>('PPZ_GET_USER_URL') ||
+      'https://ecomgetuser-grp3nuwoda-uc.a.run.app';
+
+    this.updatePpzUrl =
+      this.config.get<string>('PPZ_UPDATE_PPZ_URL') ||
+      'https://ecomupdateppz-grp3nuwoda-uc.a.run.app';
+
+    this.http = axios.create({ timeout: 10_000 });
   }
 
   isConfigured() {
-    return !!this.http;
+    return !!this.apiKey;
   }
 
-  /**
-   * Look up balance for a customer. Replace path/payload to match the integrator's API.
-   */
-  async getBalance(accountId: string): Promise<{ balance: number } | { notConfigured: true }> {
-    if (!this.http) return { notConfigured: true };
+  private headers() {
+    return {
+      'x-api-key': this.apiKey!,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  /** Look up a PPZ user by their external id. */
+  async getUser(ppzid: string): Promise<PpzUser> {
+    if (!this.apiKey) throw new Error('PPZ_API_KEY is not configured');
     try {
-      const res = await this.http.get(`/accounts/${encodeURIComponent(accountId)}/balance`);
-      return { balance: Number(res.data?.balance ?? 0) };
-    } catch (e: any) {
-      this.logger.warn(`Points getBalance failed: ${e.message}`);
-      throw e;
+      const res = await this.http.get<PpzUser>(this.getUserUrl, {
+        params: { ppzid },
+        headers: this.headers(),
+      });
+      return res.data;
+    } catch (e) {
+      throw this.wrap(e);
     }
   }
 
-  /**
-   * Redeem points. Idempotency is keyed by orderId. Replace endpoint when ready.
-   */
-  async redeem(input: {
-    accountId: string;
-    amount: number;
-    orderId: string;
-    idempotencyKey: string;
-  }): Promise<{ ref: string } | { notConfigured: true }> {
-    if (!this.http) return { notConfigured: true };
-    const res = await this.http.post(
-      `/accounts/${encodeURIComponent(input.accountId)}/redeem`,
-      { amount: input.amount, orderId: input.orderId },
-      { headers: { 'Idempotency-Key': input.idempotencyKey } },
-    );
-    return { ref: res.data?.ref || res.data?.id || '' };
+  /** Convenience used by /api/points/balance. */
+  async getBalance(
+    ppzid: string,
+  ): Promise<{ balance: number; lifetime: number } | { notConfigured: true }> {
+    if (!this.apiKey) return { notConfigured: true };
+    const u = await this.getUser(ppzid);
+    return { balance: u.ppzcurrency, lifetime: u.lifetimeppzcurrency };
   }
 
-  /**
-   * Reverse a redemption (e.g. payment failed after redeem).
-   */
-  async reverse(input: {
-    accountId: string;
+  async deduct(input: {
+    ppzid: string;
     amount: number;
-    orderId: string;
-    originalRef?: string;
-  }): Promise<{ ref: string } | { notConfigured: true }> {
-    if (!this.http) return { notConfigured: true };
-    const res = await this.http.post(
-      `/accounts/${encodeURIComponent(input.accountId)}/reverse`,
-      { amount: input.amount, orderId: input.orderId, ref: input.originalRef },
-    );
-    return { ref: res.data?.ref || '' };
+    reason: string;
+  }): Promise<PpzUpdateResult | { notConfigured: true }> {
+    if (!this.apiKey) return { notConfigured: true };
+    try {
+      const res = await this.http.patch<PpzUpdateResult>(
+        this.updatePpzUrl,
+        {
+          ppzid: input.ppzid,
+          operation: 'deduct',
+          amount: input.amount,
+          reason: input.reason,
+        },
+        { headers: this.headers() },
+      );
+      return res.data;
+    } catch (e) {
+      throw this.wrap(e);
+    }
+  }
+
+  async add(input: {
+    ppzid: string;
+    amount: number;
+    reason: string;
+  }): Promise<PpzUpdateResult | { notConfigured: true }> {
+    if (!this.apiKey) return { notConfigured: true };
+    try {
+      const res = await this.http.patch<PpzUpdateResult>(
+        this.updatePpzUrl,
+        {
+          ppzid: input.ppzid,
+          operation: 'add',
+          amount: input.amount,
+          reason: input.reason,
+        },
+        { headers: this.headers() },
+      );
+      return res.data;
+    } catch (e) {
+      throw this.wrap(e);
+    }
+  }
+
+  /** Surfaces 401 / 404 / 400 distinctly so callers can branch. */
+  private wrap(e: unknown): Error & { code?: number } {
+    const ax = e as AxiosError<any>;
+    const code = ax?.response?.status;
+    const msg =
+      (ax?.response?.data && (ax.response.data.message || ax.response.data.error)) ||
+      ax?.message ||
+      'PPZ API request failed';
+    const err = new Error(`PPZ API ${code ?? ''}: ${msg}`.trim()) as Error & {
+      code?: number;
+    };
+    err.code = code;
+    this.logger.warn(err.message);
+    return err;
   }
 }
