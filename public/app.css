@@ -562,3 +562,103 @@ a:hover { color: var(--brand-dark); }
   margin-bottom: 6px;
 }
 .image-upload-zone strong { color: var(--ink); font-size: 1rem; }
+
+/* ============================================================ */
+/* Mobile pass                                                  */
+/* ============================================================ */
+
+/* Wide tables shouldn't blow out the viewport — let the
+   containing panel scroll horizontally instead. */
+.admin-panel .panel-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Top navbar wraps cleanly on phones. */
+@media (max-width: 600px) {
+  .cc-nav { padding: 10px 0; }
+  .cc-nav .container { flex-wrap: wrap; row-gap: 8px; }
+  .cc-nav .cc-brand { font-size: 1.1rem; }
+  .cc-nav .cc-links { flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .cc-pill { padding: 6px 10px; font-size: 0.85rem; }
+  .cc-user { display: none !important; }
+}
+
+/* Sidebar should not be sticky once it stacks above the content. */
+@media (max-width: 900px) {
+  .admin-sidebar { position: static; }
+  .admin-layout { gap: 16px; }
+}
+
+/* Cart summary should flow inline on mobile, not stick at the top. */
+@media (max-width: 800px) {
+  .cc-summary { position: static; }
+}
+
+/* Section headings shouldn't push the muted helper off-screen. */
+@media (max-width: 600px) {
+  .cc-section-head { flex-wrap: wrap; gap: 4px 12px; }
+  .cc-section-head h2 { font-size: 1.2rem; }
+}
+
+/* Hero polish on phone. */
+@media (max-width: 600px) {
+  .cc-hero { padding: 32px 22px; border-radius: 18px; }
+  .cc-hero h1 { font-size: 1.6rem; }
+  .cc-hero p { font-size: 0.95rem; }
+}
+
+/* Product detail action buttons stack full-width on phones so
+   they're easy to tap. */
+@media (max-width: 480px) {
+  .cc-detail .cc-actions { flex-direction: column; }
+  .cc-detail .cc-actions .cc-btn { width: 100%; }
+  .cc-detail .cc-info h1 { font-size: 1.45rem; }
+  .cc-detail .cc-info .price-row .amount { font-size: 1.6rem; }
+}
+
+/* Cart row goes from 4-col grid to a stacked layout on tiny screens. */
+@media (max-width: 520px) {
+  .cc-cart-row {
+    grid-template-columns: 56px 1fr;
+    grid-template-areas:
+      "thumb meta"
+      "thumb qty"
+      "line  line";
+    column-gap: 12px;
+    row-gap: 6px;
+  }
+  .cc-cart-row .thumb { grid-area: thumb; width: 56px; height: 56px; }
+  .cc-cart-row .meta  { grid-area: meta; }
+  .cc-cart-row .qty   { grid-area: qty; }
+  .cc-cart-row .line  { grid-area: line; text-align: left; }
+}
+
+/* Image upload zone tighter on small screens. */
+@media (max-width: 480px) {
+  .image-upload-zone { padding: 22px 16px; }
+  .image-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+}
+
+/* Admin page header: wrap and let CTA buttons drop below the title. */
+@media (max-width: 600px) {
+  .admin-page-header { flex-direction: column; align-items: stretch; }
+  .admin-page-header h1 { font-size: 1.5rem; }
+  .admin-page-header .d-flex { flex-wrap: wrap; }
+}
+
+/* Stat cards: tighter on phones so we get 2 per row. */
+@media (max-width: 480px) {
+  .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .admin-stat { padding: 14px; gap: 10px; }
+  .admin-stat .stat-icon { width: 36px; height: 36px; font-size: 0.95rem; }
+  .admin-stat .stat-value { font-size: 1.2rem; }
+}
+
+/* Modal padding reduces on phones. */
+@media (max-width: 480px) {
+  .modal-body { padding: 18px; }
+  .modal-header, .modal-footer { padding: 14px 18px; }
+}
+
+/* Login / register card hugs the viewport on phones. */
+@media (max-width: 480px) {
+  .cc-card-form { padding: 22px; margin: 24px auto; border-radius: 14px; }
+}
