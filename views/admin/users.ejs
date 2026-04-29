@@ -23,7 +23,17 @@
           <% } else { %>
             <table class="admin-table">
               <thead>
-                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th class="actions">Actions</th></tr>
+                <tr>
+                  <th>Name</th>
+                  <th>Email / Contact</th>
+                  <th>Role</th>
+                  <th>PPZ ID</th>
+                  <th class="num">Points</th>
+                  <th class="num">Lifetime</th>
+                  <th class="num">Team</th>
+                  <th>Status</th>
+                  <th class="actions">Actions</th>
+                </tr>
               </thead>
               <tbody>
                 <% users.forEach(u => { %>
@@ -32,7 +42,10 @@
                       <strong><%= u.name %></strong>
                       <% if (u.vendorStoreName) { %><div class="text-muted" style="font-size:.82rem"><%= u.vendorStoreName %></div><% } %>
                     </td>
-                    <td><%= u.email %></td>
+                    <td>
+                      <%= u.email %>
+                      <% if (u.contact) { %><div class="text-muted" style="font-size:.82rem"><%= u.contact %></div><% } %>
+                    </td>
                     <td>
                       <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
                         <% ['admin','manager','vendor','customer'].forEach(r => { %>
@@ -40,6 +53,10 @@
                         <% }); %>
                       </select>
                     </td>
+                    <td><%= u.ppzId || '–' %></td>
+                    <td class="num"><%= u.role === 'customer' ? (u.ppzCurrency ?? 0).toLocaleString() : '–' %></td>
+                    <td class="num"><%= u.role === 'customer' ? (u.lifetimePpzCurrency ?? 0).toLocaleString() : '–' %></td>
+                    <td class="num"><%= u.team ?? '–' %></td>
                     <td><span class="tag <%= u.active ? 'tag-active' : 'tag-inactive' %>"><%= u.active ? 'active' : 'disabled' %></span></td>
                     <td class="actions">
                       <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;"
@@ -73,6 +90,14 @@
         <option value="admin">Admin</option>
       </select></div>
       <div class="mb-3"><label>Vendor store name (vendors only)</label><input class="form-control" name="vendorStoreName"></div>
+      <div class="row">
+        <div class="col-md-6 mb-3"><label>PPZ ID (optional)</label><input class="form-control" name="ppzId"></div>
+        <div class="col-md-6 mb-3"><label>Team (optional)</label><input class="form-control" type="number" name="team"></div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3"><label>PPZ currency (optional)</label><input class="form-control" type="number" min="0" name="ppzCurrency"></div>
+        <div class="col-md-6 mb-3"><label>Lifetime PPZ currency (optional)</label><input class="form-control" type="number" min="0" name="lifetimePpzCurrency"></div>
+      </div>
     </div>
     <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create user</button></div>
   </form>
@@ -83,6 +108,14 @@ document.getElementById('newUserForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(e.target);
   const body = Object.fromEntries(fd.entries());
+  // Coerce numeric fields so the DTO validators accept them.
+  for (const k of ['ppzCurrency', 'lifetimePpzCurrency', 'team']) {
+    if (body[k] === '' || body[k] == null) delete body[k];
+    else body[k] = parseInt(body[k], 10);
+  }
+  for (const k of ['ppzId', 'vendorStoreName', 'contact', 'address']) {
+    if (body[k] === '') delete body[k];
+  }
   const res = await fetch('/api/users', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (res.ok) location.reload();
   else alert((await res.json()).message);

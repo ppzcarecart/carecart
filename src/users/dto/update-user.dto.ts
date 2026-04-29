@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { Role } from '../../common/enums/role.enum';
 
 export class UpdateUserDto {
@@ -10,4 +10,10 @@ export class UpdateUserDto {
   @IsOptional() @IsString() vendorBio?: string;
   @IsOptional() @IsString() pointsAccountId?: string;
   @IsOptional() @IsString() @MinLength(6) password?: string;
+
+  // Customer fields synced from the external ppz/points system
+  @IsOptional() @IsString() ppzId?: string;
+  @IsOptional() @IsInt() @Min(0) ppzCurrency?: number;
+  @IsOptional() @IsInt() @Min(0) lifetimePpzCurrency?: number;
+  @IsOptional() @IsInt() team?: number;
 }

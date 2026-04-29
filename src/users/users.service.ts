@@ -27,6 +27,10 @@ export interface CreateUserInput {
     country?: string;
   } | string;
   vendorStoreName?: string;
+  ppzId?: string;
+  ppzCurrency?: number;
+  lifetimePpzCurrency?: number;
+  team?: number;
 }
 
 @Injectable()
@@ -60,6 +64,10 @@ export class UsersService {
       contact: input.contact,
       role: input.role ?? Role.CUSTOMER,
       vendorStoreName: input.vendorStoreName,
+      ppzId: input.ppzId,
+      ppzCurrency: input.ppzCurrency ?? 0,
+      lifetimePpzCurrency: input.lifetimePpzCurrency ?? 0,
+      team: input.team,
     });
 
     if (input.address) {
@@ -124,13 +132,26 @@ export class UsersService {
     let skipped = 0;
     const errors: { row: number; reason: string }[] = [];
 
+    // Accept either "fullname" or "name" for the name column, and the
+    // optional ppz columns (ppzid / ppzcurrency / lifetimeppzcurrency / team).
+    const intOrUndef = (v: any) => {
+      const s = (v ?? '').toString().trim();
+      if (s === '') return undefined;
+      const n = parseInt(s, 10);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
     for (let i = 0; i < records.length; i++) {
       const row = records[i];
       const email = (row.email || '').toString().toLowerCase().trim();
-      const name = (row.name || '').toString().trim();
+      const name = (row.fullname || row.name || '').toString().trim();
       const password = (row.password || '').toString();
       const contact = (row.contact || '').toString().trim() || undefined;
       const address = (row.address || '').toString().trim() || undefined;
+      const ppzId = (row.ppzid || '').toString().trim() || undefined;
+      const ppzCurrency = intOrUndef(row.ppzcurrency);
+      const lifetimePpzCurrency = intOrUndef(row.lifetimeppzcurrency);
+      const team = intOrUndef(row.team);
 
       if (!email || !name || !password) {
         errors.push({ row: i + 2, reason: 'name, email and password are required' });
@@ -149,6 +170,10 @@ export class UsersService {
           contact,
           role: Role.CUSTOMER,
           address,
+          ppzId,
+          ppzCurrency,
+          lifetimePpzCurrency,
+          team,
         });
         created++;
       } catch (e: any) {
