@@ -100,6 +100,27 @@ export class ProductsController {
     return this.products.removeVariant(id, variantId, { id: user.id, role: user.role });
   }
 
+  // Images — append (max 8) and remove individual product images
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/images')
+  addImage(
+    @Param('id') id: string,
+    @Body() body: { url: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.products.addImage(id, body?.url, { id: user.id, role: user.role });
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Delete(':id/images/:imageId')
+  removeImage(
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.products.removeImage(id, imageId, { id: user.id, role: user.role });
+  }
+
   // Featured (admin/manager only, max 8)
   @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id/featured')

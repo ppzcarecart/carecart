@@ -1,6 +1,8 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Query,
   Render,
@@ -233,6 +235,39 @@ export class ViewsController {
         lowStockCount: lowStock.length,
       },
       activePath: '/vendor',
+    };
+  }
+
+  // Shared edit page used from both /vendor/products/:id/edit and
+  // /admin/products/:id/edit. Vendors can only edit products they own.
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/products/:id/edit')
+  @Render('product-edit')
+  async vendorEditProduct(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.renderEditProduct(id, user, '/vendor/products');
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/products/:id/edit')
+  @Render('product-edit')
+  async adminEditProduct(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.renderEditProduct(id, user, '/admin/products');
+  }
+
+  private async renderEditProduct(id: string, user: any, returnTo: string) {
+    const product = await this.products.findById(id);
+    if (!product) throw new NotFoundException('Product not found');
+    if (user.role === Role.VENDOR && product.vendorId !== user.id) {
+      throw new ForbiddenException('You can only edit your own products');
+    }
+    const categories = await this.categories.list();
+    return {
+      title: 'Edit ' + product.name,
+      user,
+      product,
+      categories,
+      returnTo,
+      activePath: returnTo,
     };
   }
 

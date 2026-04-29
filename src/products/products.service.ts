@@ -207,6 +207,30 @@ export class ProductsService {
     return { ok: true };
   }
 
+  // Image management — append/remove individual images, capped at 8 per product
+  async addImage(productId: string, url: string, actor: ActorContext) {
+    if (!url) throw new BadRequestException('url is required');
+    const product = await this.findById(productId);
+    if (!product) throw new NotFoundException('Product not found');
+    this.assertCanEdit(product, actor);
+    const count = await this.images.count({ where: { productId } });
+    if (count >= 8) {
+      throw new BadRequestException('Maximum 8 images per product');
+    }
+    const img = this.images.create({ productId, url, position: count });
+    return this.images.save(img);
+  }
+
+  async removeImage(productId: string, imageId: string, actor: ActorContext) {
+    const product = await this.findById(productId);
+    if (!product) throw new NotFoundException('Product not found');
+    this.assertCanEdit(product, actor);
+    const img = await this.images.findOne({ where: { id: imageId, productId } });
+    if (!img) throw new NotFoundException('Image not found');
+    await this.images.remove(img);
+    return { ok: true };
+  }
+
   async updateStock(productId: string, variantId: string | undefined, stock: number, actor: ActorContext) {
     const product = await this.findById(productId);
     if (!product) throw new NotFoundException('Product not found');

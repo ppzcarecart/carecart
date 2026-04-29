@@ -1,0 +1,153 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <% if (user.role === 'vendor') { %>
+      <%- include('partials/vendor-sidebar', { activePath }) %>
+    <% } else { %>
+      <%- include('partials/admin-sidebar', { activePath }) %>
+    <% } %>
+    <main class="admin-main" data-product-id="<%= product.id %>">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Edit product</h1>
+          <p class="lede"><a href="<%= returnTo %>">← Back to list</a></p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/p/<%= product.slug %>" class="cc-btn cc-btn-outline" target="_blank">View on shop</a>
+          <button class="cc-btn cc-btn-primary" onclick="ppz.saveProduct()">Save changes</button>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head"><h3>Details</h3></div>
+        <div class="panel-body padded">
+          <form id="productForm" onsubmit="event.preventDefault(); ppz.saveProduct();">
+            <div class="row">
+              <div class="col-md-8 mb-3">
+                <label>Product name</label>
+                <input class="form-control" name="name" value="<%= product.name %>" required>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label>Active</label>
+                <select class="form-select" name="active">
+                  <option value="true"  <%= product.active ? 'selected' : '' %>>Active</option>
+                  <option value="false" <%= !product.active ? 'selected' : '' %>>Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label>Description</label>
+              <textarea class="form-control" name="description" rows="3"><%= product.description || '' %></textarea>
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label>Price (cents) <span class="text-danger">*</span></label>
+                <input type="number" min="0" class="form-control" name="priceCents" value="<%= product.priceCents %>" required>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label>Points price <span class="text-muted">(optional)</span></label>
+                <input type="number" min="0" class="form-control" name="pointsPrice" value="<%= product.pointsPrice ?? '' %>">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label>Stock</label>
+                <input type="number" min="0" class="form-control" name="stock" value="<%= product.stock %>">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label>Category</label>
+              <select class="form-select" name="categoryId">
+                <option value="">— None —</option>
+                <% categories.forEach(c => { %>
+                  <option value="<%= c.id %>" <%= product.categoryId === c.id ? 'selected' : '' %>><%= c.name %></option>
+                <% }); %>
+              </select>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Images</h3>
+          <span class="muted"><span id="imgCount"><%= (product.images || []).length %></span> / 8</span>
+        </div>
+        <div class="panel-body padded">
+          <div class="image-grid" id="imageGrid">
+            <% (product.images || []).forEach(img => { %>
+              <div class="image-tile" data-image-id="<%= img.id %>">
+                <img src="<%= img.url %>" alt="">
+                <button type="button" class="image-remove" title="Remove" onclick="ppz.removeProductImage('<%= img.id %>')">×</button>
+              </div>
+            <% }); %>
+          </div>
+
+          <label class="image-upload-zone" id="imageDropZone">
+            <input type="file" id="imageInput" accept="image/*" multiple hidden>
+            <span class="upload-icon">↥</span>
+            <strong>Click to upload</strong>
+            <span class="text-muted">or drop images here · PNG / JPG · up to 8 total</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Variants</h3>
+          <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="ppz.addVariantRow()">+ Add variant</button>
+        </div>
+        <div class="panel-body">
+          <% if (!product.variants || product.variants.length === 0) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;" id="noVariants">
+              No variants yet. Add one above (size, color, pack, etc.) to track separate stock or pricing.
+            </div>
+          <% } %>
+          <table class="admin-table" id="variantTable" <%= (!product.variants || product.variants.length === 0) ? 'hidden' : '' %>>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>SKU</th>
+                <th class="num">Price (cents)</th>
+                <th class="num">Points</th>
+                <th class="num">Stock</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="variantBody">
+              <% (product.variants || []).forEach(v => { %>
+                <tr data-variant-id="<%= v.id %>">
+                  <td><input type="text" name="name" value="<%= v.name %>" placeholder="Size: M / Color: Black"></td>
+                  <td><input type="text" name="sku" value="<%= v.sku || '' %>" placeholder="Optional SKU"></td>
+                  <td class="num"><input type="number" min="0" name="priceCentsOverride" value="<%= v.priceCentsOverride ?? '' %>" placeholder="—"></td>
+                  <td class="num"><input type="number" min="0" name="pointsPriceOverride" value="<%= v.pointsPriceOverride ?? '' %>" placeholder="—"></td>
+                  <td class="num"><input type="number" min="0" name="stock" value="<%= v.stock %>"></td>
+                  <td class="actions">
+                    <button class="cc-btn cc-btn-outline" style="padding:4px 10px; font-size:.78rem;" onclick="ppz.saveVariantRow(this)">Save</button>
+                    <button class="cc-btn cc-btn-ghost" style="padding:4px 10px; font-size:.78rem;" onclick="ppz.deleteVariantRow(this)">Delete</button>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="cc-btn cc-btn-ghost text-danger" onclick="ppz.deleteFromEdit('<%= returnTo %>')">Delete product</button>
+        <button class="cc-btn cc-btn-primary" onclick="ppz.saveProduct()">Save changes</button>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  ppz._editPage = {
+    productId: '<%= product.id %>',
+    returnTo: '<%= returnTo %>',
+  };
+  ppz.bindImageUpload();
+</script>
+
+<%- include('partials/foot') %>

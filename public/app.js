@@ -15,6 +15,213 @@ window.ppz = (function () {
     return res.json();
   }
 
+  // ---- Edit-page helpers (image upload + variant CRUD + save) ----
+  // These read state from `ppz._editPage` which is set inline by the
+  // product-edit.ejs page just before invoking ppz.bindImageUpload().
+
+  async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/uploads', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+    });
+    if (!res.ok) {
+      let msg = res.statusText;
+      try { msg = (await res.json()).message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function uploadAndAttachOne(file) {
+    const productId = ppz._editPage.productId;
+    const { url } = await uploadFile(file);
+    return api('/api/products/' + productId + '/images', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  function appendImageTile(image) {
+    const grid = document.getElementById('imageGrid');
+    if (!grid) return;
+    const tile = document.createElement('div');
+    tile.className = 'image-tile';
+    tile.dataset.imageId = image.id;
+    tile.innerHTML = `
+      <img src="${image.url}" alt="">
+      <button type="button" class="image-remove" title="Remove">×</button>
+    `;
+    tile.querySelector('button').addEventListener('click', () => removeProductImage(image.id));
+    grid.appendChild(tile);
+    updateImgCount(+1);
+  }
+
+  function updateImgCount(delta) {
+    const el = document.getElementById('imgCount');
+    if (!el) return;
+    el.textContent = Math.max(0, parseInt(el.textContent || '0', 10) + delta);
+  }
+
+  async function removeProductImage(imageId) {
+    if (!confirm('Remove this image?')) return;
+    const productId = ppz._editPage.productId;
+    try {
+      await api(`/api/products/${productId}/images/${imageId}`, { method: 'DELETE' });
+      const tile = document.querySelector(`.image-tile[data-image-id="${imageId}"]`);
+      if (tile) tile.remove();
+      updateImgCount(-1);
+    } catch (e) { alert(e.message); }
+  }
+
+  async function handleFiles(fileList) {
+    const remaining = 8 - parseInt(document.getElementById('imgCount').textContent || '0', 10);
+    if (remaining <= 0) {
+      alert('Maximum 8 images per product reached.');
+      return;
+    }
+    const files = Array.from(fileList).slice(0, remaining);
+    if (files.length < fileList.length) {
+      alert(`Only ${remaining} more image(s) can be added.`);
+    }
+    for (const f of files) {
+      try {
+        const img = await uploadAndAttachOne(f);
+        appendImageTile(img);
+      } catch (e) { alert(`Upload failed for ${f.name}: ${e.message}`); }
+    }
+  }
+
+  function bindImageUpload() {
+    const input = document.getElementById('imageInput');
+    const zone = document.getElementById('imageDropZone');
+    if (!input || !zone) return;
+    input.addEventListener('change', () => {
+      if (input.files && input.files.length) handleFiles(input.files);
+      input.value = '';
+    });
+    ['dragover','dragenter'].forEach((ev) => {
+      zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('dragging'); });
+    });
+    ['dragleave','drop'].forEach((ev) => {
+      zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('dragging'); });
+    });
+    zone.addEventListener('drop', (e) => {
+      if (e.dataTransfer && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+  }
+
+  // Variants
+  function addVariantRow() {
+    const body = document.getElementById('variantBody');
+    const empty = document.getElementById('noVariants');
+    const table = document.getElementById('variantTable');
+    if (empty) empty.hidden = true;
+    if (table) table.hidden = false;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" name="name" placeholder="Size: M / Color: Black"></td>
+      <td><input type="text" name="sku" placeholder="Optional SKU"></td>
+      <td class="num"><input type="number" min="0" name="priceCentsOverride" placeholder="—"></td>
+      <td class="num"><input type="number" min="0" name="pointsPriceOverride" placeholder="—"></td>
+      <td class="num"><input type="number" min="0" name="stock" value="0"></td>
+      <td class="actions">
+        <button class="cc-btn cc-btn-outline" style="padding:4px 10px; font-size:.78rem;" type="button">Save</button>
+        <button class="cc-btn cc-btn-ghost" style="padding:4px 10px; font-size:.78rem;" type="button">Delete</button>
+      </td>
+    `;
+    const [saveBtn, delBtn] = tr.querySelectorAll('.actions button');
+    saveBtn.addEventListener('click', () => saveVariantRow(saveBtn));
+    delBtn.addEventListener('click', () => deleteVariantRow(delBtn));
+    body.appendChild(tr);
+  }
+
+  function readVariantRow(tr) {
+    const get = (n) => tr.querySelector(`input[name="${n}"]`).value.trim();
+    const num = (v) => v === '' ? undefined : parseInt(v, 10);
+    return {
+      id: tr.dataset.variantId || undefined,
+      name: get('name'),
+      sku: get('sku') || undefined,
+      priceCentsOverride: num(get('priceCentsOverride')),
+      pointsPriceOverride: num(get('pointsPriceOverride')),
+      stock: num(get('stock')) ?? 0,
+    };
+  }
+
+  async function saveVariantRow(btn) {
+    const tr = btn.closest('tr');
+    const dto = readVariantRow(tr);
+    if (!dto.name) { alert('Variant name is required'); return; }
+    const productId = ppz._editPage.productId;
+    try {
+      const saved = await api(`/api/products/${productId}/variants`, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      });
+      tr.dataset.variantId = saved.id;
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteVariantRow(btn) {
+    const tr = btn.closest('tr');
+    const id = tr.dataset.variantId;
+    const productId = ppz._editPage.productId;
+    if (id) {
+      if (!confirm('Delete this variant?')) return;
+      try {
+        await api(`/api/products/${productId}/variants/${id}`, { method: 'DELETE' });
+      } catch (e) { alert(e.message); return; }
+    }
+    tr.remove();
+    if (!document.querySelectorAll('#variantBody tr').length) {
+      const empty = document.getElementById('noVariants');
+      const table = document.getElementById('variantTable');
+      if (empty) empty.hidden = false;
+      if (table) table.hidden = true;
+    }
+  }
+
+  async function saveProduct() {
+    const productId = ppz._editPage.productId;
+    const form = document.getElementById('productForm');
+    const fd = new FormData(form);
+    const num = (v) => v === '' || v == null ? undefined : parseInt(v, 10);
+    const body = {
+      name: fd.get('name'),
+      description: fd.get('description') || undefined,
+      priceCents: num(fd.get('priceCents')),
+      pointsPrice: num(fd.get('pointsPrice')),
+      stock: num(fd.get('stock')) ?? 0,
+      categoryId: fd.get('categoryId') || null,
+      active: fd.get('active') === 'true',
+    };
+    try {
+      await api('/api/products/' + productId, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      const status = document.createElement('div');
+      status.textContent = 'Saved ✓';
+      status.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--brand);color:#fff;padding:10px 18px;border-radius:10px;z-index:100;box-shadow:var(--shadow-md);';
+      document.body.appendChild(status);
+      setTimeout(() => status.remove(), 1800);
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteFromEdit(returnTo) {
+    if (!confirm('Delete this product? This cannot be undone.')) return;
+    const productId = ppz._editPage.productId;
+    try {
+      await api('/api/products/' + productId, { method: 'DELETE' });
+      location.href = returnTo;
+    } catch (e) { alert(e.message); }
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -29,6 +236,13 @@ window.ppz = (function () {
 
   return {
     imgFallback,
+    bindImageUpload,
+    addVariantRow,
+    saveVariantRow,
+    deleteVariantRow,
+    saveProduct,
+    deleteFromEdit,
+    removeProductImage,
     async logout() {
       await api('/api/auth/logout', { method: 'POST' });
       location.href = '/';

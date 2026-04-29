@@ -508,3 +508,57 @@ a:hover { color: var(--brand-dark); }
 }
 .cc-switch input:checked + .cc-switch-slider { background: var(--brand); }
 .cc-switch input:checked + .cc-switch-slider::before { transform: translateX(18px); }
+
+/* ---------- Edit product page: image grid + upload zone ---------- */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.image-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #f1f5f9;
+}
+.image-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.image-remove {
+  position: absolute; top: 8px; right: 8px;
+  width: 28px; height: 28px;
+  border: none; border-radius: 50%;
+  background: rgba(15, 23, 42, 0.78); color: #fff;
+  font-size: 1.1rem; line-height: 1;
+  cursor: pointer;
+  opacity: 0; transition: opacity .15s ease;
+}
+.image-tile:hover .image-remove,
+.image-tile:focus-within .image-remove { opacity: 1; }
+
+.image-upload-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  padding: 32px 24px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+  color: var(--ink-soft);
+}
+.image-upload-zone:hover,
+.image-upload-zone.dragging {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+.image-upload-zone .upload-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--brand-soft); color: var(--brand-dark);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; font-weight: 700;
+  margin-bottom: 6px;
+}
+.image-upload-zone strong { color: var(--ink); font-size: 1rem; }

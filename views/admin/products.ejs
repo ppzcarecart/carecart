@@ -57,7 +57,10 @@
                       <span class="cc-switch-slider"></span>
                     </label>
                   </td>
-                  <td class="actions"><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
+                  <td class="actions">
+                    <a href="/admin/products/<%= p.id %>/edit" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;">Edit</a>
+                    <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button>
+                  </td>
                 </tr>
               <% }); %>
               </tbody>

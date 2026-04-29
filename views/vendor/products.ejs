@@ -25,7 +25,8 @@
                   <th class="num">Price</th>
                   <th class="num">Points</th>
                   <th class="num">Stock</th>
-                  <th>Variants</th>
+                  <th class="num">Variants</th>
+                  <th>Status</th>
                   <th class="actions">Actions</th>
                 </tr>
               </thead>
@@ -36,31 +37,20 @@
                     <div class="row-thumb">
                       <div class="thumb"><%- include('../partials/product-thumb', { product: p }) %></div>
                       <div class="meta">
-                        <strong><a href="/p/<%= p.slug %>" class="text-reset"><%= p.name %></a></strong>
+                        <strong><a href="/p/<%= p.slug %>" class="text-reset" target="_blank"><%= p.name %></a></strong>
                         <% if (p.category) { %><div class="sub"><%= p.category.name %></div><% } %>
                       </div>
                     </div>
                   </td>
                   <td class="num">$<%= (p.priceCents/100).toFixed(2) %></td>
                   <td class="num"><%= p.pointsPrice ?? '–' %></td>
-                  <td class="num">
-                    <input type="number" min="0" value="<%= p.stock %>"
-                      onchange="ppz.updateStock('<%= p.id %>', null, this.value)">
+                  <td class="num"><%= p.stock %></td>
+                  <td class="num"><%= (p.variants || []).length %></td>
+                  <td><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
+                  <td class="actions">
+                    <a href="/vendor/products/<%= p.id %>/edit" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;">Edit</a>
+                    <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button>
                   </td>
-                  <td>
-                    <% (p.variants || []).forEach(v => { %>
-                      <div class="variant-row">
-                        <span class="name"><%= v.name %></span>
-                        <input type="number" min="0" value="<%= v.stock %>"
-                          onchange="ppz.updateStock('<%= p.id %>','<%= v.id %>', this.value)">
-                        <button class="cc-btn cc-btn-ghost" style="padding:2px 8px; font-size:.78rem;"
-                          onclick="ppz.deleteVariant('<%= p.id %>','<%= v.id %>')">×</button>
-                      </div>
-                    <% }); %>
-                    <button class="cc-btn cc-btn-outline" style="padding:5px 12px; font-size:.8rem; margin-top:4px;"
-                      onclick="ppz.addVariantPrompt('<%= p.id %>')">+ Variant</button>
-                  </td>
-                  <td class="actions"><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button></td>
                 </tr>
               <% }); %>
               </tbody>
