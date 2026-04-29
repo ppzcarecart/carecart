@@ -35,6 +35,8 @@ window.ppz = (function () {
     return res.json();
   }
 
+  function isNewPage() { return !!ppz._newPage; }
+
   async function uploadAndAttachOne(file) {
     const productId = ppz._editPage.productId;
     const { url } = await uploadFile(file);
@@ -44,17 +46,29 @@ window.ppz = (function () {
     });
   }
 
+  // New-page mode: upload to /api/uploads, buffer the URL client-side,
+  // and attach it to the product on the final create call.
+  async function uploadAndStoreOne(file) {
+    const { url } = await uploadFile(file);
+    ppz._newPage.imageUrls.push(url);
+    return { url, _new: true };
+  }
+
   function appendImageTile(image) {
     const grid = document.getElementById('imageGrid');
     if (!grid) return;
     const tile = document.createElement('div');
     tile.className = 'image-tile';
-    tile.dataset.imageId = image.id;
+    if (image.id) tile.dataset.imageId = image.id;
+    if (image._new) tile.dataset.imageUrl = image.url;
     tile.innerHTML = `
       <img src="${image.url}" alt="">
       <button type="button" class="image-remove" title="Remove">×</button>
     `;
-    tile.querySelector('button').addEventListener('click', () => removeProductImage(image.id));
+    tile.querySelector('button').addEventListener('click', () => {
+      if (image._new) removeNewImage(image.url);
+      else removeProductImage(image.id);
+    });
     grid.appendChild(tile);
     updateImgCount(+1);
   }
@@ -76,6 +90,13 @@ window.ppz = (function () {
     } catch (e) { alert(e.message); }
   }
 
+  function removeNewImage(url) {
+    ppz._newPage.imageUrls = ppz._newPage.imageUrls.filter((u) => u !== url);
+    const tile = document.querySelector(`.image-tile[data-image-url="${CSS.escape(url)}"]`);
+    if (tile) tile.remove();
+    updateImgCount(-1);
+  }
+
   async function handleFiles(fileList) {
     const remaining = 8 - parseInt(document.getElementById('imgCount').textContent || '0', 10);
     if (remaining <= 0) {
@@ -88,7 +109,7 @@ window.ppz = (function () {
     }
     for (const f of files) {
       try {
-        const img = await uploadAndAttachOne(f);
+        const img = isNewPage() ? await uploadAndStoreOne(f) : await uploadAndAttachOne(f);
         appendImageTile(img);
       } catch (e) { alert(`Upload failed for ${f.name}: ${e.message}`); }
     }
@@ -155,6 +176,12 @@ window.ppz = (function () {
     const tr = btn.closest('tr');
     const dto = readVariantRow(tr);
     if (!dto.name) { alert('Variant name is required'); return; }
+    // New-page: variants are buffered in DOM only, persisted on createProduct().
+    if (isNewPage()) {
+      btn.textContent = 'Ready ✓';
+      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+      return;
+    }
     const productId = ppz._editPage.productId;
     try {
       const saved = await api(`/api/products/${productId}/variants`, {
@@ -170,9 +197,9 @@ window.ppz = (function () {
   async function deleteVariantRow(btn) {
     const tr = btn.closest('tr');
     const id = tr.dataset.variantId;
-    const productId = ppz._editPage.productId;
-    if (id) {
+    if (!isNewPage() && id) {
       if (!confirm('Delete this variant?')) return;
+      const productId = ppz._editPage.productId;
       try {
         await api(`/api/products/${productId}/variants/${id}`, { method: 'DELETE' });
       } catch (e) { alert(e.message); return; }
@@ -222,6 +249,50 @@ window.ppz = (function () {
     } catch (e) { alert(e.message); }
   }
 
+  // Submit the New product form: collect details, buffered images,
+  // and any added variant rows, then POST /api/products in one shot.
+  async function createProduct() {
+    const form = document.getElementById('productForm');
+    const fd = new FormData(form);
+    const num = (v) => v === '' || v == null ? undefined : parseInt(v, 10);
+
+    if (!fd.get('name')) { alert('Product name is required'); return; }
+    if (fd.get('priceCents') === '' || fd.get('priceCents') == null) {
+      alert('Price is required'); return;
+    }
+    if (ppz._newPage.isAdmin && !fd.get('vendorId')) {
+      alert('Please select a vendor'); return;
+    }
+
+    const variants = Array.from(document.querySelectorAll('#variantBody tr'))
+      .map((tr) => {
+        const dto = readVariantRow(tr);
+        delete dto.id;
+        return dto;
+      })
+      .filter((v) => v.name);
+
+    const body = {
+      name: fd.get('name'),
+      description: fd.get('description') || undefined,
+      priceCents: num(fd.get('priceCents')),
+      pointsPrice: num(fd.get('pointsPrice')),
+      stock: num(fd.get('stock')) ?? 0,
+      categoryId: fd.get('categoryId') || undefined,
+      active: fd.get('active') === 'true',
+      imageUrls: ppz._newPage.imageUrls.slice(),
+      variants,
+    };
+    if (ppz._newPage.isAdmin) {
+      body.vendorId = fd.get('vendorId') || undefined;
+    }
+
+    try {
+      await api('/api/products', { method: 'POST', body: JSON.stringify(body) });
+      location.href = ppz._newPage.returnTo;
+    } catch (e) { alert(e.message); }
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -241,8 +312,10 @@ window.ppz = (function () {
     saveVariantRow,
     deleteVariantRow,
     saveProduct,
+    createProduct,
     deleteFromEdit,
     removeProductImage,
+    removeNewImage,
     async logout() {
       await api('/api/auth/logout', { method: 'POST' });
       location.href = '/';

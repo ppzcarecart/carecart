@@ -238,7 +238,44 @@ export class ViewsController {
     };
   }
 
-  // Shared edit page used from both /vendor/products/:id/edit and
+  // ---- New product (full-page form, mirrors edit layout) ----
+  @Roles(Role.VENDOR)
+  @Get('vendor/products/new')
+  @Render('product-new')
+  async vendorNewProduct(@CurrentUser() user: any) {
+    const categories = await this.categories.list();
+    return {
+      title: 'New product',
+      user,
+      categories,
+      vendors: [],
+      isAdmin: false,
+      returnTo: '/vendor/products',
+      activePath: '/vendor/products',
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/products/new')
+  @Render('product-new')
+  async adminNewProduct(@CurrentUser() user: any) {
+    const [categories, vendors] = await Promise.all([
+      this.categories.list(),
+      this.users.list({ role: Role.VENDOR }),
+    ]);
+    return {
+      title: 'New product',
+      user,
+      categories,
+      vendors,
+      isAdmin: true,
+      returnTo: '/admin/products',
+      activePath: '/admin/products',
+    };
+  }
+
+  // ---- Edit product ----
+  // Shared template used from both /vendor/products/:id/edit and
   // /admin/products/:id/edit. Vendors can only edit products they own.
   @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
   @Get('vendor/products/:id/edit')

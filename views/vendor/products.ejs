@@ -10,7 +10,7 @@
           <h1>My products</h1>
           <p class="lede">Manage stock, variants, and add new items. Only you can edit products that you own.</p>
         </div>
-        <button class="cc-btn cc-btn-primary" data-bs-toggle="modal" data-bs-target="#newProduct">+ Add product</button>
+        <a href="/vendor/products/new" class="cc-btn cc-btn-primary">+ Add product</a>
       </div>
 
       <div class="admin-panel">
@@ -63,44 +63,4 @@
   </div>
 </div>
 
-<div class="modal fade" id="newProduct" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-  <form id="newProductForm">
-    <div class="modal-header"><h5>New product</h5></div>
-    <div class="modal-body">
-      <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
-      <div class="mb-3"><label>Description</label><textarea class="form-control" name="description"></textarea></div>
-      <div class="row">
-        <div class="col-md-6 mb-3"><label>Price (cents)</label><input type="number" min="0" class="form-control" name="priceCents" required></div>
-        <div class="col-md-6 mb-3"><label>Points price (optional)</label><input type="number" min="0" class="form-control" name="pointsPrice"></div>
-      </div>
-      <div class="mb-3"><label>Stock</label><input type="number" min="0" class="form-control" name="stock" value="0"></div>
-      <div class="mb-3"><label>Category</label>
-        <select class="form-select" name="categoryId"><option value="">— None —</option>
-          <% categories.forEach(c => { %><option value="<%= c.id %>"><%= c.name %></option><% }); %>
-        </select>
-      </div>
-      <div class="mb-3"><label>Image URLs (comma-separated)</label><input class="form-control" name="imageUrls" placeholder="https://..."></div>
-    </div>
-    <div class="modal-footer"><button class="cc-btn cc-btn-primary">Create product</button></div>
-  </form>
-</div></div></div>
-
-<script>
-document.getElementById('newProductForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const body = {
-    name: fd.get('name'),
-    description: fd.get('description') || undefined,
-    priceCents: parseInt(fd.get('priceCents'), 10),
-    pointsPrice: fd.get('pointsPrice') ? parseInt(fd.get('pointsPrice'), 10) : undefined,
-    stock: parseInt(fd.get('stock') || '0', 10),
-    categoryId: fd.get('categoryId') || undefined,
-    imageUrls: fd.get('imageUrls') ? String(fd.get('imageUrls')).split(',').map(s => s.trim()).filter(Boolean) : undefined,
-  };
-  const res = await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  if (res.ok) location.reload();
-  else alert((await res.json()).message);
-});
-</script>
 <%- include('../partials/foot') %>
