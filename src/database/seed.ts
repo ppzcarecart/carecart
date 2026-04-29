@@ -6,7 +6,7 @@ import { User } from '../users/entities/user.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Product } from '../products/entities/product.entity';
 import { Role } from '../common/enums/role.enum';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 async function main() {
   await dataSource.initialize();
