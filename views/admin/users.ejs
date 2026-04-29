@@ -1,0 +1,60 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h1>Users</h1>
+  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newUser">+ New user / vendor</button>
+  <a class="btn btn-outline-secondary mb-3" href="/admin/import">Bulk import customers</a>
+  <table class="table">
+    <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr>
+          <td><%= u.email %></td>
+          <td><%= u.name %></td>
+          <td>
+            <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
+              <% ['admin','manager','vendor','customer'].forEach(r => { %>
+                <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
+              <% }); %>
+            </select>
+          </td>
+          <td><%= u.active %></td>
+          <td><button class="btn btn-sm btn-outline-warning" onclick="ppz.toggleUser('<%= u.id %>', <%= !u.active %>)"><%= u.active ? 'Disable' : 'Enable' %></button></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="newUser" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <form id="newUserForm">
+    <div class="modal-header"><h5>New user</h5></div>
+    <div class="modal-body">
+      <div class="mb-2"><label>Name</label><input class="form-control" name="name" required></div>
+      <div class="mb-2"><label>Email</label><input type="email" class="form-control" name="email" required></div>
+      <div class="mb-2"><label>Password</label><input class="form-control" name="password" minlength="6" required></div>
+      <div class="mb-2"><label>Contact</label><input class="form-control" name="contact"></div>
+      <div class="mb-2"><label>Address</label><input class="form-control" name="address"></div>
+      <div class="mb-2"><label>Role</label><select class="form-select" name="role">
+        <option value="customer">customer</option>
+        <option value="vendor">vendor</option>
+        <option value="manager">manager</option>
+        <option value="admin">admin</option>
+      </select></div>
+      <div class="mb-2"><label>Vendor store name (vendors)</label><input class="form-control" name="vendorStoreName"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+  </form>
+</div></div></div>
+
+<script>
+document.getElementById('newUserForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (res.ok) location.reload();
+  else alert((await res.json()).message);
+});
+</script>
+<%- include('../partials/foot') %>

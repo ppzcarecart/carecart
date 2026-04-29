@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<%- include('partials/nav', { user: null }) %>
+<div class="container py-5" style="max-width: 480px;">
+  <h2>Sign in</h2>
+  <form id="loginForm">
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" name="email" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-control" name="password" required>
+    </div>
+    <button class="btn btn-primary w-100">Sign in</button>
+    <div id="err" class="text-danger mt-3"></div>
+  </form>
+  <p class="mt-3"><a href="/register">Create an account</a></p>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
+  });
+  if (res.ok) location.href = '/';
+  else document.getElementById('err').innerText = (await res.json()).message || 'Login failed';
+});
+</script>
+<%- include('partials/foot') %>

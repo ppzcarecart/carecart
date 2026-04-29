@@ -1,0 +1,19 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h1>My orders</h1>
+  <table class="table">
+    <thead><tr><th>Number</th><th>Status</th><th>Total</th><th>Created</th></tr></thead>
+    <tbody>
+      <% orders.forEach(o => { %>
+        <tr>
+          <td><%= o.number %></td>
+          <td><span class="badge bg-secondary"><%= o.status %></span></td>
+          <td>$<%= (o.totalCents/100).toFixed(2) %><% if (o.pointsTotal) { %> + <%= o.pointsTotal %> pts<% } %></td>
+          <td><%= new Date(o.createdAt).toLocaleString() %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

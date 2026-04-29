@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<%- include('partials/nav', { user: null }) %>
+<div class="container py-5" style="max-width: 480px;">
+  <h2>Create account</h2>
+  <form id="regForm">
+    <div class="mb-3"><label class="form-label">Name</label><input class="form-control" name="name" required></div>
+    <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" required></div>
+    <div class="mb-3"><label class="form-label">Password (min 6)</label><input type="password" class="form-control" name="password" minlength="6" required></div>
+    <div class="mb-3"><label class="form-label">Contact (optional)</label><input class="form-control" name="contact"></div>
+    <div class="mb-3"><label class="form-label">Address (optional)</label><input class="form-control" name="address"></div>
+    <button class="btn btn-primary w-100">Create account</button>
+    <div id="err" class="text-danger mt-3"></div>
+  </form>
+</div>
+<script>
+document.getElementById('regForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {
+    name: fd.get('name'),
+    email: fd.get('email'),
+    password: fd.get('password'),
+    contact: fd.get('contact') || undefined,
+  };
+  const addr = fd.get('address');
+  if (addr) body.address = { line1: addr };
+  const res = await fetch('/api/auth/register', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) location.href = '/';
+  else document.getElementById('err').innerText = (await res.json()).message || 'Registration failed';
+});
+</script>
+<%- include('partials/foot') %>

@@ -1,0 +1,36 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h1>Vendor dashboard</h1>
+  <p class="text-muted">Welcome, <%= user.name %>.</p>
+  <div class="d-flex gap-2 mb-3">
+    <a class="btn btn-outline-dark" href="/vendor/products">Manage my products</a>
+  </div>
+
+  <h3>Sales summary</h3>
+  <table class="table">
+    <thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th><th>Points collected</th></tr></thead>
+    <tbody>
+    <% if (!sales.length) { %><tr><td colspan="4" class="text-muted">No sales yet.</td></tr><% } %>
+    <% sales.forEach(s => { %>
+      <tr>
+        <td><%= s.productName %></td>
+        <td><%= s.unitsSold %></td>
+        <td>$<%= (s.revenueCents/100).toFixed(2) %></td>
+        <td><%= s.pointsCollected %></td>
+      </tr>
+    <% }); %>
+    </tbody>
+  </table>
+
+  <h3 class="mt-4">My orders</h3>
+  <table class="table">
+    <thead><tr><th>Number</th><th>Status</th><th>Created</th></tr></thead>
+    <tbody>
+    <% orders.forEach(o => { %>
+      <tr><td><%= o.number %></td><td><%= o.status %></td><td><%= new Date(o.createdAt).toLocaleString() %></td></tr>
+    <% }); %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

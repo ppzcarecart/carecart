@@ -1,0 +1,52 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <% if (!product) { %>
+    <p>Not found.</p>
+  <% } else { %>
+    <div class="row">
+      <div class="col-md-6">
+        <% if (product.images && product.images[0]) { %>
+          <img src="<%= product.images[0].url %>" class="img-fluid rounded">
+        <% } %>
+      </div>
+      <div class="col-md-6">
+        <h2><%= product.name %></h2>
+        <p class="text-muted">by <%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></p>
+        <p><%= product.description || '' %></p>
+        <div class="my-3">
+          <span class="h4">$<%= (product.priceCents/100).toFixed(2) %></span>
+          <% if (product.pointsPrice) { %>
+            <span class="badge bg-info ms-2"><%= product.pointsPrice %> pts</span>
+          <% } %>
+        </div>
+
+        <% if (product.variants && product.variants.length) { %>
+          <div class="mb-3">
+            <label class="form-label">Variant</label>
+            <select id="variantId" class="form-select">
+              <option value="">— Choose —</option>
+              <% product.variants.forEach(v => { %>
+                <option value="<%= v.id %>"><%= v.name %> (stock: <%= v.stock %>)</option>
+              <% }); %>
+            </select>
+          </div>
+        <% } %>
+
+        <div class="mb-3"><label class="form-label">Quantity</label>
+          <input id="qty" type="number" min="1" value="1" class="form-control" style="width:120px">
+        </div>
+
+        <% if (user) { %>
+          <button class="btn btn-primary" onclick="ppz.addToCart('<%= product.id %>', 'price')">Add to cart (cash)</button>
+          <% if (product.pointsPrice) { %>
+            <button class="btn btn-info text-white" onclick="ppz.addToCart('<%= product.id %>', 'points')">Add to cart (points)</button>
+          <% } %>
+        <% } else { %>
+          <a href="/login" class="btn btn-primary">Sign in to buy</a>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include('../partials/foot') %>

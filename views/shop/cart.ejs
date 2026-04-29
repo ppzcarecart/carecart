@@ -1,0 +1,45 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h1>Your cart</h1>
+  <% if (!summary.cart.items.length) { %>
+    <p class="text-muted">Empty.</p>
+  <% } else { %>
+    <table class="table align-middle">
+      <thead><tr><th>Item</th><th>Qty</th><th>Mode</th><th class="text-end">Line</th><th></th></tr></thead>
+      <tbody>
+      <% summary.lines.forEach(l => { %>
+        <tr>
+          <td>
+            <%= l.item.product.name %><% if (l.item.variant) { %> &mdash; <%= l.item.variant.name %><% } %>
+          </td>
+          <td>
+            <input type="number" min="1" value="<%= l.item.quantity %>" style="width:80px"
+              onchange="ppz.updateCart('<%= l.item.id %>', this.value)">
+          </td>
+          <td><%= l.item.pricingMode %></td>
+          <td class="text-end">
+            <% if (l.item.pricingMode === 'price') { %>
+              $<%= (l.lineCents/100).toFixed(2) %>
+            <% } else { %>
+              <%= l.linePoints %> pts
+            <% } %>
+          </td>
+          <td><button class="btn btn-sm btn-outline-danger" onclick="ppz.removeCart('<%= l.item.id %>')">Remove</button></td>
+        </tr>
+      <% }); %>
+      </tbody>
+    </table>
+    <div class="d-flex justify-content-between">
+      <div></div>
+      <div class="text-end">
+        <div>Cash subtotal: <strong>$<%= (summary.subtotalCents/100).toFixed(2) %></strong></div>
+        <% if (summary.pointsTotal) { %>
+          <div>Points subtotal: <strong><%= summary.pointsTotal %> pts</strong></div>
+        <% } %>
+        <button class="btn btn-success mt-3" onclick="ppz.checkout()">Checkout (PayNow)</button>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include('../partials/foot') %>

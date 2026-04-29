@@ -1,0 +1,31 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h1 class="mb-4">All products</h1>
+  <div class="row g-4">
+    <% products.forEach(p => { %>
+      <div class="col-md-3">
+        <div class="card h-100">
+          <% if (p.images && p.images[0]) { %>
+            <img src="<%= p.images[0].url %>" class="card-img-top" style="height:160px;object-fit:cover">
+          <% } %>
+          <div class="card-body">
+            <h6 class="card-title"><a href="/p/<%= p.slug %>" class="text-decoration-none"><%= p.name %></a></h6>
+            <div class="text-muted small">by <%= p.vendor && (p.vendor.vendorStoreName || p.vendor.name) || 'Vendor' %></div>
+            <div class="mt-2">
+              <strong>$<%= (p.priceCents / 100).toFixed(2) %></strong>
+              <% if (p.pointsPrice) { %>
+                <span class="badge bg-info ms-2"><%= p.pointsPrice %> pts</span>
+              <% } %>
+            </div>
+            <a href="/p/<%= p.slug %>" class="btn btn-sm btn-primary mt-2 w-100">View</a>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+    <% if (!products.length) { %>
+      <p class="text-muted">No products yet.</p>
+    <% } %>
+  </div>
+</div>
+<%- include('../partials/foot') %>
