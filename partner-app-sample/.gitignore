@@ -1,0 +1,39 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Generated files
+**/generated_plugin_registrant.*
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Platform scaffolding (re-create with `flutter create .`)
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/.cxx/
+android/app/release/
+android/app/profile/
+android/app/debug/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/.last_build_id
+
+# IDE
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+.atom/
+
+# macOS
+.DS_Store
