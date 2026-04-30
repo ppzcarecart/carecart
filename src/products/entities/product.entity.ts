@@ -48,6 +48,12 @@ export class Product {
   @Column({ type: 'integer', nullable: true })
   pointsPrice?: number;
 
+  // When true, the points cost is auto-derived from the cash price using
+  // the global pointsPerDollar rate (rounding any cents up to the next
+  // whole dollar). Overrides any manual pointsPrice for this product.
+  @Column({ default: false })
+  allowPointsRedemption: boolean;
+
   @Column({ default: 0 })
   stock: number;
 

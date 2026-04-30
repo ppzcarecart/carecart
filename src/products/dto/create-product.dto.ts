@@ -37,6 +37,9 @@ export class CreateProductDto {
   // Points are optional
   @IsOptional() @IsInt() @Min(0) pointsPrice?: number;
 
+  // When true, points are auto-calculated server-side from the price.
+  @IsOptional() @IsBoolean() allowPointsRedemption?: boolean;
+
   @IsOptional() @IsInt() @Min(0) stock?: number;
 
   @IsOptional() @IsBoolean() active?: boolean;

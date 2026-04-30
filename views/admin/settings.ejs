@@ -1,0 +1,44 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Settings</h1>
+          <p class="lede">Marketplace-wide configuration. Changes take effect immediately.</p>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 560px;">
+        <div class="panel-head">
+          <h3>Points conversion rate</h3>
+          <span class="muted">$1 = N points</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            How many PPZ points equal one Singapore dollar. Used for any product
+            with <strong>Allow points-only redemption</strong> turned on.
+            Cents always round up to the next whole dollar before applying
+            the rate (so $0.20 still costs <%= settings.pointsPerDollar %> pts).
+          </p>
+          <form id="rateForm" class="row g-2" onsubmit="event.preventDefault(); ppz.savePointsRate(this)">
+            <div class="col-md-5">
+              <label>Points per dollar</label>
+              <input type="number" min="1" step="1" class="form-control"
+                name="value" value="<%= settings.pointsPerDollar %>" required>
+            </div>
+            <div class="col-md-7 d-flex align-items-end">
+              <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save</button>
+              <span id="rateStatus" class="ms-3 small"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>

@@ -24,7 +24,8 @@
         const showPpzPrice = ppzMember && product.ppzPriceCents != null;
         const cashCents = showPpzPrice ? product.ppzPriceCents : product.priceCents;
         const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
-        const showPoints = ppzMember && product.pointsPrice;
+        const ptsValue = (product.effectivePointsPrice != null) ? product.effectivePointsPrice : (ppzMember ? product.pointsPrice : null);
+        const showPoints = ppzMember && ptsValue;
         %>
         <div class="cc-info-badges">
           <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
@@ -39,7 +40,7 @@
             <span class="amount-strike">$<%= (product.priceCents/100).toFixed(2) %></span>
           <% } %>
           <% if (showPoints) { %>
-            <span class="points">or <%= product.pointsPrice %> pts</span>
+            <span class="points">or <%= ptsValue %> pts</span>
           <% } %>
         </div>
         <% if (product.description) { %>
@@ -73,7 +74,7 @@
             </button>
             <% if (showPoints) { %>
               <button class="cc-btn cc-btn-outline" onclick="ppz.addToCart('<%= product.id %>', 'points')">
-                Redeem with <%= product.pointsPrice %> pts
+                Redeem with <%= ptsValue %> pts
               </button>
             <% } %>
           <% } else { %>

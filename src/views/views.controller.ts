@@ -22,6 +22,7 @@ import { CategoriesService } from '../categories/categories.service';
 import { OrdersService } from '../orders/orders.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Controller()
 export class ViewsController {
@@ -31,6 +32,7 @@ export class ViewsController {
     private orders: OrdersService,
     private cart: CartService,
     private users: UsersService,
+    private settings: SettingsService,
   ) {}
 
   @Public()
@@ -65,10 +67,14 @@ export class ViewsController {
           }),
     ]);
     const reqUser = (req as any).user || null;
+    const isPpzMember = !!reqUser?.ppzId;
+    this.products.enrichForView(products, isPpzMember);
+    this.products.enrichForView(featured, isPpzMember);
+    this.products.enrichForView(newProducts, isPpzMember);
     return {
       title: 'carecart',
       user: reqUser,
-      isPpzMember: !!reqUser?.ppzId,
+      isPpzMember,
       products,
       featured,
       newProducts,
@@ -84,10 +90,12 @@ export class ViewsController {
   async product(@Param('slug') slug: string, @Req() req: Request) {
     const product = await this.products.findBySlug(slug);
     const reqUser = (req as any).user || null;
+    const isPpzMember = !!reqUser?.ppzId;
+    if (product) this.products.enrichForView([product], isPpzMember);
     return {
       title: product?.name || 'Product',
       user: reqUser,
-      isPpzMember: !!reqUser?.ppzId,
+      isPpzMember,
       product,
     };
   }
@@ -224,6 +232,18 @@ export class ViewsController {
     return { title: 'Bulk import customers', user, activePath: '/admin/import' };
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/settings')
+  @Render('admin/settings')
+  settingsPage(@CurrentUser() user: any) {
+    return {
+      title: 'Settings',
+      user,
+      activePath: '/admin/settings',
+      settings: { pointsPerDollar: this.settings.pointsPerDollar() },
+    };
+  }
+
   // ---- Vendor dashboard ----
   @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
   @Get('vendor')
@@ -269,6 +289,7 @@ export class ViewsController {
       categories,
       vendors: [],
       isAdmin: false,
+      pointsPerDollar: this.settings.pointsPerDollar(),
       returnTo: '/vendor/products',
       activePath: '/vendor/products',
     };
@@ -296,6 +317,7 @@ export class ViewsController {
       vendors: sortedVendors,
       defaultVendorId: ppz?.id,
       isAdmin: true,
+      pointsPerDollar: this.settings.pointsPerDollar(),
       returnTo: '/admin/products',
       activePath: '/admin/products',
     };
@@ -330,6 +352,7 @@ export class ViewsController {
       user,
       product,
       categories,
+      pointsPerDollar: this.settings.pointsPerDollar(),
       returnTo,
       activePath: returnTo,
     };

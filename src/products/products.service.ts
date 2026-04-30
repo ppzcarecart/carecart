@@ -15,6 +15,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { UpsertVariantDto } from './dto/upsert-variant.dto';
 import { Role } from '../common/enums/role.enum';
 import { slugify } from '../common/utils/slugify';
+import { SettingsService } from '../settings/settings.service';
 
 export interface ActorContext {
   id: string;
@@ -27,7 +28,34 @@ export class ProductsService {
     @InjectRepository(Product) private products: Repository<Product>,
     @InjectRepository(ProductVariant) private variants: Repository<ProductVariant>,
     @InjectRepository(ProductImage) private images: Repository<ProductImage>,
+    private settings: SettingsService,
   ) {}
+
+  /**
+   * Auto-derived points cost: ceil(priceDollars) * pointsPerDollar.
+   * "$0.20 → 50 pts" because cents round up to the next dollar before
+   * applying the rate.
+   */
+  computeAutoPoints(priceCents: number): number {
+    const dollars = Math.ceil(priceCents / 100);
+    return dollars * this.settings.pointsPerDollar();
+  }
+
+  /**
+   * Decorate fetched products with the resolved cash + points price for
+   * the current viewer (PPZ member or not). Templates read these
+   * pre-computed fields instead of reaching back into the manual
+   * pointsPrice on the entity.
+   */
+  enrichForView(products: Product[], isPpzMember: boolean): Product[] {
+    for (const p of products) {
+      const r = this.resolvePricing(p, undefined, isPpzMember);
+      (p as any).effectiveCashCents = r.priceCents;
+      (p as any).effectivePointsPrice = r.pointsPrice;
+      (p as any).isPpzPriceActive = r.isPpzPrice;
+    }
+    return products;
+  }
 
   async list(opts: {
     q?: string;
@@ -111,6 +139,7 @@ export class ProductsService {
       ppzPriceCents: dto.ppzPriceCents ?? null,
       currency: dto.currency || 'SGD',
       pointsPrice: dto.pointsPrice ?? null,
+      allowPointsRedemption: dto.allowPointsRedemption ?? false,
       stock: dto.stock ?? 0,
       active: dto.active ?? true,
       vendorId,
@@ -153,6 +182,9 @@ export class ProductsService {
     if (dto.currency !== undefined) product.currency = dto.currency;
     if (dto.ppzPriceCents !== undefined) product.ppzPriceCents = dto.ppzPriceCents;
     if (dto.pointsPrice !== undefined) product.pointsPrice = dto.pointsPrice;
+    if (dto.allowPointsRedemption !== undefined) {
+      product.allowPointsRedemption = !!dto.allowPointsRedemption;
+    }
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;
     if (dto.categoryId !== undefined) product.categoryId = dto.categoryId;
@@ -267,19 +299,29 @@ export class ProductsService {
     const normalCents = variant?.priceCentsOverride ?? product.priceCents;
     const ppzCents =
       variant?.ppzPriceCentsOverride ?? product.ppzPriceCents ?? null;
-    const memberPoints =
-      variant?.pointsPriceOverride !== undefined &&
-      variant?.pointsPriceOverride !== null
-        ? variant.pointsPriceOverride
-        : product.pointsPrice ?? null;
 
     const usePpz = isPpzMember && ppzCents != null;
+    const buyerCashCents = usePpz ? ppzCents : normalCents;
+
+    let memberPoints: number | null;
+    if (product.allowPointsRedemption) {
+      // Auto-calculated from the buyer-applicable cash price.
+      memberPoints = this.computeAutoPoints(buyerCashCents);
+    } else {
+      memberPoints =
+        variant?.pointsPriceOverride !== undefined &&
+        variant?.pointsPriceOverride !== null
+          ? variant.pointsPriceOverride
+          : product.pointsPrice ?? null;
+    }
+
     return {
-      priceCents: usePpz ? ppzCents : normalCents,
+      priceCents: buyerCashCents,
       normalPriceCents: normalCents,
       ppzPriceCents: ppzCents,
       pointsPrice: isPpzMember ? memberPoints : null,
       isPpzPrice: usePpz,
+      allowPointsRedemption: !!product.allowPointsRedemption,
     };
   }
 }

@@ -5,9 +5,17 @@ import { CategoriesModule } from '../categories/categories.module';
 import { OrdersModule } from '../orders/orders.module';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
-  imports: [ProductsModule, CategoriesModule, OrdersModule, CartModule, UsersModule],
+  imports: [
+    ProductsModule,
+    CategoriesModule,
+    OrdersModule,
+    CartModule,
+    UsersModule,
+    SettingsModule,
+  ],
   controllers: [ViewsController],
 })
 export class ViewsModule {}

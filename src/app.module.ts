@@ -13,6 +13,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PointsModule } from './points/points.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { SettingsModule } from './settings/settings.module';
 import { ViewsModule } from './views/views.module';
 import { BootstrapService } from './bootstrap.service';
 import { HealthController } from './health.controller';
@@ -49,6 +50,7 @@ import { SamplesService } from './database/samples.service';
     PaymentsModule,
     PointsModule,
     UploadsModule,
+    SettingsModule,
     ViewsModule,
   ],
   controllers: [HealthController],

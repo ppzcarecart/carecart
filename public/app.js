@@ -235,12 +235,16 @@ window.ppz = (function () {
     const productId = ppz._editPage.productId;
     const form = document.getElementById('productForm');
     const fd = new FormData(form);
+    const allowPts = !!form.querySelector('input[name="allowPointsRedemption"]')?.checked;
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
       priceCents: dollarsToCents(fd.get('price')),
       ppzPriceCents: dollarsToCents(fd.get('ppzPrice')),
-      pointsPrice: intOrUndef(fd.get('pointsPrice')),
+      // When auto-redemption is on, server computes points from the rate;
+      // null wipes any manual value.
+      pointsPrice: allowPts ? null : intOrUndef(fd.get('pointsPrice')),
+      allowPointsRedemption: allowPts,
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
@@ -289,12 +293,14 @@ window.ppz = (function () {
       })
       .filter((v) => v.name);
 
+    const allowPts = !!form.querySelector('input[name="allowPointsRedemption"]')?.checked;
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
       priceCents: dollarsToCents(fd.get('price')),
       ppzPriceCents: dollarsToCents(fd.get('ppzPrice')),
-      pointsPrice: intOrUndef(fd.get('pointsPrice')),
+      pointsPrice: allowPts ? undefined : intOrUndef(fd.get('pointsPrice')),
+      allowPointsRedemption: allowPts,
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',
@@ -441,6 +447,79 @@ window.ppz = (function () {
     })[c]);
   }
 
+  // ---- Auto-points toggle on product create/edit ----
+  // Reads pointsPerDollar from ppz._editPage / ppz._newPage (injected by
+  // the EJS page) and updates the preview live as the price changes.
+  function pointsRate() {
+    return (ppz._editPage && ppz._editPage.pointsPerDollar)
+      || (ppz._newPage && ppz._newPage.pointsPerDollar)
+      || 50;
+  }
+
+  function computeAutoPointsCents(priceCents) {
+    const dollars = Math.ceil((priceCents || 0) / 100);
+    return dollars * pointsRate();
+  }
+
+  function bindAllowPointsToggle() {
+    const toggle = document.getElementById('allowPointsRedemption');
+    const priceEl = document.querySelector('input[name="price"]');
+    const ppzPriceEl = document.querySelector('input[name="ppzPrice"]');
+    const pointsInput = document.getElementById('pointsPriceInput');
+    const preview = document.getElementById('pointsPreview');
+    if (!toggle || !preview) return;
+
+    function refresh() {
+      const on = toggle.checked;
+      // Use the smaller of normal/PPZ price for the preview, since members
+      // would see the PPZ price.
+      const normalCents = dollarsToCents(priceEl?.value) ?? 0;
+      const ppzCents = dollarsToCents(ppzPriceEl?.value);
+      const cashCents = (ppzCents != null && ppzCents > 0) ? ppzCents : normalCents;
+      const pts = computeAutoPointsCents(cashCents);
+      if (on) {
+        preview.textContent = pts > 0 ? `${pts.toLocaleString()} pts (auto)` : 'set a price first';
+        if (pointsInput) {
+          pointsInput.value = '';
+          pointsInput.disabled = true;
+          pointsInput.placeholder = 'Auto-calculated';
+        }
+      } else {
+        preview.textContent = `would be ${pts.toLocaleString()} pts at $1 = ${pointsRate()} pts`;
+        if (pointsInput) {
+          pointsInput.disabled = false;
+          pointsInput.placeholder = 'Blank to disable';
+        }
+      }
+    }
+
+    toggle.addEventListener('change', refresh);
+    if (priceEl) priceEl.addEventListener('input', refresh);
+    if (ppzPriceEl) ppzPriceEl.addEventListener('input', refresh);
+    refresh();
+  }
+
+  async function savePointsRate(form) {
+    const fd = new FormData(form);
+    const status = document.getElementById('rateStatus');
+    if (status) { status.textContent = ''; status.style.color = ''; }
+    try {
+      await api('/api/settings/points-per-dollar', {
+        method: 'PATCH',
+        body: JSON.stringify({ value: parseInt(fd.get('value'), 10) }),
+      });
+      if (status) {
+        status.style.color = 'var(--brand)';
+        status.textContent = 'Saved ✓';
+      }
+    } catch (e) {
+      if (status) {
+        status.style.color = '#b91c1c';
+        status.textContent = e.message || 'Failed to save';
+      }
+    }
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -458,6 +537,8 @@ window.ppz = (function () {
     refreshPoints,
     syncProfile,
     changePassword,
+    bindAllowPointsToggle,
+    savePointsRate,
     bindImageUpload,
     addVariantRow,
     saveVariantRow,

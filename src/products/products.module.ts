@@ -6,9 +6,13 @@ import { ProductVariant } from './entities/product-variant.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, ProductVariant, ProductImage])],
+  imports: [
+    TypeOrmModule.forFeature([Product, ProductVariant, ProductImage]),
+    SettingsModule,
+  ],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports: [ProductsService, TypeOrmModule],

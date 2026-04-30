@@ -58,7 +58,13 @@
               </div>
               <div class="col-md-3 mb-3">
                 <label>Points price</label>
-                <input type="number" min="0" step="1" class="form-control" name="pointsPrice" placeholder="Blank to disable">
+                <input type="number" min="0" step="1" class="form-control" name="pointsPrice" placeholder="Blank to disable" id="pointsPriceInput">
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="allowPointsRedemption" name="allowPointsRedemption">
+                  <label class="form-check-label" for="allowPointsRedemption" style="font-size:.82rem;">
+                    Auto-calc from price · <span id="pointsPreview" class="text-muted">—</span>
+                  </label>
+                </div>
               </div>
               <div class="col-md-3 mb-3">
                 <label>Stock</label>
@@ -150,9 +156,11 @@
   ppz._newPage = {
     returnTo: '<%= returnTo %>',
     isAdmin: <%= isAdmin ? 'true' : 'false' %>,
+    pointsPerDollar: <%= pointsPerDollar %>,
     imageUrls: [],
   };
   ppz.bindImageUpload();
+  ppz.bindAllowPointsToggle();
 </script>
 
 <%- include('partials/foot') %>

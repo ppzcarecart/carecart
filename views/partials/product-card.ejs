@@ -6,7 +6,10 @@ const ppzMember = (typeof isPpzMember !== 'undefined') ? isPpzMember : false;
 const showPpzPrice = ppzMember && product.ppzPriceCents != null;
 const cashCents = showPpzPrice ? product.ppzPriceCents : product.priceCents;
 const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
-const showPoints = ppzMember && product.pointsPrice;
+// effectivePointsPrice is set by ProductsService.enrichForView when the
+// viewer is a member; falls back to manual pointsPrice for safety.
+const ptsValue = (product.effectivePointsPrice != null) ? product.effectivePointsPrice : (ppzMember ? product.pointsPrice : null);
+const showPoints = ppzMember && ptsValue;
 %>
 <a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
   <div class="cc-thumb">
@@ -26,7 +29,7 @@ const showPoints = ppzMember && product.pointsPrice;
         <span class="amount-strike">$<%= (product.priceCents / 100).toFixed(2) %></span>
       <% } %>
       <% if (showPoints) { %>
-        <span class="points">or <%= product.pointsPrice %> pts</span>
+        <span class="points">or <%= ptsValue %> pts</span>
       <% } %>
     </div>
   </div>
