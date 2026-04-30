@@ -44,4 +44,66 @@ const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
     </div>
   </div>
 </nav>
+
+<%
+// Bottom icon nav for mobile. Only shows on small screens (CSS) and only
+// for signed-in users on the customer-facing storefront. Admin/vendor
+// pages already use the sidebar layout that stacks on mobile, so we
+// suppress the bottom nav there to avoid duplication.
+%>
+<% if (user) { %>
+  <nav class="cc-mobnav" id="ccMobnav">
+    <a href="/" class="cc-mobnav-item" data-path="/">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9.5L12 3l9 6.5"/>
+        <path d="M5 9v12h14V9"/>
+        <path d="M10 21v-6h4v6"/>
+      </svg>
+      <span>Shop</span>
+    </a>
+    <a href="/cart" class="cc-mobnav-item" data-path="/cart">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="20" r="1.5"/>
+        <circle cx="18" cy="20" r="1.5"/>
+        <path d="M3 4h2l2.5 11.5a2 2 0 0 0 2 1.5h7a2 2 0 0 0 2-1.5L21 8H6.2"/>
+      </svg>
+      <span>Cart</span>
+    </a>
+    <a href="/orders" class="cc-mobnav-item" data-path="/orders">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="3" width="16" height="18" rx="2"/>
+        <line x1="8" y1="8" x2="16" y2="8"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+        <line x1="8" y1="16" x2="13" y2="16"/>
+      </svg>
+      <span>Orders</span>
+    </a>
+    <a href="/profile" class="cc-mobnav-item" data-path="/profile">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>
+      </svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+  <script>
+    // Mark the active item by best-matching path prefix.
+    (function () {
+      const path = location.pathname;
+      const items = document.querySelectorAll('#ccMobnav .cc-mobnav-item');
+      let bestMatch = null;
+      let bestLen = -1;
+      items.forEach((it) => {
+        const p = it.dataset.path;
+        if (path === p || (p !== '/' && path.startsWith(p))) {
+          if (p.length > bestLen) { bestLen = p.length; bestMatch = it; }
+        } else if (p === '/' && path === '/') {
+          if (0 > bestLen) { bestLen = 0; bestMatch = it; }
+        }
+      });
+      if (bestMatch) bestMatch.classList.add('is-active');
+    })();
+  </script>
+<% } %>
+
 <script src="/static/app.js"></script>
