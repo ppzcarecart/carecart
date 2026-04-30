@@ -1,4 +1,5 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, Matches } from 'class-validator';
+import { PASSWORD_REGEX, PASSWORD_RULE_MESSAGE } from './password-policy';
 
 export class ChangePasswordDto {
   @IsOptional()
@@ -6,6 +7,6 @@ export class ChangePasswordDto {
   currentPassword?: string;
 
   @IsString()
-  @MinLength(6)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_RULE_MESSAGE })
   newPassword: string;
 }

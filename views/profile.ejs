@@ -144,7 +144,12 @@
           <% } %>
           <div class="mb-3" style="max-width:360px;">
             <label>New password</label>
-            <input type="password" class="form-control" name="newPassword" minlength="6" required>
+            <input type="password" class="form-control" name="newPassword" minlength="8" required>
+            <small class="text-muted">At least 8 characters with upper, lower, and a digit or symbol.</small>
+          </div>
+          <div class="mb-3" style="max-width:360px;">
+            <label>Confirm new password</label>
+            <input type="password" class="form-control" name="confirmPassword" minlength="8" required>
           </div>
           <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">
             <%= buttonText %>

@@ -2,10 +2,11 @@ import {
   IsEmail,
   IsOptional,
   IsString,
-  MinLength,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PASSWORD_REGEX, PASSWORD_RULE_MESSAGE } from './password-policy';
 
 export class RegisterAddressDto {
   @IsString() line1: string;
@@ -20,7 +21,11 @@ export class RegisterAddressDto {
 
 export class RegisterDto {
   @IsEmail() email: string;
-  @IsString() @MinLength(6) password: string;
+
+  @IsString()
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_RULE_MESSAGE })
+  password: string;
+
   @IsString() name: string;
   @IsOptional() @IsString() contact?: string;
 

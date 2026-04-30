@@ -6,7 +6,15 @@
     <form id="regForm">
       <div class="mb-3"><label>Name</label><input class="form-control" name="name" required></div>
       <div class="mb-3"><label>Email</label><input type="email" class="form-control" name="email" required></div>
-      <div class="mb-3"><label>Password (min 6)</label><input type="password" class="form-control" name="password" minlength="6" required></div>
+      <div class="mb-3">
+        <label>Password</label>
+        <input type="password" class="form-control" name="password" minlength="8" required>
+        <small class="text-muted">At least 8 characters with upper, lower, and a digit or symbol.</small>
+      </div>
+      <div class="mb-3">
+        <label>Confirm password</label>
+        <input type="password" class="form-control" name="confirmPassword" minlength="8" required>
+      </div>
       <div class="mb-3"><label>Contact</label><input class="form-control" name="contact" placeholder="e.g. 91234567"></div>
       <div class="mb-3"><label>Address line</label><input class="form-control" name="line1" placeholder="Street, unit number" required></div>
       <div class="row">
@@ -26,13 +34,27 @@
   </div>
 </div>
 <script>
+const PWD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W])[\s\S]{8,}$/;
+
 document.getElementById('regForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const errEl = document.getElementById('err');
+  errEl.innerText = '';
   const fd = new FormData(e.target);
+  const password = fd.get('password');
+  const confirm = fd.get('confirmPassword');
+  if (!PWD_RE.test(password)) {
+    errEl.innerText = 'Password must be at least 8 characters with upper, lower, and a digit or symbol.';
+    return;
+  }
+  if (password !== confirm) {
+    errEl.innerText = 'Passwords do not match.';
+    return;
+  }
   const body = {
     name: fd.get('name'),
     email: fd.get('email'),
-    password: fd.get('password'),
+    password,
     contact: fd.get('contact') || undefined,
     address: {
       line1: fd.get('line1'),
@@ -45,7 +67,7 @@ document.getElementById('regForm').addEventListener('submit', async (e) => {
     body: JSON.stringify(body),
   });
   if (res.ok) location.href = '/';
-  else document.getElementById('err').innerText = (await res.json()).message || 'Registration failed';
+  else errEl.innerText = (await res.json()).message || 'Registration failed';
 });
 </script>
 <%- include('partials/foot') %>

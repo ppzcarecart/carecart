@@ -4,14 +4,21 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Min,
-  MinLength,
 } from 'class-validator';
 import { Role } from '../../common/enums/role.enum';
+import {
+  PASSWORD_REGEX,
+  PASSWORD_RULE_MESSAGE,
+} from '../../auth/dto/password-policy';
 
 export class CreateUserDto {
   @IsEmail() email: string;
-  @IsString() @MinLength(6) password: string;
+
+  @IsString()
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_RULE_MESSAGE })
+  password: string;
   @IsString() name: string;
   @IsOptional() @IsString() contact?: string;
   @IsOptional() @IsEnum(Role) role?: Role;

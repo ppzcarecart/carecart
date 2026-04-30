@@ -381,13 +381,30 @@ window.ppz = (function () {
 
   async function changePassword(form) {
     const fd = new FormData(form);
-    const body = {
-      newPassword: fd.get('newPassword'),
-    };
+    const newPassword = fd.get('newPassword');
+    const confirm = fd.get('confirmPassword');
     const cur = fd.get('currentPassword');
-    if (cur) body.currentPassword = cur;
     const status = document.getElementById('pwdStatus');
     if (status) { status.textContent = ''; status.style.color = ''; }
+
+    const PWD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W])[\s\S]{8,}$/;
+    if (!PWD_RE.test(newPassword)) {
+      if (status) {
+        status.style.color = '#b91c1c';
+        status.textContent = 'At least 8 characters with upper, lower, and a digit or symbol.';
+      }
+      return;
+    }
+    if (newPassword !== confirm) {
+      if (status) {
+        status.style.color = '#b91c1c';
+        status.textContent = 'Passwords do not match.';
+      }
+      return;
+    }
+
+    const body = { newPassword };
+    if (cur) body.currentPassword = cur;
     try {
       await api('/api/auth/password', {
         method: 'PATCH',
