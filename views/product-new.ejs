@@ -43,32 +43,42 @@
             </div>
             <div class="row">
               <div class="col-md-3 mb-3">
-                <label>Normal price (cents) <span class="text-danger">*</span></label>
-                <input type="number" min="0" class="form-control" name="priceCents" required placeholder="e.g. 1990">
+                <label>Normal price (SGD) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" min="0" class="form-control" name="price" required placeholder="12.90">
+                </div>
               </div>
               <div class="col-md-3 mb-3">
-                <label>PPZ member price (cents)</label>
-                <input type="number" min="0" class="form-control" name="ppzPriceCents" placeholder="Leave blank → same as normal">
+                <label>PPZ member price (SGD)</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" min="0" class="form-control" name="ppzPrice" placeholder="10.90">
+                </div>
               </div>
               <div class="col-md-3 mb-3">
                 <label>Points price</label>
-                <input type="number" min="0" class="form-control" name="pointsPrice" placeholder="Leave blank to disable">
+                <input type="number" min="0" step="1" class="form-control" name="pointsPrice" placeholder="Blank to disable">
               </div>
               <div class="col-md-3 mb-3">
                 <label>Stock</label>
-                <input type="number" min="0" class="form-control" name="stock" value="0">
+                <input type="number" min="0" step="1" class="form-control" name="stock" value="0">
               </div>
             </div>
             <div class="row">
               <% if (isAdmin) { %>
                 <div class="col-md-6 mb-3">
-                  <label>Vendor <span class="text-danger">*</span></label>
+                  <label>Fulfilment vendor</label>
                   <select class="form-select" name="vendorId" required>
-                    <option value="">— Select vendor —</option>
                     <% vendors.forEach(v => { %>
-                      <option value="<%= v.id %>"><%= v.vendorStoreName || v.name %> (<%= v.email %>)</option>
+                      <%
+                      const isDefault = typeof defaultVendorId !== 'undefined' && v.id === defaultVendorId;
+                      const label = isDefault ? `${v.vendorStoreName || v.name} (default)` : `${v.vendorStoreName || v.name} (${v.email})`;
+                      %>
+                      <option value="<%= v.id %>" <%= isDefault ? 'selected' : '' %>><%= label %></option>
                     <% }); %>
                   </select>
+                  <small class="text-muted">Defaults to PPZ Fulfilment when you don't pick a third-party vendor.</small>
                 </div>
               <% } %>
               <div class="col-md-<%= isAdmin ? '6' : '12' %> mb-3">
@@ -116,8 +126,8 @@
               <tr>
                 <th>Name</th>
                 <th>SKU</th>
-                <th class="num">Price (cents)</th>
-                <th class="num">PPZ price</th>
+                <th class="num">Price (SGD)</th>
+                <th class="num">PPZ price (SGD)</th>
                 <th class="num">Points</th>
                 <th class="num">Stock</th>
                 <th class="actions">Actions</th>

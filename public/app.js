@@ -37,6 +37,19 @@ window.ppz = (function () {
 
   function isNewPage() { return !!ppz._newPage; }
 
+  // Money helpers: forms show SGD with two decimals, server stores integer cents.
+  function dollarsToCents(v) {
+    if (v === '' || v == null) return undefined;
+    const n = parseFloat(v);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  }
+  function intOrUndef(v) {
+    if (v === '' || v == null) return undefined;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : undefined;
+  }
+
   async function uploadAndAttachOne(file) {
     const productId = ppz._editPage.productId;
     const { url } = await uploadFile(file);
@@ -145,10 +158,10 @@ window.ppz = (function () {
     tr.innerHTML = `
       <td><input type="text" name="name" placeholder="Size: M / Color: Black"></td>
       <td><input type="text" name="sku" placeholder="Optional SKU"></td>
-      <td class="num"><input type="number" min="0" name="priceCentsOverride" placeholder="—"></td>
-      <td class="num"><input type="number" min="0" name="ppzPriceCentsOverride" placeholder="—"></td>
-      <td class="num"><input type="number" min="0" name="pointsPriceOverride" placeholder="—"></td>
-      <td class="num"><input type="number" min="0" name="stock" value="0"></td>
+      <td class="num"><input type="number" step="0.01" min="0" name="priceOverride" placeholder="—"></td>
+      <td class="num"><input type="number" step="0.01" min="0" name="ppzPriceOverride" placeholder="—"></td>
+      <td class="num"><input type="number" min="0" step="1" name="pointsPriceOverride" placeholder="—"></td>
+      <td class="num"><input type="number" min="0" step="1" name="stock" value="0"></td>
       <td class="actions">
         <button class="cc-btn cc-btn-outline" style="padding:4px 10px; font-size:.78rem;" type="button">Save</button>
         <button class="cc-btn cc-btn-ghost" style="padding:4px 10px; font-size:.78rem;" type="button">Delete</button>
@@ -166,15 +179,14 @@ window.ppz = (function () {
       const el = getInput(n);
       return el ? el.value.trim() : '';
     };
-    const num = (v) => v === '' ? undefined : parseInt(v, 10);
     return {
       id: tr.dataset.variantId || undefined,
       name: get('name'),
       sku: get('sku') || undefined,
-      priceCentsOverride: num(get('priceCentsOverride')),
-      ppzPriceCentsOverride: num(get('ppzPriceCentsOverride')),
-      pointsPriceOverride: num(get('pointsPriceOverride')),
-      stock: num(get('stock')) ?? 0,
+      priceCentsOverride: dollarsToCents(get('priceOverride')),
+      ppzPriceCentsOverride: dollarsToCents(get('ppzPriceOverride')),
+      pointsPriceOverride: intOrUndef(get('pointsPriceOverride')),
+      stock: intOrUndef(get('stock')) ?? 0,
     };
   }
 
@@ -223,14 +235,13 @@ window.ppz = (function () {
     const productId = ppz._editPage.productId;
     const form = document.getElementById('productForm');
     const fd = new FormData(form);
-    const num = (v) => v === '' || v == null ? undefined : parseInt(v, 10);
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
-      priceCents: num(fd.get('priceCents')),
-      ppzPriceCents: num(fd.get('ppzPriceCents')),
-      pointsPrice: num(fd.get('pointsPrice')),
-      stock: num(fd.get('stock')) ?? 0,
+      priceCents: dollarsToCents(fd.get('price')),
+      ppzPriceCents: dollarsToCents(fd.get('ppzPrice')),
+      pointsPrice: intOrUndef(fd.get('pointsPrice')),
+      stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
     };
@@ -261,14 +272,13 @@ window.ppz = (function () {
   async function createProduct() {
     const form = document.getElementById('productForm');
     const fd = new FormData(form);
-    const num = (v) => v === '' || v == null ? undefined : parseInt(v, 10);
 
     if (!fd.get('name')) { alert('Product name is required'); return; }
-    if (fd.get('priceCents') === '' || fd.get('priceCents') == null) {
+    if (fd.get('price') === '' || fd.get('price') == null) {
       alert('Price is required'); return;
     }
     if (ppz._newPage.isAdmin && !fd.get('vendorId')) {
-      alert('Please select a vendor'); return;
+      alert('Please select a fulfilment vendor'); return;
     }
 
     const variants = Array.from(document.querySelectorAll('#variantBody tr'))
@@ -282,10 +292,10 @@ window.ppz = (function () {
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
-      priceCents: num(fd.get('priceCents')),
-      ppzPriceCents: num(fd.get('ppzPriceCents')),
-      pointsPrice: num(fd.get('pointsPrice')),
-      stock: num(fd.get('stock')) ?? 0,
+      priceCents: dollarsToCents(fd.get('price')),
+      ppzPriceCents: dollarsToCents(fd.get('ppzPrice')),
+      pointsPrice: intOrUndef(fd.get('pointsPrice')),
+      stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',
       imageUrls: ppz._newPage.imageUrls.slice(),

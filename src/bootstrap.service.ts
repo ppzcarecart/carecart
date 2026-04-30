@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { UsersService } from './users/users.service';
 import { Role } from './common/enums/role.enum';
+
+export const PPZ_FULFILMENT_EMAIL = 'ppz-fulfilment@carecart.local';
 
 @Injectable()
 export class BootstrapService implements OnApplicationBootstrap {
@@ -13,6 +16,11 @@ export class BootstrapService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
+    await this.ensureBootstrapAdmin();
+    await this.ensurePpzFulfilmentVendor();
+  }
+
+  private async ensureBootstrapAdmin() {
     const email = this.config.get<string>('BOOTSTRAP_ADMIN_EMAIL');
     const password = this.config.get<string>('BOOTSTRAP_ADMIN_PASSWORD');
     const name = this.config.get<string>('BOOTSTRAP_ADMIN_NAME') || 'Administrator';
@@ -30,5 +38,24 @@ export class BootstrapService implements OnApplicationBootstrap {
       role: Role.ADMIN,
     });
     this.logger.log(`Bootstrap admin created: ${email}`);
+  }
+
+  /**
+   * System vendor used as the default fulfilment owner when admin or
+   * manager add a product without choosing a third-party vendor. Has a
+   * random unrecoverable password — no one logs into this account; it
+   * just owns "first-party" products.
+   */
+  private async ensurePpzFulfilmentVendor() {
+    const existing = await this.users.findByEmail(PPZ_FULFILMENT_EMAIL);
+    if (existing) return;
+    await this.users.createUser({
+      email: PPZ_FULFILMENT_EMAIL,
+      password: crypto.randomBytes(24).toString('hex'),
+      name: 'PPZ Fulfilment',
+      vendorStoreName: 'PPZ Fulfilment',
+      role: Role.VENDOR,
+    });
+    this.logger.log('System PPZ Fulfilment vendor created');
   }
 }

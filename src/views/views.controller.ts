@@ -282,11 +282,19 @@ export class ViewsController {
       this.categories.list(),
       this.users.list({ role: Role.VENDOR }),
     ]);
+    // Sort so PPZ Fulfilment is first in the dropdown.
+    const ppz = vendors.find(
+      (v) => v.email === 'ppz-fulfilment@carecart.local',
+    );
+    const sortedVendors = ppz
+      ? [ppz, ...vendors.filter((v) => v.id !== ppz.id)]
+      : vendors;
     return {
       title: 'New product',
       user,
       categories,
-      vendors,
+      vendors: sortedVendors,
+      defaultVendorId: ppz?.id,
       isAdmin: true,
       returnTo: '/admin/products',
       activePath: '/admin/products',

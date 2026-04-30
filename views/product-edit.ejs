@@ -43,20 +43,29 @@
             </div>
             <div class="row">
               <div class="col-md-3 mb-3">
-                <label>Normal price (cents) <span class="text-danger">*</span></label>
-                <input type="number" min="0" class="form-control" name="priceCents" value="<%= product.priceCents %>" required>
+                <label>Normal price (SGD) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" min="0" class="form-control" name="price"
+                    value="<%= (product.priceCents/100).toFixed(2) %>" required>
+                </div>
               </div>
               <div class="col-md-3 mb-3">
-                <label>PPZ member price (cents)</label>
-                <input type="number" min="0" class="form-control" name="ppzPriceCents" value="<%= product.ppzPriceCents ?? '' %>" placeholder="Blank → same as normal">
+                <label>PPZ member price (SGD)</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" min="0" class="form-control" name="ppzPrice"
+                    value="<%= product.ppzPriceCents != null ? (product.ppzPriceCents/100).toFixed(2) : '' %>"
+                    placeholder="Blank → same as normal">
+                </div>
               </div>
               <div class="col-md-3 mb-3">
                 <label>Points price</label>
-                <input type="number" min="0" class="form-control" name="pointsPrice" value="<%= product.pointsPrice ?? '' %>" placeholder="Blank to disable">
+                <input type="number" min="0" step="1" class="form-control" name="pointsPrice" value="<%= product.pointsPrice ?? '' %>" placeholder="Blank to disable">
               </div>
               <div class="col-md-3 mb-3">
                 <label>Stock</label>
-                <input type="number" min="0" class="form-control" name="stock" value="<%= product.stock %>">
+                <input type="number" min="0" step="1" class="form-control" name="stock" value="<%= product.stock %>">
               </div>
             </div>
             <div class="mb-3">
@@ -112,8 +121,8 @@
               <tr>
                 <th>Name</th>
                 <th>SKU</th>
-                <th class="num">Price (cents)</th>
-                <th class="num">PPZ price</th>
+                <th class="num">Price (SGD)</th>
+                <th class="num">PPZ price (SGD)</th>
                 <th class="num">Points</th>
                 <th class="num">Stock</th>
                 <th class="actions">Actions</th>
@@ -124,10 +133,10 @@
                 <tr data-variant-id="<%= v.id %>">
                   <td><input type="text" name="name" value="<%= v.name %>" placeholder="Size: M / Color: Black"></td>
                   <td><input type="text" name="sku" value="<%= v.sku || '' %>" placeholder="Optional SKU"></td>
-                  <td class="num"><input type="number" min="0" name="priceCentsOverride" value="<%= v.priceCentsOverride ?? '' %>" placeholder="—"></td>
-                  <td class="num"><input type="number" min="0" name="ppzPriceCentsOverride" value="<%= v.ppzPriceCentsOverride ?? '' %>" placeholder="—"></td>
-                  <td class="num"><input type="number" min="0" name="pointsPriceOverride" value="<%= v.pointsPriceOverride ?? '' %>" placeholder="—"></td>
-                  <td class="num"><input type="number" min="0" name="stock" value="<%= v.stock %>"></td>
+                  <td class="num"><input type="number" step="0.01" min="0" name="priceOverride" value="<%= v.priceCentsOverride != null ? (v.priceCentsOverride/100).toFixed(2) : '' %>" placeholder="—"></td>
+                  <td class="num"><input type="number" step="0.01" min="0" name="ppzPriceOverride" value="<%= v.ppzPriceCentsOverride != null ? (v.ppzPriceCentsOverride/100).toFixed(2) : '' %>" placeholder="—"></td>
+                  <td class="num"><input type="number" min="0" step="1" name="pointsPriceOverride" value="<%= v.pointsPriceOverride ?? '' %>" placeholder="—"></td>
+                  <td class="num"><input type="number" min="0" step="1" name="stock" value="<%= v.stock %>"></td>
                   <td class="actions">
                     <button class="cc-btn cc-btn-outline" style="padding:4px 10px; font-size:.78rem;" onclick="ppz.saveVariantRow(this)">Save</button>
                     <button class="cc-btn cc-btn-ghost" style="padding:4px 10px; font-size:.78rem;" onclick="ppz.deleteVariantRow(this)">Delete</button>
