@@ -613,6 +613,28 @@ a:hover { color: var(--brand-dark); }
 .ppz-stat-primary .ppz-stat-value { color: #92400e; }
 .ppz-stat-unit { font-size: .78rem; font-weight: 500; opacity: 0.7; margin-left: 4px; }
 
+/* ---------- Avatar pill (always visible when signed in) ---------- */
+.cc-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 0.95rem;
+  text-decoration: none !important;
+  flex-shrink: 0;
+  transition: transform .12s ease, box-shadow .12s ease;
+  box-shadow: var(--shadow-sm);
+}
+.cc-avatar:hover, .cc-avatar:focus {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  color: #fff;
+}
+.cc-pill-icon { padding: 6px 12px; }
+@media (max-width: 600px) {
+  .cc-avatar { width: 30px; height: 30px; font-size: 0.85rem; }
+  .cc-pill-icon { padding: 6px 10px; }
+}
+
 /* ---------- PPZ points pill in navbar ---------- */
 .cc-points-pill {
   display: inline-flex; align-items: center; gap: 6px;

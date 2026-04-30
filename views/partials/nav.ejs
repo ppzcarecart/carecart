@@ -1,3 +1,16 @@
+<%
+// Build a deterministic gradient + initial for the avatar so the same
+// user always renders the same colour across the app.
+const avatarPalettes = [
+  ['#0f766e','#14b8a6'], ['#0369a1','#0ea5e9'], ['#7c3aed','#a78bfa'],
+  ['#be185d','#ec4899'], ['#b45309','#f59e0b'], ['#15803d','#22c55e'],
+];
+let avatarHash = 0;
+const avatarKey = (user && user.name) || '';
+for (let i = 0; i < avatarKey.length; i++) avatarHash = (avatarHash * 31 + avatarKey.charCodeAt(i)) >>> 0;
+const avatarPalette = avatarPalettes[avatarHash % avatarPalettes.length];
+const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
+%>
 <nav class="cc-nav">
   <div class="container d-flex align-items-center justify-content-between">
     <a href="/" class="cc-brand">
@@ -22,8 +35,14 @@
             <span class="cc-points-label">pts</span>
           </a>
         <% } %>
-        <a href="/profile" class="cc-user d-none d-md-inline ms-2 text-decoration-none"><%= user.name %></a>
-        <button class="cc-pill" onclick="ppz.logout()">Logout</button>
+        <a href="/profile" class="cc-avatar" title="<%= user.name %> · View profile"
+           style="background: linear-gradient(135deg, <%= avatarPalette[0] %> 0%, <%= avatarPalette[1] %> 100%);">
+          <span><%= avatarInitial %></span>
+        </a>
+        <button class="cc-pill cc-pill-icon" onclick="ppz.logout()" title="Logout" aria-label="Logout">
+          <span class="d-none d-md-inline">Logout</span>
+          <span class="d-md-none">⏻</span>
+        </button>
       <% } else { %>
         <a href="/login" class="cc-pill">Sign in</a>
         <a href="/register" class="cc-pill cc-pill-primary">Sign up</a>
