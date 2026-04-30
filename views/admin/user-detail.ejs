@@ -59,31 +59,26 @@
           </div>
         </div>
 
-        <% if (target.role === 'customer') { %>
+        <% if (target.ppzId) { %>
           <div class="admin-panel profile-ppz">
             <div class="panel-head">
               <h3>PPZ Wallet</h3>
-              <% if (target.ppzId) { %>
-                <div class="d-flex gap-2">
-                  <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;"
-                    onclick="ppz.syncUserFromPpz(this, '<%= target.id %>')"
-                    title="Pull latest balance/lifetime from the partner app">
-                    Sync now
+              <div class="d-flex gap-2">
+                <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;"
+                  onclick="ppz.syncUserFromPpz(this, '<%= target.id %>')"
+                  title="Pull latest balance/lifetime from the partner app">
+                  Sync now
+                </button>
+                <% if (user.role === 'admin') { %>
+                  <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
+                    data-bs-toggle="modal" data-bs-target="#addPointsModal">
+                    + Add points
                   </button>
-                  <% if (user.role === 'admin') { %>
-                    <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
-                      data-bs-toggle="modal" data-bs-target="#addPointsModal">
-                      + Add points
-                    </button>
-                  <% } %>
-                </div>
-              <% } %>
+                <% } %>
+              </div>
             </div>
             <div class="panel-body padded">
-              <% if (!target.ppzId) { %>
-                <p class="text-muted mb-0">This account isn't linked to a PPZ ID. Add points is unavailable.</p>
-              <% } else { %>
-                <div class="ppz-stats">
+              <div class="ppz-stats">
                   <div class="ppz-stat">
                     <div class="ppz-stat-label">PPZ ID</div>
                     <div class="ppz-stat-value"><%= target.ppzId %></div>
@@ -102,12 +97,11 @@
                       <span class="ppz-stat-unit">pts</span>
                     </div>
                   </div>
-                  <div class="ppz-stat">
-                    <div class="ppz-stat-label">Team</div>
-                    <div class="ppz-stat-value"><%= target.team ?? '—' %></div>
-                  </div>
+                <div class="ppz-stat">
+                  <div class="ppz-stat-label">Team</div>
+                  <div class="ppz-stat-value"><%= target.team ?? '—' %></div>
                 </div>
-              <% } %>
+              </div>
             </div>
           </div>
         <% } %>
@@ -135,7 +129,7 @@
   </div>
 </div>
 
-<% if (user.role === 'admin' && target.role === 'customer' && target.ppzId) { %>
+<% if (user.role === 'admin' && target.ppzId) { %>
   <div class="modal fade" id="addPointsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">

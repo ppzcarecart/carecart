@@ -67,8 +67,8 @@
                       </select>
                     </td>
                     <td><%= u.ppzId || '–' %></td>
-                    <td class="num"><%= u.role === 'customer' ? (u.ppzCurrency ?? 0).toLocaleString() : '–' %></td>
-                    <td class="num"><%= u.role === 'customer' ? (u.lifetimePpzCurrency ?? 0).toLocaleString() : '–' %></td>
+                    <td class="num"><%= u.ppzId ? (u.ppzCurrency ?? 0).toLocaleString() : '–' %></td>
+                    <td class="num"><%= u.ppzId ? (u.lifetimePpzCurrency ?? 0).toLocaleString() : '–' %></td>
                     <td class="num"><%= u.team ?? '–' %></td>
                     <td><span class="tag <%= u.active ? 'tag-active' : 'tag-inactive' %>"><%= u.active ? 'active' : 'disabled' %></span></td>
                     <td class="actions">
