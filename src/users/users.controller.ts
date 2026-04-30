@@ -3,13 +3,13 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
   Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,13 +27,21 @@ export class UsersController {
 
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get()
-  list(@Query('role') role?: Role) {
-    return this.users.list(role ? { role } : undefined);
+  async list(@CurrentUser() actor: any, @Query('role') role?: Role) {
+    const all = await this.users.list(role ? { role } : undefined);
+    // Managers don't see admin accounts.
+    if (actor.role === Role.MANAGER) {
+      return all.filter((u) => u.role !== Role.ADMIN);
+    }
+    return all;
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
-  create(@Body() dto: CreateUserDto) {
+  create(@CurrentUser() actor: any, @Body() dto: CreateUserDto) {
+    if (actor.role === Role.MANAGER && dto.role === Role.ADMIN) {
+      throw new ForbiddenException('Managers cannot create admin accounts');
+    }
     return this.users.createUser({
       email: dto.email,
       password: dto.password,
@@ -47,7 +55,20 @@ export class UsersController {
 
   @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+    @Body() dto: UpdateUserDto,
+  ) {
+    if (actor.role === Role.MANAGER) {
+      const target = await this.users.findById(id);
+      if (target?.role === Role.ADMIN) {
+        throw new ForbiddenException('Managers cannot edit admin accounts');
+      }
+      if (dto.role === Role.ADMIN) {
+        throw new ForbiddenException('Managers cannot promote to admin');
+      }
+    }
     return this.users.update(id, dto as any);
   }
 

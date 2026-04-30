@@ -218,8 +218,18 @@ export class ViewsController {
   @Get('admin/users')
   @Render('admin/users')
   async adminUsers(@CurrentUser() user: any) {
-    const users = await this.users.list();
-    return { title: 'Users', user, users, activePath: '/admin/users' };
+    const all = await this.users.list();
+    // Managers don't see admin accounts.
+    const visible =
+      user.role === Role.MANAGER
+        ? all.filter((u) => u.role !== Role.ADMIN)
+        : all;
+    return {
+      title: 'Users',
+      user,
+      users: visible,
+      activePath: '/admin/users',
+    };
   }
 
   @Roles(Role.ADMIN)

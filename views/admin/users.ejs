@@ -51,8 +51,14 @@
                       <% if (u.contact) { %><div class="text-muted" style="font-size:.82rem"><%= u.contact %></div><% } %>
                     </td>
                     <td>
+                      <%
+                      // Manager can never assign admin; everything else is allowed.
+                      const allowedRoles = user.role === 'admin'
+                        ? ['admin','manager','vendor','customer']
+                        : ['manager','vendor','customer'];
+                      %>
                       <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
-                        <% ['admin','manager','vendor','customer'].forEach(r => { %>
+                        <% allowedRoles.forEach(r => { %>
                           <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
                         <% }); %>
                       </select>
@@ -91,7 +97,9 @@
         <option value="customer">Customer</option>
         <option value="vendor">Vendor</option>
         <option value="manager">Manager</option>
-        <option value="admin">Admin</option>
+        <% if (user.role === 'admin') { %>
+          <option value="admin">Admin</option>
+        <% } %>
       </select></div>
       <div class="mb-3"><label>Vendor store name (vendors only)</label><input class="form-control" name="vendorStoreName"></div>
       <div class="row">
