@@ -232,7 +232,7 @@ export class ViewsController {
     };
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/users/:id')
   @Render('admin/user-detail')
   async adminUserDetail(
@@ -241,6 +241,10 @@ export class ViewsController {
   ) {
     const target = await this.users.findById(id);
     if (!target) throw new NotFoundException('User not found');
+    // Managers can't see admin user records.
+    if (user.role === Role.MANAGER && target.role === Role.ADMIN) {
+      throw new ForbiddenException();
+    }
     return {
       title: target.name,
       user,

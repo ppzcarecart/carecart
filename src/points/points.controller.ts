@@ -24,6 +24,34 @@ export class PointsController {
   }
 
   /**
+   * Admin/manager: pull the latest profile from the partner app for a
+   * specific user (balance, lifetime, team, name, contact, address).
+   * Useful when staff want fresh values without waiting for the user
+   * to log in.
+   */
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Post('users/:id/sync')
+  async syncUser(@Param('id') id: string) {
+    const result = await this.points.syncProfile(id);
+    const u = result.user;
+    return {
+      ok: true,
+      notLinked: 'notLinked' in result ? result.notLinked : false,
+      notConfigured: 'notConfigured' in result ? result.notConfigured : false,
+      user: {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        contact: u.contact,
+        ppzId: u.ppzId,
+        ppzCurrency: u.ppzCurrency,
+        lifetimePpzCurrency: u.lifetimePpzCurrency,
+        team: u.team,
+      },
+    };
+  }
+
+  /**
    * Pull the latest profile from the partner app (balance, lifetime,
    * team, name, contact, email, default address) and write it to the
    * local row.

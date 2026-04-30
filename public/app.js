@@ -723,6 +723,28 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
+    async syncUserFromPpz(btn, userId) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Syncing…';
+      try {
+        const r = await api('/api/points/users/' + userId + '/sync', { method: 'POST' });
+        if (r.notLinked) { alert('This user is not linked to a PPZ ID.'); return; }
+        if (r.notConfigured) { alert('Partner API is not configured on this deploy.'); return; }
+        const u = r.user || {};
+        const cur = document.getElementById('td-ppzCurrency');
+        const life = document.getElementById('td-lifetime');
+        if (cur && u.ppzCurrency != null) cur.textContent = Number(u.ppzCurrency).toLocaleString();
+        if (life && u.lifetimePpzCurrency != null) life.textContent = Number(u.lifetimePpzCurrency).toLocaleString();
+        btn.textContent = 'Synced ✓';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1400);
+        return;
+      } catch (e) {
+        alert('Sync failed: ' + e.message);
+      }
+      btn.textContent = original;
+      btn.disabled = false;
+    },
     async addPointsToUser(form, userId) {
       const fd = new FormData(form);
       const amount = parseInt(fd.get('amount'), 10);
