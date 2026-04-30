@@ -49,6 +49,25 @@ export class User {
   @Column({ nullable: true, type: 'text' })
   vendorBio?: string;
 
+  // Vendor fulfilment overrides. When useOwnCollectionLocation is true and
+  // the address is filled in, this vendor's products show the vendor
+  // address as their collection point at checkout instead of the admin's
+  // global one. Same for delivery fee.
+  @Column({ default: false })
+  useOwnCollectionLocation: boolean;
+
+  @Column({ nullable: true }) collectionLine1?: string;
+  @Column({ nullable: true }) collectionLine2?: string;
+  @Column({ nullable: true }) collectionPostalCode?: string;
+  @Column({ nullable: true }) collectionContact?: string;
+  @Column({ nullable: true }) collectionHours?: string;
+
+  @Column({ default: false })
+  useOwnDeliveryFee: boolean;
+
+  @Column({ type: 'integer', nullable: true })
+  vendorDeliveryFeeCents?: number;
+
   // External points-system identifier (set when integrator API is available)
   @Column({ nullable: true })
   pointsAccountId?: string;

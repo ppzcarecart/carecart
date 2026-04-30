@@ -245,6 +245,7 @@ window.ppz = (function () {
       // null wipes any manual value.
       pointsPrice: allowPts ? null : intOrUndef(fd.get('pointsPrice')),
       allowPointsRedemption: allowPts,
+      deliveryFeeCentsOverride: dollarsToCents(fd.get('deliveryFee')) ?? null,
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
@@ -301,6 +302,7 @@ window.ppz = (function () {
       ppzPriceCents: dollarsToCents(fd.get('ppzPrice')),
       pointsPrice: allowPts ? undefined : intOrUndef(fd.get('pointsPrice')),
       allowPointsRedemption: allowPts,
+      deliveryFeeCentsOverride: dollarsToCents(fd.get('deliveryFee')),
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',
@@ -499,6 +501,106 @@ window.ppz = (function () {
     refresh();
   }
 
+  async function patchSettingsBulk(payload, statusEl) {
+    if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
+    try {
+      await api('/api/settings', { method: 'PATCH', body: JSON.stringify(payload) });
+      if (statusEl) {
+        statusEl.style.color = 'var(--brand)';
+        statusEl.textContent = 'Saved ✓';
+      }
+    } catch (e) {
+      if (statusEl) {
+        statusEl.style.color = '#b91c1c';
+        statusEl.textContent = e.message || 'Failed to save';
+      }
+    }
+  }
+
+  async function saveCollectionPoint(form) {
+    const fd = new FormData(form);
+    await patchSettingsBulk({
+      'collection.line1': fd.get('collection.line1') || '',
+      'collection.line2': fd.get('collection.line2') || '',
+      'collection.postalCode': fd.get('collection.postalCode') || '',
+      'collection.contact': fd.get('collection.contact') || '',
+      'collection.hours': fd.get('collection.hours') || '',
+    }, document.getElementById('collectionStatus'));
+  }
+
+  async function saveDeliverySettings(form) {
+    const fd = new FormData(form);
+    const enabled = !!form.querySelector('input[name="delivery.enabled"]')?.checked;
+    const fee = dollarsToCents(fd.get('delivery.fee')) ?? 0;
+    await patchSettingsBulk({
+      'delivery.enabled': enabled ? 'true' : 'false',
+      'delivery.feeCents': String(fee),
+    }, document.getElementById('deliveryStatus'));
+  }
+
+  async function patchSelf(payload, statusEl) {
+    if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
+    try {
+      await api('/api/users/me', { method: 'PATCH', body: JSON.stringify(payload) });
+      if (statusEl) {
+        statusEl.style.color = 'var(--brand)';
+        statusEl.textContent = 'Saved ✓';
+      }
+    } catch (e) {
+      if (statusEl) {
+        statusEl.style.color = '#b91c1c';
+        statusEl.textContent = e.message || 'Failed to save';
+      }
+    }
+  }
+
+  async function saveVendorCollection(form) {
+    const fd = new FormData(form);
+    await patchSelf({
+      useOwnCollectionLocation: !!form.querySelector('input[name="useOwnCollectionLocation"]')?.checked,
+      collectionLine1: fd.get('collectionLine1') || null,
+      collectionLine2: fd.get('collectionLine2') || null,
+      collectionPostalCode: fd.get('collectionPostalCode') || null,
+      collectionContact: fd.get('collectionContact') || null,
+      collectionHours: fd.get('collectionHours') || null,
+    }, document.getElementById('vCollectionStatus'));
+  }
+
+  // Cart fulfilment-method picker. Posts to /cart?method=collection so the
+  // server-rendered summary updates (delivery fee, collection points list).
+  function pickFulfilment(method) {
+    const m = method === 'collection' ? 'collection' : 'delivery';
+    const url = new URL(location.href);
+    url.searchParams.set('method', m);
+    location.href = url.pathname + '?' + url.searchParams.toString();
+  }
+
+  function setShippingAddress(form) {
+    const fd = new FormData(form);
+    const addr = {
+      line1: fd.get('line1') || '',
+      postalCode: fd.get('postalCode') || '',
+      country: 'SG',
+    };
+    if (!addr.line1 || !addr.postalCode) {
+      alert('Please enter address line and postal code');
+      return false;
+    }
+    window.ppz._cart = window.ppz._cart || {};
+    window.ppz._cart.fulfilmentMethod = 'delivery';
+    window.ppz._cart.shippingAddress = addr;
+    return true;
+  }
+
+  async function saveVendorDelivery(form) {
+    const fd = new FormData(form);
+    const fee = dollarsToCents(fd.get('vendorDeliveryFee'));
+    await patchSelf({
+      useOwnDeliveryFee: !!form.querySelector('input[name="useOwnDeliveryFee"]')?.checked,
+      vendorDeliveryFeeCents: fee == null ? null : fee,
+    }, document.getElementById('vDeliveryStatus'));
+  }
+
   async function savePointsRate(form) {
     const fd = new FormData(form);
     const status = document.getElementById('rateStatus');
@@ -539,6 +641,12 @@ window.ppz = (function () {
     changePassword,
     bindAllowPointsToggle,
     savePointsRate,
+    saveCollectionPoint,
+    saveDeliverySettings,
+    saveVendorCollection,
+    saveVendorDelivery,
+    pickFulfilment,
+    setShippingAddress,
     bindImageUpload,
     addVariantRow,
     saveVariantRow,
@@ -579,7 +687,15 @@ window.ppz = (function () {
 
     async checkout() {
       try {
-        const r = await api('/api/checkout', { method: 'POST', body: JSON.stringify({ provider: 'stripe' }) });
+        const cart = (window.ppz && window.ppz._cart) || {};
+        const r = await api('/api/checkout', {
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'stripe',
+            fulfilmentMethod: cart.fulfilmentMethod || 'delivery',
+            shippingAddress: cart.shippingAddress || undefined,
+          }),
+        });
         if (r.payment.checkoutUrl) location.href = r.payment.checkoutUrl;
         else if (r.payment.clientSecret) {
           // PayNow QR confirmation should be handled with Stripe.js. For demo we just show the intent.

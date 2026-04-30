@@ -1,0 +1,98 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/vendor-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Vendor settings</h1>
+          <p class="lede">Override the marketplace-wide collection point and delivery fee for products you own.</p>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
+          <h3>Self-collection point</h3>
+          <span class="muted">Default = admin's PPZ Collection Point</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            By default customers collecting <strong>your products</strong> are sent to:
+            <em><%= adminCollection.line1 || '(not set yet)' %></em>.
+            Tick below to send them to your own location instead.
+          </p>
+          <form id="collectionForm" onsubmit="event.preventDefault(); ppz.saveVendorCollection(this)">
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="useOwnCollectionLocation" name="useOwnCollectionLocation"
+                <%= vendor.useOwnCollectionLocation ? 'checked' : '' %>>
+              <label class="form-check-label" for="useOwnCollectionLocation">
+                Use my own location
+              </label>
+            </div>
+            <div class="mb-3"><label>Address line</label>
+              <input class="form-control" name="collectionLine1" value="<%= vendor.collectionLine1 || '' %>" placeholder="123 Orchard Road #03-01">
+            </div>
+            <div class="mb-3"><label>Address line 2 (optional)</label>
+              <input class="form-control" name="collectionLine2" value="<%= vendor.collectionLine2 || '' %>">
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3"><label>Postal code</label>
+                <input class="form-control" name="collectionPostalCode" value="<%= vendor.collectionPostalCode || '' %>" inputmode="numeric" maxlength="6">
+              </div>
+              <div class="col-md-4 mb-3"><label>Contact (optional)</label>
+                <input class="form-control" name="collectionContact" value="<%= vendor.collectionContact || '' %>" placeholder="91234567">
+              </div>
+              <div class="col-md-4 mb-3"><label>Opening hours (optional)</label>
+                <input class="form-control" name="collectionHours" value="<%= vendor.collectionHours || '' %>" placeholder="Mon-Fri 10am-7pm">
+              </div>
+            </div>
+            <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save collection settings</button>
+            <span id="vCollectionStatus" class="ms-3 small"></span>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
+          <h3>Delivery fee</h3>
+          <span class="muted">Default = $<%= (adminDeliveryFeeCents/100).toFixed(2) %></span>
+        </div>
+        <div class="panel-body padded">
+          <% if (!adminDeliveryEnabled) { %>
+            <div class="cc-empty" style="margin-bottom:14px;">
+              Delivery is currently disabled marketplace-wide. Contact admin to enable it.
+            </div>
+          <% } %>
+          <p class="text-muted" style="font-size:.92rem;">
+            Per-product delivery fees can also be set on individual products in
+            <a href="/vendor/products">My products</a>. Order: per-product → vendor → admin default.
+          </p>
+          <form id="deliveryForm" onsubmit="event.preventDefault(); ppz.saveVendorDelivery(this)">
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="useOwnDeliveryFee" name="useOwnDeliveryFee"
+                <%= vendor.useOwnDeliveryFee ? 'checked' : '' %>>
+              <label class="form-check-label" for="useOwnDeliveryFee">
+                Use my own delivery fee instead of the admin default
+              </label>
+            </div>
+            <div class="mb-3" style="max-width:280px;">
+              <label>My delivery fee (SGD)</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" step="0.01" min="0" class="form-control" name="vendorDeliveryFee"
+                  value="<%= vendor.vendorDeliveryFeeCents != null ? (vendor.vendorDeliveryFeeCents/100).toFixed(2) : '' %>"
+                  placeholder="<%= (adminDeliveryFeeCents/100).toFixed(2) %>">
+              </div>
+            </div>
+            <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save delivery settings</button>
+            <span id="vDeliveryStatus" class="ms-3 small"></span>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>

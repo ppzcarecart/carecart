@@ -16,4 +16,14 @@ export class UpdateUserDto {
   @IsOptional() @IsInt() @Min(0) ppzCurrency?: number;
   @IsOptional() @IsInt() @Min(0) lifetimePpzCurrency?: number;
   @IsOptional() @IsInt() team?: number;
+
+  // Vendor fulfilment overrides
+  @IsOptional() @IsBoolean() useOwnCollectionLocation?: boolean;
+  @IsOptional() @IsString() collectionLine1?: string;
+  @IsOptional() @IsString() collectionLine2?: string;
+  @IsOptional() @IsString() collectionPostalCode?: string;
+  @IsOptional() @IsString() collectionContact?: string;
+  @IsOptional() @IsString() collectionHours?: string;
+  @IsOptional() @IsBoolean() useOwnDeliveryFee?: boolean;
+  @IsOptional() @IsInt() @Min(0) vendorDeliveryFeeCents?: number;
 }

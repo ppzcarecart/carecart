@@ -87,7 +87,7 @@
                   <small class="text-muted">Defaults to PPZ Fulfilment when you don't pick a third-party vendor.</small>
                 </div>
               <% } %>
-              <div class="col-md-<%= isAdmin ? '6' : '12' %> mb-3">
+              <div class="col-md-<%= isAdmin ? '4' : '8' %> mb-3">
                 <label>Category</label>
                 <select class="form-select" name="categoryId">
                   <option value="">— None —</option>
@@ -95,6 +95,13 @@
                     <option value="<%= c.id %>"><%= c.name %></option>
                   <% }); %>
                 </select>
+              </div>
+              <div class="col-md-<%= isAdmin ? '4' : '4' %> mb-3">
+                <label>Delivery fee override (SGD)</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" min="0" class="form-control" name="deliveryFee" placeholder="Blank → use vendor / admin default">
+                </div>
               </div>
             </div>
           </form>

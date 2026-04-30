@@ -20,6 +20,8 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
+export type FulfilmentMethod = 'delivery' | 'collection';
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -51,7 +53,29 @@ export class Order {
   @Column({ default: 'SGD' })
   currency: string;
 
-  // Shipping snapshot
+  // Fulfilment
+  @Column({ type: 'varchar', default: 'delivery' })
+  fulfilmentMethod: FulfilmentMethod;
+
+  @Column({ type: 'integer', default: 0 })
+  deliveryFeeCents: number;
+
+  // For "collection" orders we snapshot the picked points into the order
+  // (one per vendor) so the customer's confirmation / order detail keeps
+  // showing the right place even if the vendor later changes settings.
+  @Column({ type: 'jsonb', nullable: true })
+  collectionPoints?: Array<{
+    vendorId?: string;
+    vendorName?: string;
+    line1?: string;
+    line2?: string;
+    postalCode?: string;
+    contact?: string;
+    hours?: string;
+    source?: 'admin' | 'vendor';
+  }>;
+
+  // Shipping snapshot (used for delivery orders)
   @Column({ type: 'jsonb', nullable: true })
   shippingAddress?: Record<string, any>;
 

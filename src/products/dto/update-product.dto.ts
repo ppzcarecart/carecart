@@ -16,6 +16,7 @@ export class UpdateProductDto {
   @IsOptional() @IsString() currency?: string;
   @IsOptional() @IsInt() @Min(0) pointsPrice?: number | null;
   @IsOptional() @IsBoolean() allowPointsRedemption?: boolean;
+  @IsOptional() @IsInt() @Min(0) deliveryFeeCentsOverride?: number | null;
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsString() categoryId?: string | null;

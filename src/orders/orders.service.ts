@@ -32,19 +32,27 @@ export class OrdersService {
     userId: string,
     shippingAddress: Record<string, any> | undefined,
     paymentProvider: string,
+    fulfilmentMethod: 'delivery' | 'collection' = 'delivery',
   ): Promise<Order> {
-    const summary = await this.cart.summary(userId);
+    const summary = await this.cart.summary(userId, fulfilmentMethod);
     if (!summary.cart.items.length) throw new BadRequestException('Cart is empty');
+    if (fulfilmentMethod === 'delivery' && !summary.deliveryEnabled) {
+      throw new BadRequestException('Delivery is currently disabled');
+    }
 
     const order = this.orders.create({
       number: this.generateNumber(),
       customerId: userId,
       status: 'awaiting_payment',
       subtotalCents: summary.subtotalCents,
-      totalCents: summary.subtotalCents, // taxes/shipping not modeled — extend here
+      totalCents: summary.subtotalCents + summary.deliveryFeeCents,
       pointsTotal: summary.pointsTotal,
       currency: 'SGD',
-      shippingAddress,
+      fulfilmentMethod,
+      deliveryFeeCents: summary.deliveryFeeCents,
+      collectionPoints:
+        fulfilmentMethod === 'collection' ? summary.collectionPoints : null,
+      shippingAddress: fulfilmentMethod === 'delivery' ? shippingAddress : null,
       paymentProvider,
       items: [],
     });

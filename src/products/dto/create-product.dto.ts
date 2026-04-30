@@ -40,6 +40,10 @@ export class CreateProductDto {
   // When true, points are auto-calculated server-side from the price.
   @IsOptional() @IsBoolean() allowPointsRedemption?: boolean;
 
+  // Per-item delivery fee override (cents). Null/undefined means "use the
+  // vendor's default or the global default from settings".
+  @IsOptional() @IsInt() @Min(0) deliveryFeeCentsOverride?: number;
+
   @IsOptional() @IsInt() @Min(0) stock?: number;
 
   @IsOptional() @IsBoolean() active?: boolean;

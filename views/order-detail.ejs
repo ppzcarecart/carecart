@@ -52,8 +52,28 @@
               <dd><%= new Date(customer.createdAt).toLocaleDateString() %></dd>
             </dl>
 
-            <h4 style="margin-top:22px; font-size:.95rem; font-weight:600;">Shipping address</h4>
-            <% if (order.shippingAddress && order.shippingAddress.line1) { %>
+            <h4 style="margin-top:22px; font-size:.95rem; font-weight:600;">
+              Fulfilment · <span class="text-muted" style="font-weight:500;"><%= order.fulfilmentMethod === 'collection' ? 'Self-collection' : 'Delivery' %></span>
+            </h4>
+            <% if (order.fulfilmentMethod === 'collection') { %>
+              <% if (order.collectionPoints && order.collectionPoints.length) { %>
+                <% order.collectionPoints.forEach(cp => { %>
+                  <div style="margin-top:8px;">
+                    <strong><%= cp.vendorName || 'PPZ Collection Point' %></strong>
+                    <% if (cp.source === 'vendor') { %>
+                      <span class="ctype-tag ctype-ppz" style="margin-left:6px;">Vendor location</span>
+                    <% } %>
+                    <div><%= cp.line1 || '' %></div>
+                    <% if (cp.line2) { %><div><%= cp.line2 %></div><% } %>
+                    <% if (cp.postalCode) { %><div class="text-muted">Postal <%= cp.postalCode %></div><% } %>
+                    <% if (cp.contact) { %><div class="text-muted">Contact <%= cp.contact %></div><% } %>
+                    <% if (cp.hours) { %><div class="text-muted">Hours <%= cp.hours %></div><% } %>
+                  </div>
+                <% }); %>
+              <% } else { %>
+                <p class="text-muted" style="margin:0;">No collection point recorded.</p>
+              <% } %>
+            <% } else if (order.shippingAddress && order.shippingAddress.line1) { %>
               <p style="margin:0;"><%= order.shippingAddress.line1 %></p>
               <% if (order.shippingAddress.line2) { %>
                 <p style="margin:0;"><%= order.shippingAddress.line2 %></p>
@@ -138,6 +158,12 @@
             <span class="text-muted">Cash subtotal</span>
             <strong>$<%= (order.subtotalCents/100).toFixed(2) %></strong>
           </div>
+          <% if (order.deliveryFeeCents > 0) { %>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Delivery</span>
+              <strong>$<%= (order.deliveryFeeCents/100).toFixed(2) %></strong>
+            </div>
+          <% } %>
           <% if (order.pointsTotal > 0) { %>
             <div class="d-flex justify-content-between mb-2">
               <span class="text-muted">Points subtotal</span>

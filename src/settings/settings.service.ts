@@ -5,6 +5,18 @@ import { Setting } from './setting.entity';
 
 const DEFAULTS: Record<string, string> = {
   pointsPerDollar: '50',
+  // Self-collection point shown when an order's fulfilment method is
+  // "collection" and the vendor hasn't set their own location.
+  'collection.line1': '',
+  'collection.line2': '',
+  'collection.postalCode': '',
+  'collection.contact': '',
+  'collection.hours': '',
+  // Delivery
+  'delivery.enabled': 'true',
+  // Default delivery fee (in cents) used when a product has no override
+  // and the vendor hasn't set their own.
+  'delivery.feeCents': '500',
 };
 
 @Injectable()
@@ -36,6 +48,25 @@ export class SettingsService implements OnModuleInit {
 
   pointsPerDollar(): number {
     return this.getInt('pointsPerDollar', 50);
+  }
+
+  isDeliveryEnabled(): boolean {
+    return this.get('delivery.enabled') === 'true';
+  }
+
+  deliveryFeeCents(): number {
+    return this.getInt('delivery.feeCents', 0);
+  }
+
+  collectionPoint() {
+    return {
+      line1: this.get('collection.line1') || '',
+      line2: this.get('collection.line2') || '',
+      postalCode: this.get('collection.postalCode') || '',
+      contact: this.get('collection.contact') || '',
+      hours: this.get('collection.hours') || '',
+      country: 'SG',
+    };
   }
 
   async set(key: string, value: string) {

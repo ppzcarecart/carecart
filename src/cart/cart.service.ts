@@ -10,6 +10,8 @@ import { Cart } from './entities/cart.entity';
 import { CartItem, PricingMode } from './entities/cart-item.entity';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
+import { FulfilmentService, CollectionPoint } from '../fulfilment/fulfilment.service';
+import { FulfilmentMethod } from '../orders/entities/order.entity';
 
 @Injectable()
 export class CartService {
@@ -18,6 +20,7 @@ export class CartService {
     @InjectRepository(CartItem) private items: Repository<CartItem>,
     private products: ProductsService,
     private users: UsersService,
+    private fulfilment: FulfilmentService,
   ) {}
 
   private async isPpzMember(userId: string) {
@@ -108,12 +111,19 @@ export class CartService {
     return this.getOrCreate(userId);
   }
 
-  async summary(userId: string) {
+  async summary(
+    userId: string,
+    fulfilmentMethod: FulfilmentMethod = 'delivery',
+  ) {
     const cart = await this.getOrCreate(userId);
     const isMember = await this.isPpzMember(userId);
+
     let subtotalCents = 0;
     let pointsTotal = 0;
-    const lines = cart.items.map((item) => {
+    let deliveryFeeCents = 0;
+
+    // Resolve pricing first (sync), then fulfilment (async).
+    const baseLines = cart.items.map((item) => {
       const variant = item.variant;
       const product = item.product;
       const pricing = this.products.resolvePricing(product, variant, isMember);
@@ -127,6 +137,7 @@ export class CartService {
       pointsTotal += linePoints;
       return {
         item,
+        product,
         priceCents: pricing.priceCents,
         pointsPrice: pricing.pointsPrice,
         normalPriceCents: pricing.normalPriceCents,
@@ -135,6 +146,46 @@ export class CartService {
         linePoints,
       };
     });
-    return { cart, lines, subtotalCents, pointsTotal, isPpzMember: isMember };
+
+    const lines: any[] = [];
+    const collectionByVendor = new Map<string, CollectionPoint>();
+    const isDelivery = fulfilmentMethod === 'delivery';
+
+    for (const l of baseLines) {
+      let lineDelivery = 0;
+      // Cash-paid lines incur delivery fees; points-only lines don't (the
+      // shop owner can change this later if they want a different policy).
+      if (isDelivery && l.item.pricingMode === 'price') {
+        lineDelivery = await this.fulfilment.resolveDeliveryFee(l.product);
+        deliveryFeeCents += lineDelivery;
+      }
+      lines.push({ ...l, deliveryFeeCents: lineDelivery });
+
+      if (!isDelivery) {
+        const vendorId = l.product.vendorId;
+        if (vendorId && !collectionByVendor.has(vendorId)) {
+          collectionByVendor.set(
+            vendorId,
+            await this.fulfilment.resolveCollectionPoint(vendorId),
+          );
+        }
+      }
+    }
+
+    const collectionPoints = Array.from(collectionByVendor.values());
+    const totalCents = subtotalCents + deliveryFeeCents;
+
+    return {
+      cart,
+      lines,
+      subtotalCents,
+      deliveryFeeCents,
+      totalCents,
+      pointsTotal,
+      isPpzMember: isMember,
+      fulfilmentMethod,
+      deliveryEnabled: this.fulfilment.isDeliveryEnabled(),
+      collectionPoints,
+    };
   }
 }

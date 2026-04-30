@@ -116,9 +116,18 @@ export class ViewsController {
 
   @Get('cart')
   @Render('shop/cart')
-  async cartPage(@CurrentUser() user: any) {
-    const summary = await this.cart.summary(user.id);
-    return { title: 'Your cart', user, summary };
+  async cartPage(
+    @CurrentUser() user: any,
+    @Query('method') method?: string,
+  ) {
+    const fulfilmentMethod = method === 'collection' ? 'collection' : 'delivery';
+    const summary = await this.cart.summary(user.id, fulfilmentMethod);
+    const fullUser = await this.users.findById(user.id);
+    const defaultShipping =
+      (fullUser?.addresses || []).find((a: any) => a.isDefault) ||
+      (fullUser?.addresses || [])[0] ||
+      null;
+    return { title: 'Your cart', user, summary, defaultShipping };
   }
 
   @Get('orders')
@@ -273,12 +282,26 @@ export class ViewsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/settings')
   @Render('admin/settings')
-  settingsPage(@CurrentUser() user: any) {
+  async settingsPage(@CurrentUser() user: any) {
+    const all = await this.settings.getAll();
     return {
       title: 'Settings',
       user,
       activePath: '/admin/settings',
-      settings: { pointsPerDollar: this.settings.pointsPerDollar() },
+      settings: {
+        pointsPerDollar: parseInt(all.pointsPerDollar || '50', 10),
+        collection: {
+          line1: all['collection.line1'] || '',
+          line2: all['collection.line2'] || '',
+          postalCode: all['collection.postalCode'] || '',
+          contact: all['collection.contact'] || '',
+          hours: all['collection.hours'] || '',
+        },
+        delivery: {
+          enabled: all['delivery.enabled'] === 'true',
+          feeCents: parseInt(all['delivery.feeCents'] || '0', 10),
+        },
+      },
     };
   }
 
@@ -393,6 +416,29 @@ export class ViewsController {
       pointsPerDollar: this.settings.pointsPerDollar(),
       returnTo,
       activePath: returnTo,
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/settings')
+  @Render('vendor/settings')
+  async vendorSettings(@CurrentUser() user: any) {
+    const me = await this.users.findById(user.id);
+    const all = await this.settings.getAll();
+    return {
+      title: 'Vendor settings',
+      user,
+      vendor: me,
+      adminCollection: {
+        line1: all['collection.line1'] || '',
+        line2: all['collection.line2'] || '',
+        postalCode: all['collection.postalCode'] || '',
+        contact: all['collection.contact'] || '',
+        hours: all['collection.hours'] || '',
+      },
+      adminDeliveryEnabled: all['delivery.enabled'] === 'true',
+      adminDeliveryFeeCents: parseInt(all['delivery.feeCents'] || '0', 10),
+      activePath: '/vendor/settings',
     };
   }
 

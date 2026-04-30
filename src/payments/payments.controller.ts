@@ -34,10 +34,17 @@ export class PaymentsController {
     body: {
       provider?: string;
       shippingAddress?: Record<string, any>;
+      fulfilmentMethod?: 'delivery' | 'collection';
     },
   ) {
     const provider = body.provider || 'stripe';
-    const order = await this.orders.createFromCart(user.id, body.shippingAddress, provider);
+    const method = body.fulfilmentMethod === 'collection' ? 'collection' : 'delivery';
+    const order = await this.orders.createFromCart(
+      user.id,
+      body.shippingAddress,
+      provider,
+      method,
+    );
     const init = await this.payments.start(order.id, provider);
     return { order, payment: init };
   }

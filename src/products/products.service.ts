@@ -140,6 +140,7 @@ export class ProductsService {
       currency: dto.currency || 'SGD',
       pointsPrice: dto.pointsPrice ?? null,
       allowPointsRedemption: dto.allowPointsRedemption ?? false,
+      deliveryFeeCentsOverride: dto.deliveryFeeCentsOverride ?? null,
       stock: dto.stock ?? 0,
       active: dto.active ?? true,
       vendorId,
@@ -184,6 +185,9 @@ export class ProductsService {
     if (dto.pointsPrice !== undefined) product.pointsPrice = dto.pointsPrice;
     if (dto.allowPointsRedemption !== undefined) {
       product.allowPointsRedemption = !!dto.allowPointsRedemption;
+    }
+    if (dto.deliveryFeeCentsOverride !== undefined) {
+      product.deliveryFeeCentsOverride = dto.deliveryFeeCentsOverride as any;
     }
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;

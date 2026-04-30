@@ -54,6 +54,11 @@ export class Product {
   @Column({ default: false })
   allowPointsRedemption: boolean;
 
+  // Per-item delivery fee override. When set, takes precedence over the
+  // vendor's own fee and the admin global default.
+  @Column({ type: 'integer', nullable: true })
+  deliveryFeeCentsOverride?: number;
+
   @Column({ default: 0 })
   stock: number;
 
