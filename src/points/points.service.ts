@@ -103,6 +103,7 @@ export class PointsService {
     amount: number,
     orderId: string,
     orderNumber?: string,
+    reason?: string,
   ) {
     if (amount <= 0) return { skipped: true };
     const tx = this.repo.create({
@@ -111,22 +112,31 @@ export class PointsService {
       kind: 'reverse',
       amount,
       status: 'pending',
-      meta: { type: 'refund' },
+      meta: { type: 'refund', reason: reason || null },
     });
     await this.repo.save(tx);
 
     const user = await this.users.findById(userId);
     if (!user?.ppzId || !this.client.isConfigured()) {
-      tx.meta = { type: 'refund', reason: 'PPZ API not configured or user not linked' };
+      tx.meta = {
+        type: 'refund',
+        reason: reason || null,
+        skipReason: 'PPZ API not configured or user not linked',
+      };
       await this.repo.save(tx);
       return { recorded: true, remote: false };
     }
+
+    // Description for the partner-app transaction history. Always starts
+    // with "Refund" so it's filterable on their side.
+    const headline = orderNumber ? `Refund - ${orderNumber}` : 'Refund';
+    const remoteReason = reason ? `${headline}: ${reason}` : headline;
 
     try {
       const res = await this.client.add({
         ppzid: user.ppzId,
         amount,
-        reason: orderNumber ? `Refund - ${orderNumber}` : 'Refund',
+        reason: remoteReason,
       });
       if ('notConfigured' in res) {
         await this.repo.save(tx);

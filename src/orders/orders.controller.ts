@@ -74,7 +74,15 @@ export class OrdersController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
   @Post(':id/refund')
-  refund(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.orders.refund(id, { id: user.id, role: user.role });
+  refund(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.orders.refund(
+      id,
+      { id: user.id, role: user.role },
+      body?.reason ?? '',
+    );
   }
 }

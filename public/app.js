@@ -723,13 +723,27 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
-    async refundOrder(id, number) {
-      const label = number ? 'order ' + number : 'this order';
-      if (!confirm('Issue a full refund for ' + label + '? This refunds any PPZ points to the customer and locks the status to "refunded". This action cannot be undone.')) return;
+    async submitRefund(form, id) {
+      const fd = new FormData(form);
+      const reason = (fd.get('reason') || '').toString().trim();
+      const errEl = document.getElementById('refundError');
+      if (errEl) errEl.textContent = '';
+      if (!reason) {
+        if (errEl) errEl.textContent = 'Please enter a refund reason.';
+        return;
+      }
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Refunding…'; }
       try {
-        await api('/api/orders/' + id + '/refund', { method: 'POST' });
+        await api('/api/orders/' + id + '/refund', {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        });
         location.reload();
-      } catch (e) { alert(e.message); }
+      } catch (e) {
+        if (errEl) errEl.textContent = e.message || 'Refund failed';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm refund'; }
+      }
     },
     async setFeatured(id, featured, checkbox) {
       try {

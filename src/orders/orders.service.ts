@@ -158,7 +158,16 @@ export class OrdersService {
   async refund(
     id: string,
     actor: { id: string; role: Role },
+    reason: string,
   ): Promise<Order> {
+    const trimmed = (reason || '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('A refund reason is required');
+    }
+    if (trimmed.length > 500) {
+      throw new BadRequestException('Refund reason is too long (max 500)');
+    }
+
     const order = await this.findById(id);
     if (!order) throw new NotFoundException('Order not found');
     if (order.status === 'refunded') {
@@ -181,17 +190,21 @@ export class OrdersService {
       throw new ForbiddenException();
     }
 
-    // Refund PPZ points if the order had a points component.
+    // Refund PPZ points if the order had a points component. The reason
+    // travels along to the partner-API description so it shows up in the
+    // customer's PPZ transaction history.
     if (order.pointsTotal > 0 && order.customerId) {
       await this.points.refund(
         order.customerId,
         order.pointsTotal,
         order.id,
         order.number,
+        trimmed,
       );
     }
 
     order.status = 'refunded';
+    order.refundReason = trimmed;
     return this.orders.save(order);
   }
 

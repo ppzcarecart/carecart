@@ -79,6 +79,11 @@ export class Order {
   @Column({ type: 'jsonb', nullable: true })
   shippingAddress?: Record<string, any>;
 
+  // Captured by the staff/vendor when an order is refunded; required at
+  // refund time and surfaced under "Remarks" on the order detail page.
+  @Column({ type: 'text', nullable: true })
+  refundReason?: string;
+
   // Selected payment provider, e.g. 'stripe' or future gateway
   @Column({ nullable: true })
   paymentProvider?: string;
