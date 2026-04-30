@@ -22,6 +22,7 @@
                 <tr>
                   <th>Number</th>
                   <th>Customer</th>
+                  <th>CType</th>
                   <th>Status</th>
                   <th class="num">Total</th>
                   <th class="num">Points</th>
@@ -30,9 +31,19 @@
               </thead>
               <tbody>
               <% orders.forEach(o => { %>
+                <%
+                const ctype = o.customer ? (o.customer.ppzId ? 'PPZ' : 'CC') : 'NA';
+                %>
                 <tr>
-                  <td><strong><%= o.number %></strong></td>
+                  <td><strong><a href="/admin/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
                   <td><%= o.customer ? o.customer.email : '-' %></td>
+                  <td>
+                    <% if (ctype === 'NA') { %>
+                      <span class="text-muted">—</span>
+                    <% } else { %>
+                      <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
+                    <% } %>
+                  </td>
                   <td>
                     <select onchange="ppz.setOrderStatus('<%= o.id %>', this.value)">
                       <% ['pending','awaiting_payment','paid','fulfilled','cancelled','refunded'].forEach(s => { %>
@@ -41,7 +52,7 @@
                     </select>
                   </td>
                   <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
-                  <td class="num"><%= o.pointsTotal || '–' %></td>
+                  <td class="num"><%= o.pointsTotal ? Number(o.pointsTotal).toLocaleString() : '–' %></td>
                   <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
                 </tr>
               <% }); %>

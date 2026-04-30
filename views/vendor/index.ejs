@@ -88,11 +88,20 @@
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No orders yet.</div>
           <% } else { %>
             <table class="admin-table">
-              <thead><tr><th>Number</th><th>Status</th><th class="num">Total</th><th>Created</th></tr></thead>
+              <thead><tr><th>Number</th><th>Customer</th><th>CType</th><th>Status</th><th class="num">Total</th><th>Created</th></tr></thead>
               <tbody>
               <% orders.slice(0, 12).forEach(o => { %>
+                <% const ctype = o.customer ? (o.customer.ppzId ? 'PPZ' : 'CC') : 'NA'; %>
                 <tr>
-                  <td><strong><%= o.number %></strong></td>
+                  <td><strong><a href="/vendor/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
+                  <td><%= o.customer ? (o.customer.name || o.customer.email) : '-' %></td>
+                  <td>
+                    <% if (ctype === 'NA') { %>
+                      <span class="text-muted">—</span>
+                    <% } else { %>
+                      <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
+                    <% } %>
+                  </td>
                   <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
                   <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
                   <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>

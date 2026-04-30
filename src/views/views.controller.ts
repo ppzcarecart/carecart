@@ -226,6 +226,44 @@ export class ViewsController {
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/orders/:id')
+  @Render('order-detail')
+  async adminOrderDetail(@Param('id') id: string, @CurrentUser() user: any) {
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+    return {
+      title: 'Order ' + order.number,
+      user,
+      order,
+      customer: order.customer,
+      activePath: '/admin/orders',
+      returnTo: '/admin/orders',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/orders/:id')
+  @Render('order-detail')
+  async vendorOrderDetail(@Param('id') id: string, @CurrentUser() user: any) {
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+    if (
+      user.role === Role.VENDOR &&
+      !order.items.some((i) => i.vendorId === user.id)
+    ) {
+      throw new ForbiddenException('This order does not contain your items');
+    }
+    return {
+      title: 'Order ' + order.number,
+      user,
+      order,
+      customer: order.customer,
+      activePath: '/vendor',
+      returnTo: '/vendor',
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/import')
   @Render('admin/import')
   importPage(@CurrentUser() user: any) {

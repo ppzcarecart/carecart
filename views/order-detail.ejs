@@ -1,0 +1,164 @@
+<%- include('partials/head') %>
+<%- include('partials/nav') %>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <% if (user.role === 'vendor') { %>
+      <%- include('partials/vendor-sidebar', { activePath }) %>
+    <% } else { %>
+      <%- include('partials/admin-sidebar', { activePath }) %>
+    <% } %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Order <%= order.number %></h1>
+          <p class="lede"><a href="<%= returnTo %>">← Back</a> · placed <%= new Date(order.createdAt).toLocaleString() %></p>
+        </div>
+        <div>
+          <span class="badge-status <%= order.status %>" style="font-size:.85rem; padding:6px 14px;"><%= order.status %></span>
+        </div>
+      </div>
+
+      <%
+      const ctype = (customer && customer.ppzId) ? 'PPZ' : (customer ? 'CC' : 'NA');
+      const ctypeLabel = ctype === 'NA' ? '—' : ctype;
+      %>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Customer</h3>
+          <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctypeLabel %></span>
+        </div>
+        <div class="panel-body padded">
+          <% if (customer) { %>
+            <dl class="profile-dl">
+              <dt>Name</dt>
+              <dd><%= customer.name %></dd>
+              <dt>Email</dt>
+              <dd><%= customer.email %></dd>
+              <% if (customer.contact) { %>
+                <dt>Contact</dt>
+                <dd><%= customer.contact %></dd>
+              <% } %>
+              <% if (customer.ppzId) { %>
+                <dt>PPZ ID</dt>
+                <dd><%= customer.ppzId %></dd>
+              <% } %>
+              <% if (customer.team != null) { %>
+                <dt>Team</dt>
+                <dd><%= customer.team %></dd>
+              <% } %>
+              <dt>Member since</dt>
+              <dd><%= new Date(customer.createdAt).toLocaleDateString() %></dd>
+            </dl>
+
+            <h4 style="margin-top:22px; font-size:.95rem; font-weight:600;">Shipping address</h4>
+            <% if (order.shippingAddress && order.shippingAddress.line1) { %>
+              <p style="margin:0;"><%= order.shippingAddress.line1 %></p>
+              <% if (order.shippingAddress.line2) { %>
+                <p style="margin:0;"><%= order.shippingAddress.line2 %></p>
+              <% } %>
+              <% const region = [order.shippingAddress.city, order.shippingAddress.state, order.shippingAddress.postalCode].filter(Boolean).join(' '); %>
+              <% if (region) { %><p class="text-muted" style="margin:0;"><%= region %></p><% } %>
+              <% if (order.shippingAddress.country) { %>
+                <p class="text-muted" style="margin:0;"><%= order.shippingAddress.country %></p>
+              <% } %>
+            <% } else if (customer.addresses && customer.addresses.length) { %>
+              <% const a = customer.addresses.find(x => x.isDefault) || customer.addresses[0]; %>
+              <p style="margin:0;"><%= a.line1 %></p>
+              <% if (a.line2) { %><p style="margin:0;"><%= a.line2 %></p><% } %>
+              <% const region = [a.city, a.state, a.postalCode].filter(Boolean).join(' '); %>
+              <% if (region) { %><p class="text-muted" style="margin:0;"><%= region %></p><% } %>
+              <% if (a.country) { %><p class="text-muted" style="margin:0;"><%= a.country %></p><% } %>
+            <% } else { %>
+              <p class="text-muted" style="margin:0;">No address on file.</p>
+            <% } %>
+          <% } else { %>
+            <p class="text-muted" style="margin:0;">Customer record no longer available.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Items <span class="muted">(<%= order.items.length %>)</span></h3>
+        </div>
+        <div class="panel-body">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Vendor</th>
+                <th class="num">Qty</th>
+                <th>Mode</th>
+                <th class="num">Unit</th>
+                <th class="num">Line total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% order.items.forEach(it => { %>
+                <tr>
+                  <td>
+                    <strong><%= it.productName %></strong>
+                    <% if (it.product) { %>
+                      <div class="text-muted" style="font-size:.82rem">
+                        <a href="/p/<%= it.product.slug %>" target="_blank" class="text-muted">View on shop ↗</a>
+                      </div>
+                    <% } %>
+                  </td>
+                  <td><%= it.vendor ? (it.vendor.vendorStoreName || it.vendor.name) : '—' %></td>
+                  <td class="num"><%= it.quantity %></td>
+                  <td>
+                    <span class="tag <%= it.pricingMode === 'points' ? 'tag-vendor' : 'tag-customer' %>"><%= it.pricingMode %></span>
+                  </td>
+                  <td class="num">
+                    <% if (it.pricingMode === 'price') { %>
+                      $<%= (it.unitPriceCents/100).toFixed(2) %>
+                    <% } else { %>
+                      <%= Number(it.unitPoints).toLocaleString() %> pts
+                    <% } %>
+                  </td>
+                  <td class="num">
+                    <% if (it.pricingMode === 'price') { %>
+                      $<%= (it.unitPriceCents * it.quantity / 100).toFixed(2) %>
+                    <% } else { %>
+                      <%= Number(it.unitPoints * it.quantity).toLocaleString() %> pts
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 480px; margin-left: auto;">
+        <div class="panel-body padded">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Cash subtotal</span>
+            <strong>$<%= (order.subtotalCents/100).toFixed(2) %></strong>
+          </div>
+          <% if (order.pointsTotal > 0) { %>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Points subtotal</span>
+              <strong><%= Number(order.pointsTotal).toLocaleString() %> pts</strong>
+            </div>
+          <% } %>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Payment</span>
+            <span><%= order.paymentProvider || '—' %></span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between" style="font-size:1.05rem;">
+            <strong>Total</strong>
+            <strong>
+              $<%= (order.totalCents/100).toFixed(2) %><% if (order.pointsTotal > 0) { %> + <%= Number(order.pointsTotal).toLocaleString() %> pts<% } %>
+            </strong>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('partials/foot') %>
