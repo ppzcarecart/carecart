@@ -185,6 +185,13 @@ a:hover { color: var(--brand-dark); }
 }
 .cc-badge-featured { background: rgba(245, 158, 11, 0.95); color: #fff; }
 .cc-badge-new { background: rgba(15, 118, 110, 0.95); color: #fff; }
+.cc-badge-ppz { background: rgba(124, 58, 237, 0.95); color: #fff; }
+.amount-strike {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
 .cc-info-badges { display: flex; gap: 6px; margin-bottom: 10px; }
 .cc-card .cc-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .cc-card .cc-vendor { color: var(--ink-soft); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }

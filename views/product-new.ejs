@@ -42,15 +42,19 @@
               <textarea class="form-control" name="description" rows="3" placeholder="What makes this product great?"></textarea>
             </div>
             <div class="row">
-              <div class="col-md-4 mb-3">
-                <label>Price (cents) <span class="text-danger">*</span></label>
-                <input type="number" min="0" class="form-control" name="priceCents" required placeholder="e.g. 1990 = $19.90">
+              <div class="col-md-3 mb-3">
+                <label>Normal price (cents) <span class="text-danger">*</span></label>
+                <input type="number" min="0" class="form-control" name="priceCents" required placeholder="e.g. 1990">
               </div>
-              <div class="col-md-4 mb-3">
-                <label>Points price <span class="text-muted">(optional)</span></label>
-                <input type="number" min="0" class="form-control" name="pointsPrice" placeholder="Leave blank to disable points">
+              <div class="col-md-3 mb-3">
+                <label>PPZ member price (cents)</label>
+                <input type="number" min="0" class="form-control" name="ppzPriceCents" placeholder="Leave blank → same as normal">
               </div>
-              <div class="col-md-4 mb-3">
+              <div class="col-md-3 mb-3">
+                <label>Points price</label>
+                <input type="number" min="0" class="form-control" name="pointsPrice" placeholder="Leave blank to disable">
+              </div>
+              <div class="col-md-3 mb-3">
                 <label>Stock</label>
                 <input type="number" min="0" class="form-control" name="stock" value="0">
               </div>
@@ -113,6 +117,7 @@
                 <th>Name</th>
                 <th>SKU</th>
                 <th class="num">Price (cents)</th>
+                <th class="num">PPZ price</th>
                 <th class="num">Points</th>
                 <th class="num">Stock</th>
                 <th class="actions">Actions</th>

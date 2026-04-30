@@ -108,6 +108,7 @@ export class ProductsService {
       slug: finalSlug,
       description: dto.description,
       priceCents: dto.priceCents,
+      ppzPriceCents: dto.ppzPriceCents ?? null,
       currency: dto.currency || 'SGD',
       pointsPrice: dto.pointsPrice ?? null,
       stock: dto.stock ?? 0,
@@ -119,6 +120,7 @@ export class ProductsService {
           name: v.name,
           sku: v.sku,
           priceCentsOverride: v.priceCentsOverride,
+          ppzPriceCentsOverride: v.ppzPriceCentsOverride,
           pointsPriceOverride: v.pointsPriceOverride,
           stock: v.stock ?? 0,
           active: v.active ?? true,
@@ -149,6 +151,7 @@ export class ProductsService {
       product.priceCents = dto.priceCents;
     }
     if (dto.currency !== undefined) product.currency = dto.currency;
+    if (dto.ppzPriceCents !== undefined) product.ppzPriceCents = dto.ppzPriceCents;
     if (dto.pointsPrice !== undefined) product.pointsPrice = dto.pointsPrice;
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;
@@ -189,6 +192,7 @@ export class ProductsService {
         name: dto.name,
         sku: dto.sku,
         priceCentsOverride: dto.priceCentsOverride,
+        ppzPriceCentsOverride: dto.ppzPriceCentsOverride,
         pointsPriceOverride: dto.pointsPriceOverride,
         stock: dto.stock ?? 0,
         active: dto.active ?? true,
@@ -245,13 +249,37 @@ export class ProductsService {
     return this.products.save(product);
   }
 
-  // Resolves the effective price/points for an order line
-  resolvePricing(product: Product, variant?: ProductVariant) {
-    const priceCents = variant?.priceCentsOverride ?? product.priceCents;
-    const pointsPrice =
-      variant?.pointsPriceOverride !== undefined && variant?.pointsPriceOverride !== null
+  /**
+   * Resolves the effective price/points for an order line. When
+   * `isPpzMember` is true and the product (or variant) has a PPZ price
+   * defined, that value replaces the normal cash price. Points price is
+   * only ever returned for PPZ members — non-members can't redeem.
+   *
+   * The `priceCents` field in the result is what the buyer pays in cash
+   * for this line, so the rest of the cart/order code doesn't need to
+   * branch on member status.
+   */
+  resolvePricing(
+    product: Product,
+    variant?: ProductVariant,
+    isPpzMember = false,
+  ) {
+    const normalCents = variant?.priceCentsOverride ?? product.priceCents;
+    const ppzCents =
+      variant?.ppzPriceCentsOverride ?? product.ppzPriceCents ?? null;
+    const memberPoints =
+      variant?.pointsPriceOverride !== undefined &&
+      variant?.pointsPriceOverride !== null
         ? variant.pointsPriceOverride
         : product.pointsPrice ?? null;
-    return { priceCents, pointsPrice };
+
+    const usePpz = isPpzMember && ppzCents != null;
+    return {
+      priceCents: usePpz ? ppzCents : normalCents,
+      normalPriceCents: normalCents,
+      ppzPriceCents: ppzCents,
+      pointsPrice: isPpzMember ? memberPoints : null,
+      isPpzPrice: usePpz,
+    };
   }
 }

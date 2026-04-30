@@ -146,6 +146,7 @@ window.ppz = (function () {
       <td><input type="text" name="name" placeholder="Size: M / Color: Black"></td>
       <td><input type="text" name="sku" placeholder="Optional SKU"></td>
       <td class="num"><input type="number" min="0" name="priceCentsOverride" placeholder="—"></td>
+      <td class="num"><input type="number" min="0" name="ppzPriceCentsOverride" placeholder="—"></td>
       <td class="num"><input type="number" min="0" name="pointsPriceOverride" placeholder="—"></td>
       <td class="num"><input type="number" min="0" name="stock" value="0"></td>
       <td class="actions">
@@ -160,13 +161,18 @@ window.ppz = (function () {
   }
 
   function readVariantRow(tr) {
-    const get = (n) => tr.querySelector(`input[name="${n}"]`).value.trim();
+    const getInput = (n) => tr.querySelector(`input[name="${n}"]`);
+    const get = (n) => {
+      const el = getInput(n);
+      return el ? el.value.trim() : '';
+    };
     const num = (v) => v === '' ? undefined : parseInt(v, 10);
     return {
       id: tr.dataset.variantId || undefined,
       name: get('name'),
       sku: get('sku') || undefined,
       priceCentsOverride: num(get('priceCentsOverride')),
+      ppzPriceCentsOverride: num(get('ppzPriceCentsOverride')),
       pointsPriceOverride: num(get('pointsPriceOverride')),
       stock: num(get('stock')) ?? 0,
     };
@@ -222,6 +228,7 @@ window.ppz = (function () {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
       priceCents: num(fd.get('priceCents')),
+      ppzPriceCents: num(fd.get('ppzPriceCents')),
       pointsPrice: num(fd.get('pointsPrice')),
       stock: num(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
@@ -276,6 +283,7 @@ window.ppz = (function () {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
       priceCents: num(fd.get('priceCents')),
+      ppzPriceCents: num(fd.get('ppzPriceCents')),
       pointsPrice: num(fd.get('pointsPrice')),
       stock: num(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,

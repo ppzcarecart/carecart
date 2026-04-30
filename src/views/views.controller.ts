@@ -64,9 +64,11 @@ export class ViewsController {
             limit: 8,
           }),
     ]);
+    const reqUser = (req as any).user || null;
     return {
       title: 'carecart',
-      user: (req as any).user || null,
+      user: reqUser,
+      isPpzMember: !!reqUser?.ppzId,
       products,
       featured,
       newProducts,
@@ -81,9 +83,11 @@ export class ViewsController {
   @Render('shop/product')
   async product(@Param('slug') slug: string, @Req() req: Request) {
     const product = await this.products.findBySlug(slug);
+    const reqUser = (req as any).user || null;
     return {
       title: product?.name || 'Product',
-      user: (req as any).user || null,
+      user: reqUser,
+      isPpzMember: !!reqUser?.ppzId,
       product,
     };
   }

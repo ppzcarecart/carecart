@@ -36,7 +36,7 @@
     </div>
     <div class="cc-grid">
       <% featured.forEach(product => { %>
-        <%- include('../partials/product-card', { product }) %>
+        <%- include('../partials/product-card', { product, isPpzMember }) %>
       <% }); %>
     </div>
   <% } %>
@@ -48,7 +48,7 @@
     </div>
     <div class="cc-grid">
       <% newProducts.forEach(product => { %>
-        <%- include('../partials/product-card', { product }) %>
+        <%- include('../partials/product-card', { product, isPpzMember }) %>
       <% }); %>
     </div>
   <% } %>
@@ -63,7 +63,7 @@
   <% } else { %>
     <div class="cc-grid">
       <% products.forEach(product => { %>
-        <%- include('../partials/product-card', { product }) %>
+        <%- include('../partials/product-card', { product, isPpzMember }) %>
       <% }); %>
     </div>
   <% } %>

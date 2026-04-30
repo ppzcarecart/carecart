@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Cart } from './entities/cart.entity';
 import { CartItem, PricingMode } from './entities/cart-item.entity';
 import { ProductsService } from '../products/products.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class CartService {
@@ -16,7 +17,13 @@ export class CartService {
     @InjectRepository(Cart) private carts: Repository<Cart>,
     @InjectRepository(CartItem) private items: Repository<CartItem>,
     private products: ProductsService,
+    private users: UsersService,
   ) {}
+
+  private async isPpzMember(userId: string) {
+    const u = await this.users.findById(userId);
+    return !!u?.ppzId;
+  }
 
   async getOrCreate(userId: string): Promise<Cart> {
     let cart = await this.carts.findOne({ where: { userId } });
@@ -43,7 +50,11 @@ export class CartService {
       : undefined;
 
     if (pricingMode === 'points') {
-      const { pointsPrice } = this.products.resolvePricing(product, variant);
+      const isMember = await this.isPpzMember(userId);
+      if (!isMember) {
+        throw new BadRequestException('Only PPZ members can pay with points');
+      }
+      const { pointsPrice } = this.products.resolvePricing(product, variant, true);
       if (pointsPrice === null || pointsPrice === undefined) {
         throw new BadRequestException('This item cannot be purchased with points');
       }
@@ -99,25 +110,31 @@ export class CartService {
 
   async summary(userId: string) {
     const cart = await this.getOrCreate(userId);
+    const isMember = await this.isPpzMember(userId);
     let subtotalCents = 0;
     let pointsTotal = 0;
     const lines = cart.items.map((item) => {
       const variant = item.variant;
       const product = item.product;
-      const { priceCents, pointsPrice } = this.products.resolvePricing(product, variant);
-      const lineCents = item.pricingMode === 'price' ? priceCents * item.quantity : 0;
+      const pricing = this.products.resolvePricing(product, variant, isMember);
+      const lineCents =
+        item.pricingMode === 'price' ? pricing.priceCents * item.quantity : 0;
       const linePoints =
-        item.pricingMode === 'points' && pointsPrice != null ? pointsPrice * item.quantity : 0;
+        item.pricingMode === 'points' && pricing.pointsPrice != null
+          ? pricing.pointsPrice * item.quantity
+          : 0;
       subtotalCents += lineCents;
       pointsTotal += linePoints;
       return {
         item,
-        priceCents,
-        pointsPrice,
+        priceCents: pricing.priceCents,
+        pointsPrice: pricing.pointsPrice,
+        normalPriceCents: pricing.normalPriceCents,
+        isPpzPrice: pricing.isPpzPrice,
         lineCents,
         linePoints,
       };
     });
-    return { cart, lines, subtotalCents, pointsTotal };
+    return { cart, lines, subtotalCents, pointsTotal, isPpzMember: isMember };
   }
 }

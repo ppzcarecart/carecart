@@ -12,7 +12,9 @@ export class RegisterAddressDto {
   @IsOptional() @IsString() line2?: string;
   @IsOptional() @IsString() city?: string;
   @IsOptional() @IsString() state?: string;
-  @IsOptional() @IsString() postalCode?: string;
+  @IsString() postalCode: string;
+  // Singapore-only at the moment. Free-typed value is ignored and
+  // normalised to "SG" by UsersService.createUser.
   @IsOptional() @IsString() country?: string;
 }
 

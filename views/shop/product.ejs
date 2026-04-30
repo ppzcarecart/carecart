@@ -20,17 +20,26 @@
         <%
         const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
         const isNew = product.createdAt && (Date.now() - new Date(product.createdAt).getTime() < NEW_WINDOW_MS);
+        const ppzMember = !!isPpzMember;
+        const showPpzPrice = ppzMember && product.ppzPriceCents != null;
+        const cashCents = showPpzPrice ? product.ppzPriceCents : product.priceCents;
+        const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
+        const showPoints = ppzMember && product.pointsPrice;
         %>
         <div class="cc-info-badges">
           <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
           <% if (isNew) { %><span class="cc-badge cc-badge-new">New</span><% } %>
+          <% if (showPpzPrice) { %><span class="cc-badge cc-badge-ppz">PPZ Member Price</span><% } %>
         </div>
         <h1><%= product.name %></h1>
         <div class="vendor-tag">by <%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></div>
         <div class="price-row">
-          <span class="amount">$<%= (product.priceCents/100).toFixed(2) %></span>
-          <% if (product.pointsPrice) { %>
-            <span class="points"><%= product.pointsPrice %> pts</span>
+          <span class="amount">$<%= (cashCents/100).toFixed(2) %></span>
+          <% if (showStrike) { %>
+            <span class="amount-strike">$<%= (product.priceCents/100).toFixed(2) %></span>
+          <% } %>
+          <% if (showPoints) { %>
+            <span class="points">or <%= product.pointsPrice %> pts</span>
           <% } %>
         </div>
         <% if (product.description) { %>
@@ -60,11 +69,11 @@
         <div class="cc-actions">
           <% if (user) { %>
             <button class="cc-btn cc-btn-primary" onclick="ppz.addToCart('<%= product.id %>', 'price')">
-              Add to cart · $<%= (product.priceCents/100).toFixed(2) %>
+              <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
             </button>
-            <% if (product.pointsPrice) { %>
+            <% if (showPoints) { %>
               <button class="cc-btn cc-btn-outline" onclick="ppz.addToCart('<%= product.id %>', 'points')">
-                Use <%= product.pointsPrice %> pts
+                Redeem with <%= product.pointsPrice %> pts
               </button>
             <% } %>
           <% } else { %>

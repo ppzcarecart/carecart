@@ -30,6 +30,9 @@ export class ProductVariant {
   priceCentsOverride?: number;
 
   @Column({ type: 'integer', nullable: true })
+  ppzPriceCentsOverride?: number;
+
+  @Column({ type: 'integer', nullable: true })
   pointsPriceOverride?: number;
 
   @Column({ default: 0 })

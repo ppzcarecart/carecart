@@ -29,14 +29,22 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // Price is mandatory; expressed in minor units (cents) to avoid float issues
+  // Normal cash price — what non-PPZ customers see. Mandatory.
+  // Expressed in minor units (cents) to avoid float issues.
   @Column({ type: 'integer' })
   priceCents: number;
+
+  // PPZ member cash price. When set and the buyer has a ppzId, this
+  // replaces priceCents in the storefront display and at checkout.
+  // Falls back to priceCents when null.
+  @Column({ type: 'integer', nullable: true })
+  ppzPriceCents?: number;
 
   @Column({ default: 'SGD' })
   currency: string;
 
   // Points are optional. If null, product cannot be purchased with points.
+  // Only PPZ-linked customers see / can use the points option.
   @Column({ type: 'integer', nullable: true })
   pointsPrice?: number;
 

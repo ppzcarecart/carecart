@@ -13,6 +13,7 @@ export class CreateVariantDto {
   @IsString() name: string;
   @IsOptional() @IsString() sku?: string;
   @IsOptional() @IsInt() @Min(0) priceCentsOverride?: number;
+  @IsOptional() @IsInt() @Min(0) ppzPriceCentsOverride?: number;
   @IsOptional() @IsInt() @Min(0) pointsPriceOverride?: number;
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
@@ -25,8 +26,11 @@ export class CreateProductDto {
 
   @IsOptional() @IsString() description?: string;
 
-  // Price is mandatory (in cents)
+  // Normal price is mandatory (in cents)
   @IsInt() @Min(0) priceCents: number;
+
+  // PPZ member price (optional). When set, members see and pay this instead.
+  @IsOptional() @IsInt() @Min(0) ppzPriceCents?: number;
 
   @IsOptional() @IsString() currency?: string;
 

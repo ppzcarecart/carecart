@@ -77,10 +77,12 @@ export class UsersService {
     });
 
     if (input.address) {
-      const addr =
+      const raw =
         typeof input.address === 'string'
-          ? { line1: input.address, country: 'SG' }
-          : { country: 'SG', ...input.address };
+          ? { line1: input.address }
+          : { ...input.address };
+      // Singapore-only marketplace — normalise country regardless of input.
+      const addr = { ...raw, country: 'SG' };
       user.addresses = [
         this.addressRepo.create({
           ...addr,

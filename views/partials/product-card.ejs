@@ -1,6 +1,12 @@
 <%
 const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const isNew = product.createdAt && (Date.now() - new Date(product.createdAt).getTime() < NEW_WINDOW_MS);
+// Caller should pass isPpzMember; default to false for safety.
+const ppzMember = (typeof isPpzMember !== 'undefined') ? isPpzMember : false;
+const showPpzPrice = ppzMember && product.ppzPriceCents != null;
+const cashCents = showPpzPrice ? product.ppzPriceCents : product.priceCents;
+const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
+const showPoints = ppzMember && product.pointsPrice;
 %>
 <a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
   <div class="cc-thumb">
@@ -8,15 +14,19 @@ const isNew = product.createdAt && (Date.now() - new Date(product.createdAt).get
     <div class="cc-thumb-badges">
       <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
       <% if (isNew) { %><span class="cc-badge cc-badge-new">New</span><% } %>
+      <% if (showPpzPrice) { %><span class="cc-badge cc-badge-ppz">PPZ</span><% } %>
     </div>
   </div>
   <div class="cc-body">
     <span class="cc-vendor"><%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></span>
     <h3 class="cc-name"><%= product.name %></h3>
     <div class="cc-price">
-      <span class="amount">$<%= (product.priceCents / 100).toFixed(2) %></span>
-      <% if (product.pointsPrice) { %>
-        <span class="points"><%= product.pointsPrice %> pts</span>
+      <span class="amount">$<%= (cashCents / 100).toFixed(2) %></span>
+      <% if (showStrike) { %>
+        <span class="amount-strike">$<%= (product.priceCents / 100).toFixed(2) %></span>
+      <% } %>
+      <% if (showPoints) { %>
+        <span class="points">or <%= product.pointsPrice %> pts</span>
       <% } %>
     </div>
   </div>

@@ -12,6 +12,7 @@ export class UpdateProductDto {
   @IsOptional() @IsString() slug?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsInt() @Min(0) priceCents?: number;
+  @IsOptional() @IsInt() @Min(0) ppzPriceCents?: number | null;
   @IsOptional() @IsString() currency?: string;
   @IsOptional() @IsInt() @Min(0) pointsPrice?: number | null;
   @IsOptional() @IsInt() @Min(0) stock?: number;
