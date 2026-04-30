@@ -81,9 +81,10 @@ export class HandoffController {
     if (!user) {
       user = await this.users.createUser({
         email: ppzUser.email,
-        // The user doesn't know this password — they only ever sign in
-        // through the handoff. They can be sent a reset link later if
-        // direct sign-in is ever needed.
+        // The user doesn't know this password — they sign in via the
+        // handoff. Once they visit /profile and call PATCH
+        // /api/auth/password they'll flip hasSetPassword to true and
+        // can use /login directly.
         password: crypto.randomBytes(16).toString('hex'),
         name: ppzUser.fullname,
         contact: ppzUser.contact,
@@ -93,6 +94,7 @@ export class HandoffController {
         ppzCurrency: ppzUser.ppzcurrency,
         lifetimePpzCurrency: ppzUser.lifetimeppzcurrency,
         team: ppzUser.team,
+        hasSetPassword: false,
       });
     } else {
       // Refresh cached fields — the partner app is the source of truth.

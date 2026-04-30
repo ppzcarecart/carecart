@@ -31,6 +31,7 @@ export interface CreateUserInput {
   ppzCurrency?: number;
   lifetimePpzCurrency?: number;
   team?: number;
+  hasSetPassword?: boolean;
 }
 
 @Injectable()
@@ -72,6 +73,7 @@ export class UsersService {
       ppzCurrency: input.ppzCurrency ?? 0,
       lifetimePpzCurrency: input.lifetimePpzCurrency ?? 0,
       team: input.team,
+      hasSetPassword: input.hasSetPassword ?? true,
     });
 
     if (input.address) {

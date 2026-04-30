@@ -101,6 +101,40 @@
     <% } %>
 
     <div class="admin-panel">
+      <div class="panel-head">
+        <h3><%= profile.hasSetPassword ? 'Change password' : 'Set password' %></h3>
+        <% if (!profile.hasSetPassword) { %>
+          <span class="muted">Required to sign in via the web</span>
+        <% } %>
+      </div>
+      <div class="panel-body padded">
+        <% if (!profile.hasSetPassword) { %>
+          <p class="text-muted" style="font-size:.9rem;">
+            You haven't set a password yet. Set one below to sign in
+            directly at <a href="/login">/login</a> without going through
+            the partner app.
+          </p>
+        <% } %>
+        <form id="passwordForm" onsubmit="event.preventDefault(); ppz.changePassword(this)">
+          <% if (profile.hasSetPassword) { %>
+            <div class="mb-3" style="max-width:360px;">
+              <label>Current password</label>
+              <input type="password" class="form-control" name="currentPassword" required>
+            </div>
+          <% } %>
+          <div class="mb-3" style="max-width:360px;">
+            <label>New password</label>
+            <input type="password" class="form-control" name="newPassword" minlength="6" required>
+          </div>
+          <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">
+            <%= profile.hasSetPassword ? 'Update password' : 'Set password' %>
+          </button>
+          <span id="pwdStatus" class="ms-3 small"></span>
+        </form>
+      </div>
+    </div>
+
+    <div class="admin-panel">
       <div class="panel-head"><h3>Activity</h3></div>
       <div class="panel-body padded">
         <p style="margin:0;">You've placed <strong><%= orderCount %></strong> order<%= orderCount === 1 ? '' : 's' %>.</p>

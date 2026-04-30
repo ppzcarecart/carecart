@@ -356,6 +356,35 @@ window.ppz = (function () {
     btn.disabled = false;
   }
 
+  async function changePassword(form) {
+    const fd = new FormData(form);
+    const body = {
+      newPassword: fd.get('newPassword'),
+    };
+    const cur = fd.get('currentPassword');
+    if (cur) body.currentPassword = cur;
+    const status = document.getElementById('pwdStatus');
+    if (status) { status.textContent = ''; status.style.color = ''; }
+    try {
+      await api('/api/auth/password', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      if (status) {
+        status.style.color = 'var(--brand)';
+        status.textContent = 'Password saved ✓';
+      }
+      // Reload so the card switches from "Set password" → "Change password"
+      // (it reads profile.hasSetPassword which just flipped server-side).
+      setTimeout(() => location.reload(), 900);
+    } catch (e) {
+      if (status) {
+        status.style.color = '#b91c1c';
+        status.textContent = e.message || 'Failed to update password';
+      }
+    }
+  }
+
   function imgFallback(img) {
     if (img.dataset.ppzFallback === '1') return;
     img.dataset.ppzFallback = '1';
@@ -372,6 +401,7 @@ window.ppz = (function () {
     imgFallback,
     refreshPoints,
     syncProfile,
+    changePassword,
     bindImageUpload,
     addVariantRow,
     saveVariantRow,

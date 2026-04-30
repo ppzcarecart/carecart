@@ -34,6 +34,14 @@ export class User {
   @Column({ default: true })
   active: boolean;
 
+  // True when the user has explicitly chosen their password (registration,
+  // admin creation, bulk import, profile change). False when the password
+  // was auto-generated for them — currently only the partner-app handoff
+  // creates users in that state. They must set a password on /profile
+  // before they can sign in directly via /login.
+  @Column({ default: true })
+  hasSetPassword: boolean;
+
   // Vendor display fields
   @Column({ nullable: true })
   vendorStoreName?: string;
