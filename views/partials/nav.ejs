@@ -28,7 +28,7 @@ const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
         <% if (user.role === 'vendor') { %>
           <a href="/vendor" class="cc-pill cc-pill-outline">Vendor</a>
         <% } %>
-        <% if (user.role === 'customer' && user.ppzCurrency != null) { %>
+        <% if (user.ppzId && user.ppzCurrency != null) { %>
           <a href="/profile" class="cc-points-pill" title="View profile">
             <span class="cc-points-icon">★</span>
             <span class="cc-points-value"><%= Number(user.ppzCurrency).toLocaleString() %></span>

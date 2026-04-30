@@ -57,45 +57,39 @@
       </div>
     </div>
 
-    <% if (profile.role === 'customer') { %>
+    <% if (profile.ppzId) { %>
       <div class="admin-panel profile-ppz">
         <div class="panel-head">
           <h3>PPZ Wallet</h3>
-          <% if (profile.ppzId) { %>
-            <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="ppz.syncProfile(this)">
-              Sync from partner app
-            </button>
-          <% } %>
+          <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="ppz.syncProfile(this)">
+            Sync from partner app
+          </button>
         </div>
         <div class="panel-body padded">
-          <% if (!profile.ppzId) { %>
-            <p class="text-muted mb-0">This account isn't linked to the partner app yet. Sign in via the partner app's Shop button to link.</p>
-          <% } else { %>
-            <div class="ppz-stats">
-              <div class="ppz-stat">
-                <div class="ppz-stat-label">PPZ ID</div>
-                <div class="ppz-stat-value"><%= profile.ppzId %></div>
-              </div>
-              <div class="ppz-stat ppz-stat-primary">
-                <div class="ppz-stat-label">Current balance</div>
-                <div class="ppz-stat-value">
-                  <span id="pf-ppzCurrency"><%= Number(profile.ppzCurrency).toLocaleString() %></span>
-                  <span class="ppz-stat-unit">pts</span>
-                </div>
-              </div>
-              <div class="ppz-stat">
-                <div class="ppz-stat-label">Lifetime earned</div>
-                <div class="ppz-stat-value">
-                  <span id="pf-lifetime"><%= Number(profile.lifetimePpzCurrency).toLocaleString() %></span>
-                  <span class="ppz-stat-unit">pts</span>
-                </div>
-              </div>
-              <div class="ppz-stat">
-                <div class="ppz-stat-label">Team</div>
-                <div class="ppz-stat-value" id="pf-team"><%= profile.team ?? '—' %></div>
+          <div class="ppz-stats">
+            <div class="ppz-stat">
+              <div class="ppz-stat-label">PPZ ID</div>
+              <div class="ppz-stat-value"><%= profile.ppzId %></div>
+            </div>
+            <div class="ppz-stat ppz-stat-primary">
+              <div class="ppz-stat-label">Current balance</div>
+              <div class="ppz-stat-value">
+                <span id="pf-ppzCurrency"><%= Number(profile.ppzCurrency).toLocaleString() %></span>
+                <span class="ppz-stat-unit">pts</span>
               </div>
             </div>
-          <% } %>
+            <div class="ppz-stat">
+              <div class="ppz-stat-label">Lifetime earned</div>
+              <div class="ppz-stat-value">
+                <span id="pf-lifetime"><%= Number(profile.lifetimePpzCurrency).toLocaleString() %></span>
+                <span class="ppz-stat-unit">pts</span>
+              </div>
+            </div>
+            <div class="ppz-stat">
+              <div class="ppz-stat-label">Team</div>
+              <div class="ppz-stat-value" id="pf-team"><%= profile.team ?? '—' %></div>
+            </div>
+          </div>
         </div>
       </div>
     <% } %>
