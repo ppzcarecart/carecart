@@ -20,7 +20,7 @@
         <tbody>
           <% orders.forEach(o => { %>
             <tr>
-              <td class="ps-3"><strong><%= o.number %></strong></td>
+              <td class="ps-3"><strong><a href="/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
               <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
               <td>$<%= (o.totalCents/100).toFixed(2) %><% if (o.pointsTotal) { %> + <%= o.pointsTotal %> pts<% } %></td>
               <td class="pe-3 text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>

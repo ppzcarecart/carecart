@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import { Order, OrderStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { ProductsService } from '../products/products.service';
 import { CartService } from '../cart/cart.service';
+import { PointsService } from '../points/points.service';
 import { Role } from '../common/enums/role.enum';
 
 @Injectable()
@@ -19,6 +21,7 @@ export class OrdersService {
     @InjectRepository(OrderItem) private orderItems: Repository<OrderItem>,
     private products: ProductsService,
     private cart: CartService,
+    private points: PointsService,
   ) {}
 
   private generateNumber() {
@@ -136,7 +139,59 @@ export class OrdersService {
   async setStatus(id: string, status: OrderStatus) {
     const order = await this.findById(id);
     if (!order) throw new NotFoundException('Order not found');
+    if (order.status === 'refunded' && status !== 'refunded') {
+      throw new BadRequestException(
+        'Order has been refunded and cannot change status',
+      );
+    }
     order.status = status;
+    return this.orders.save(order);
+  }
+
+  /**
+   * Issue a refund. Admin/manager can refund any order. Vendors can only
+   * refund orders that contain at least one of their items. Refunds the
+   * customer's PPZ points (if any) via the partner API with reason
+   * "Refund - <orderNumber>", marks the order status as refunded, and
+   * locks the status from further changes.
+   */
+  async refund(
+    id: string,
+    actor: { id: string; role: Role },
+  ): Promise<Order> {
+    const order = await this.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status === 'refunded') {
+      throw new BadRequestException('Order is already refunded');
+    }
+
+    if (
+      actor.role === Role.VENDOR &&
+      !order.items.some((i) => i.vendorId === actor.id)
+    ) {
+      throw new ForbiddenException(
+        'You can only refund orders that contain your items',
+      );
+    }
+    if (
+      actor.role !== Role.ADMIN &&
+      actor.role !== Role.MANAGER &&
+      actor.role !== Role.VENDOR
+    ) {
+      throw new ForbiddenException();
+    }
+
+    // Refund PPZ points if the order had a points component.
+    if (order.pointsTotal > 0 && order.customerId) {
+      await this.points.refund(
+        order.customerId,
+        order.pointsTotal,
+        order.id,
+        order.number,
+      );
+    }
+
+    order.status = 'refunded';
     return this.orders.save(order);
   }
 

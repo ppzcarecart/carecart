@@ -66,4 +66,15 @@ export class OrdersController {
   setStatus(@Param('id') id: string, @Body() body: { status: OrderStatus }) {
     return this.orders.setStatus(id, body.status);
   }
+
+  /**
+   * Refund the order. Admin/manager can refund any order; vendors can
+   * only refund orders that include their items. Refunds PPZ points to
+   * the customer via the partner API and locks the status to refunded.
+   */
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/refund')
+  refund(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.orders.refund(id, { id: user.id, role: user.role });
+  }
 }

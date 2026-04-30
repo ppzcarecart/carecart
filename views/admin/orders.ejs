@@ -45,7 +45,9 @@
                     <% } %>
                   </td>
                   <td>
-                    <select onchange="ppz.setOrderStatus('<%= o.id %>', this.value)">
+                    <select <%= o.status === 'refunded' ? 'disabled' : '' %>
+                      onchange="ppz.setOrderStatus('<%= o.id %>', this.value)"
+                      title="<%= o.status === 'refunded' ? 'Refunded orders cannot change status' : '' %>">
                       <% ['pending','awaiting_payment','paid','fulfilled','cancelled','refunded'].forEach(s => { %>
                         <option value="<%= s %>" <%= o.status === s ? 'selected' : '' %>><%= s %></option>
                       <% }); %>

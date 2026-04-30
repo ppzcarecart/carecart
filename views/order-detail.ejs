@@ -1,10 +1,18 @@
 <%- include('partials/head') %>
 <%- include('partials/nav') %>
+<%
+const isCustomer = user.role === 'customer';
+const canRefund =
+  !isCustomer &&
+  order.status !== 'refunded' &&
+  (user.role === 'admin' || user.role === 'manager' ||
+    (user.role === 'vendor' && (order.items || []).some(i => i.vendorId === user.id)));
+%>
 <div class="container admin-shell">
-  <div class="admin-layout">
+  <div class="<%= isCustomer ? '' : 'admin-layout' %>">
     <% if (user.role === 'vendor') { %>
       <%- include('partials/vendor-sidebar', { activePath }) %>
-    <% } else { %>
+    <% } else if (!isCustomer) { %>
       <%- include('partials/admin-sidebar', { activePath }) %>
     <% } %>
     <main class="admin-main">
@@ -14,8 +22,14 @@
           <h1>Order <%= order.number %></h1>
           <p class="lede"><a href="<%= returnTo %>">← Back</a> · placed <%= new Date(order.createdAt).toLocaleString() %></p>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2">
           <span class="badge-status <%= order.status %>" style="font-size:.85rem; padding:6px 14px;"><%= order.status %></span>
+          <% if (canRefund) { %>
+            <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem; color:#b91c1c; border-color:#fca5a5;"
+              onclick="ppz.refundOrder('<%= order.id %>', '<%= order.number %>')">
+              Issue refund
+            </button>
+          <% } %>
         </div>
       </div>
 

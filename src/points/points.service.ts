@@ -92,7 +92,62 @@ export class PointsService {
     }
   }
 
-  /** Refund PPZ currency (e.g. payment failed after redeem). */
+  /**
+   * Explicit refund triggered by admin/manager/vendor. Same operation:add
+   * remote call as reverse() but with an admin-action reason text. Always
+   * records a local audit row, even when the partner API is offline, so
+   * the order can still be marked refunded and reconciled later.
+   */
+  async refund(
+    userId: string,
+    amount: number,
+    orderId: string,
+    orderNumber?: string,
+  ) {
+    if (amount <= 0) return { skipped: true };
+    const tx = this.repo.create({
+      userId,
+      orderId,
+      kind: 'reverse',
+      amount,
+      status: 'pending',
+      meta: { type: 'refund' },
+    });
+    await this.repo.save(tx);
+
+    const user = await this.users.findById(userId);
+    if (!user?.ppzId || !this.client.isConfigured()) {
+      tx.meta = { type: 'refund', reason: 'PPZ API not configured or user not linked' };
+      await this.repo.save(tx);
+      return { recorded: true, remote: false };
+    }
+
+    try {
+      const res = await this.client.add({
+        ppzid: user.ppzId,
+        amount,
+        reason: orderNumber ? `Refund - ${orderNumber}` : 'Refund',
+      });
+      if ('notConfigured' in res) {
+        await this.repo.save(tx);
+        return { recorded: true, remote: false };
+      }
+      await this.applyResultToUser(user, res);
+      tx.status = 'reversed';
+      tx.externalRef = String(res.newPPZCurrency);
+      tx.meta = { type: 'refund', ...(res as any) };
+      await this.repo.save(tx);
+      return { recorded: true, remote: true };
+    } catch (e: any) {
+      tx.status = 'failed';
+      tx.meta = { type: 'refund', error: e.message };
+      await this.repo.save(tx);
+      this.logger.error(`PPZ refund failed for order ${orderId}: ${e.message}`);
+      return { recorded: true, remote: false };
+    }
+  }
+
+  /** Reverse PPZ redeem (e.g. payment failed after redeem). */
   async reverse(userId: string, amount: number, orderId: string) {
     if (amount <= 0) return { skipped: true };
     const tx = this.repo.create({

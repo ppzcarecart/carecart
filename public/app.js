@@ -723,6 +723,14 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
+    async refundOrder(id, number) {
+      const label = number ? 'order ' + number : 'this order';
+      if (!confirm('Issue a full refund for ' + label + '? This refunds any PPZ points to the customer and locks the status to "refunded". This action cannot be undone.')) return;
+      try {
+        await api('/api/orders/' + id + '/refund', { method: 'POST' });
+        location.reload();
+      } catch (e) { alert(e.message); }
+    },
     async setFeatured(id, featured, checkbox) {
       try {
         await api('/api/products/' + id + '/featured', {

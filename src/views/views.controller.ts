@@ -137,6 +137,27 @@ export class ViewsController {
     return { title: 'My orders', user, orders };
   }
 
+  @Get('orders/:id')
+  @Render('order-detail')
+  async customerOrderDetail(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.customerId !== user.id) {
+      throw new ForbiddenException();
+    }
+    return {
+      title: 'Order ' + order.number,
+      user,
+      order,
+      customer: order.customer,
+      activePath: '',
+      returnTo: '/orders',
+    };
+  }
+
   @Get('profile')
   @Render('profile')
   async profile(@CurrentUser() user: any) {
