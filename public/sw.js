@@ -1,10 +1,12 @@
 // carecart service worker — keeps the shell snappy on mobile and lets the
 // PWA install on the home screen. Strategy:
 //   - HTML navigations: network-first, fall back to cached "/" on failure
-//   - /static/* assets: stale-while-revalidate
-// Bump VERSION when /static/app.{css,js} change in a way that needs purge.
+//   - /static/* assets: network-first too (cache only as offline fallback)
+// We avoid stale-while-revalidate for static so a new app.js / app.css
+// goes live immediately after deploy, no double-reload needed.
+// Bump VERSION whenever the activate-time cache wipe should fire.
 
-const VERSION = 'carecart-v1';
+const VERSION = 'carecart-v2';
 const SHELL = ['/', '/static/app.css', '/static/app.js', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -50,19 +52,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: stale-while-revalidate.
-  if (url.pathname.startsWith('/static/') || url.pathname === '/icon.svg' || url.pathname === '/manifest.webmanifest') {
+  // Static assets: network-first so fresh JS/CSS lands without a
+  // double-reload after deploy; cache is only the offline fallback.
+  if (
+    url.pathname.startsWith('/static/') ||
+    url.pathname === '/icon.svg' ||
+    url.pathname === '/manifest.webmanifest'
+  ) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        const network = fetch(req)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(VERSION).then((cache) => cache.put(req, copy)).catch(() => {});
-            return res;
-          })
-          .catch(() => cached);
-        return cached || network;
-      }),
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches
+            .open(VERSION)
+            .then((cache) => cache.put(req, copy))
+            .catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req)),
     );
   }
 });
