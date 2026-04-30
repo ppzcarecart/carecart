@@ -710,7 +710,7 @@ a:hover { color: var(--brand-dark); }
 @media (max-width: 800px) {
   .cc-mobnav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, 1fr); /* Home · Shop · Cart · Orders */
     position: fixed;
     bottom: 0; left: 0; right: 0;
     background: var(--surface);

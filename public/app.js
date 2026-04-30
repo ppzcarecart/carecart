@@ -644,8 +644,60 @@ window.ppz = (function () {
     img.replaceWith(div);
   }
 
+  /**
+   * Try to close the in-app webview and hand control back to the
+   * partner app. We try multiple bridges in order of preference so the
+   * partner team can wire any one of them and we'll pick it up:
+   *
+   *   1. iOS WKWebView script message handler "closeWebView"
+   *      Set up via:
+   *        webView.configuration.userContentController.add(self, name: "closeWebView")
+   *
+   *   2. Android JavascriptInterface "Android.closeWebView()"
+   *      Set up via:
+   *        webView.addJavascriptInterface(JsBridge(), "Android")
+   *
+   *   3. Custom URL scheme — the partner app intercepts navigation
+   *      to "papazao://close" and closes the webview.
+   *
+   *   4. Final fallback: history.back(), which in many in-app
+   *      browsers maps to closing the chrome.
+   */
+  function exitToApp() {
+    try {
+      if (
+        window.webkit &&
+        window.webkit.messageHandlers &&
+        window.webkit.messageHandlers.closeWebView
+      ) {
+        window.webkit.messageHandlers.closeWebView.postMessage(null);
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      if (window.Android && typeof window.Android.closeWebView === 'function') {
+        window.Android.closeWebView();
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      window.location.href = 'papazao://close';
+      // Some partner apps need a moment to handle the scheme. If
+      // history.back fires too soon it can navigate before close.
+      setTimeout(() => {
+        try { history.back(); } catch (e) {}
+      }, 250);
+      return;
+    } catch (e) {}
+
+    try { history.back(); } catch (e) {}
+  }
+
   return {
     imgFallback,
+    exitToApp,
     refreshPoints,
     syncProfile,
     changePassword,
