@@ -13,6 +13,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { PointsClient } from '../points/points.client';
+import { PointsService } from '../points/points.service';
 import { Role } from '../common/enums/role.enum';
 
 /**
@@ -36,6 +37,7 @@ export class HandoffController {
     private auth: AuthService,
     private users: UsersService,
     private points: PointsClient,
+    private pointsService: PointsService,
   ) {}
 
   @Public()
@@ -97,16 +99,16 @@ export class HandoffController {
         hasSetPassword: false,
       });
     } else {
-      // Refresh cached fields — the partner app is the source of truth.
-      await this.users.update(user.id, {
-        ppzId: ppzUser.ppzid,
-        ppzCurrency: ppzUser.ppzcurrency,
-        lifetimePpzCurrency: ppzUser.lifetimeppzcurrency,
-        team: ppzUser.team,
-        contact: ppzUser.contact || user.contact,
-        name: user.name || ppzUser.fullname,
-      } as any);
-      user = await this.users.findById(user.id);
+      // Make sure the local row is linked to this ppzId so applyRemoteToUser
+      // (which writes the rest of the fields) finds the right record.
+      if (user.ppzId !== ppzUser.ppzid) {
+        user.ppzId = ppzUser.ppzid;
+        await this.users.update(user.id, { ppzId: ppzUser.ppzid });
+      }
+      // Use the same comprehensive sync as direct /login and the profile
+      // page button — overwrite name, contact, email, default address,
+      // team, and PPZ balances with whatever the partner app currently has.
+      user = await this.pointsService.applyRemoteToUser(user, ppzUser);
     }
 
     if (!user.active) {

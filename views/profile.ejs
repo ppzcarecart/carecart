@@ -29,7 +29,7 @@
           <dt>Full name</dt>
           <dd id="pf-name"><%= profile.name %></dd>
           <dt>Email</dt>
-          <dd><%= profile.email %></dd>
+          <dd id="pf-email"><%= profile.email %></dd>
           <dt>Contact</dt>
           <dd id="pf-contact"><%= profile.contact || '—' %></dd>
         </dl>
@@ -38,7 +38,7 @@
 
     <div class="admin-panel">
       <div class="panel-head"><h3>Address</h3></div>
-      <div class="panel-body padded">
+      <div class="panel-body padded" id="pf-address-body">
         <% if (profile.addresses && profile.addresses.length) { %>
           <% profile.addresses.forEach(a => { %>
             <div class="profile-address">

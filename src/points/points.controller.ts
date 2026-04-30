@@ -13,12 +13,17 @@ export class PointsController {
 
   /**
    * Pull the latest profile from the partner app (balance, lifetime,
-   * team, name, contact) and write it to the local row.
+   * team, name, contact, email, default address) and write it to the
+   * local row.
    */
   @Post('sync-profile')
   async syncProfile(@CurrentUser() user: any) {
     const result = await this.points.syncProfile(user.id);
     const u = result.user;
+    const defaultAddress =
+      (u.addresses || []).find((a: any) => a.isDefault) ||
+      (u.addresses || [])[0] ||
+      null;
     return {
       ok: true,
       notLinked: 'notLinked' in result ? result.notLinked : false,
@@ -32,6 +37,16 @@ export class PointsController {
         ppzCurrency: u.ppzCurrency,
         lifetimePpzCurrency: u.lifetimePpzCurrency,
         team: u.team,
+        address: defaultAddress
+          ? {
+              line1: defaultAddress.line1,
+              line2: defaultAddress.line2,
+              city: defaultAddress.city,
+              state: defaultAddress.state,
+              postalCode: defaultAddress.postalCode,
+              country: defaultAddress.country,
+            }
+          : null,
       },
     };
   }

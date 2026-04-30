@@ -3,9 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { PointsTransaction } from './entities/points-transaction.entity';
-import { PointsClient, PpzUpdateResult } from './points.client';
+import { PointsClient, PpzUpdateResult, PpzUser } from './points.client';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
+import { Address } from '../users/entities/address.entity';
 
 @Injectable()
 export class PointsService {
@@ -16,6 +17,8 @@ export class PointsService {
     private repo: Repository<PointsTransaction>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    @InjectRepository(Address)
+    private addressRepo: Repository<Address>,
     private client: PointsClient,
     private users: UsersService,
   ) {}
@@ -140,9 +143,17 @@ export class PointsService {
   }
 
   /**
-   * Re-fetch the full profile from the partner app and update any
-   * fields that may have changed (balance, lifetime, team, contact,
-   * name). Returns the freshly-saved user plus the raw remote payload.
+   * Re-fetch the full profile from the partner app and overwrite every
+   * field carecart caches locally. Source of truth is the partner app.
+   *
+   * Updated fields:
+   *   - name             ← remote.fullname
+   *   - contact          ← remote.contact
+   *   - email            ← remote.email   (skipped if it would collide with another user)
+   *   - default address  ← remote.address (replaces the user's default; creates one if missing)
+   *   - team             ← remote.team
+   *   - ppzCurrency      ← remote.ppzcurrency
+   *   - lifetimePpzCurrency ← remote.lifetimeppzcurrency
    */
   async syncProfile(userId: string) {
     const user = await this.users.findById(userId);
@@ -151,12 +162,66 @@ export class PointsService {
     if (!this.client.isConfigured()) return { user, notConfigured: true as const };
 
     const remote = await this.client.getUser(user.ppzId);
+    return { user: await this.applyRemoteToUser(user, remote), remote };
+  }
+
+  /**
+   * Apply a freshly-fetched PPZ record to an in-memory user, persist
+   * everything (user row + default address) and return the saved user.
+   * Public so the handoff flow can reuse it without re-fetching.
+   */
+  async applyRemoteToUser(user: User, remote: PpzUser): Promise<User> {
+    // Always overwrite — partner app is the source of truth.
     user.ppzCurrency = remote.ppzcurrency;
     user.lifetimePpzCurrency = remote.lifetimeppzcurrency;
     user.team = remote.team;
-    if (remote.contact) user.contact = remote.contact;
     if (remote.fullname) user.name = remote.fullname;
+    if (remote.contact) user.contact = remote.contact;
+
+    // Email: only switch if it actually differs and won't collide with
+    // another local account (which would block them from logging in).
+    if (
+      remote.email &&
+      remote.email.toLowerCase().trim() !== user.email
+    ) {
+      const incoming = remote.email.toLowerCase().trim();
+      const collision = await this.users.findByEmail(incoming);
+      if (!collision || collision.id === user.id) {
+        user.email = incoming;
+      } else {
+        this.logger.warn(
+          `Skipping email sync for ${user.id}: ${incoming} already used by ${collision.id}`,
+        );
+      }
+    }
+
     await this.userRepo.save(user);
-    return { user, remote };
+
+    // Default shipping address: replace its line1 with the partner record,
+    // or create one if the user has no address yet.
+    if (remote.address) {
+      const addresses = (user.addresses || []).slice();
+      let defaultAddr =
+        addresses.find((a) => a.isDefault) || addresses[0] || null;
+      if (defaultAddr) {
+        defaultAddr.line1 = remote.address;
+        defaultAddr.label = defaultAddr.label || 'shipping';
+        defaultAddr.isDefault = true;
+        await this.addressRepo.save(defaultAddr);
+      } else {
+        const created = this.addressRepo.create({
+          userId: user.id,
+          line1: remote.address,
+          label: 'shipping',
+          isDefault: true,
+          country: 'SG',
+        });
+        await this.addressRepo.save(created);
+      }
+    }
+
+    // Re-load to pick up the addresses relation freshly (eager).
+    const saved = await this.users.findById(user.id);
+    return saved ?? user;
   }
 }

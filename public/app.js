@@ -333,6 +333,7 @@ window.ppz = (function () {
         if (el && v != null) el.textContent = String(v);
       };
       set('pf-name', u.name);
+      set('pf-email', u.email);
       set('pf-contact', u.contact || '—');
       set('pf-team', u.team ?? '—');
       if (u.ppzCurrency != null) {
@@ -340,6 +341,20 @@ window.ppz = (function () {
       }
       if (u.lifetimePpzCurrency != null) {
         set('pf-lifetime', Number(u.lifetimePpzCurrency).toLocaleString());
+      }
+      // Refresh the address card with the partner-app value.
+      const addrBody = document.getElementById('pf-address-body');
+      if (addrBody && u.address) {
+        const a = u.address;
+        const parts = [a.city, a.state, a.postalCode].filter(Boolean).join(' ');
+        addrBody.innerHTML =
+          '<div class="profile-address">' +
+            '<span class="tag tag-active mb-2">Default</span>' +
+            '<div>' + escapeHtml(a.line1 || '') + '</div>' +
+            (a.line2 ? '<div>' + escapeHtml(a.line2) + '</div>' : '') +
+            (parts ? '<div class="text-muted">' + escapeHtml(parts) + '</div>' : '') +
+            '<div class="text-muted">' + escapeHtml(a.country || '') + '</div>' +
+          '</div>';
       }
       // Reflect new balance in the navbar pill, if visible.
       const navPill = document.querySelector('.cc-points-pill .cc-points-value');
@@ -383,6 +398,12 @@ window.ppz = (function () {
         status.textContent = e.message || 'Failed to update password';
       }
     }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
   }
 
   function imgFallback(img) {
