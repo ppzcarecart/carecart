@@ -100,23 +100,43 @@
       </div>
     <% } %>
 
+    <%
+    const isPpz = !!profile.ppzId;
+    // PPZ users always see the simpler "Set password" form (no current
+    // challenge) because handoff-created accounts have a bcrypt hash the
+    // user never saw. Non-PPZ users get the standard set / change flow.
+    const requireCurrent = profile.hasSetPassword && !isPpz;
+    const cardTitle = requireCurrent ? 'Change password' : 'Set password';
+    const buttonText = requireCurrent ? 'Update password' : 'Set password';
+    %>
     <div class="admin-panel">
       <div class="panel-head">
-        <h3><%= profile.hasSetPassword ? 'Change password' : 'Set password' %></h3>
-        <% if (!profile.hasSetPassword) { %>
+        <h3><%= cardTitle %></h3>
+        <% if (isPpz) { %>
+          <span class="muted">For direct login at /login</span>
+        <% } else if (!profile.hasSetPassword) { %>
           <span class="muted">Required to sign in via the web</span>
         <% } %>
       </div>
       <div class="panel-body padded">
-        <% if (!profile.hasSetPassword) { %>
+        <% if (isPpz && !profile.hasSetPassword) { %>
+          <p class="text-muted" style="font-size:.9rem;">
+            Your account was set up via the partner app's <strong>Shop</strong>
+            button. Set a password below so you can also sign in directly at
+            <a href="/login">/login</a> next time.
+          </p>
+        <% } else if (isPpz) { %>
+          <p class="text-muted" style="font-size:.9rem;">
+            Choose a new password for direct sign-in at <a href="/login">/login</a>.
+          </p>
+        <% } else if (!profile.hasSetPassword) { %>
           <p class="text-muted" style="font-size:.9rem;">
             You haven't set a password yet. Set one below to sign in
-            directly at <a href="/login">/login</a> without going through
-            the partner app.
+            directly at <a href="/login">/login</a>.
           </p>
         <% } %>
         <form id="passwordForm" onsubmit="event.preventDefault(); ppz.changePassword(this)">
-          <% if (profile.hasSetPassword) { %>
+          <% if (requireCurrent) { %>
             <div class="mb-3" style="max-width:360px;">
               <label>Current password</label>
               <input type="password" class="form-control" name="currentPassword" required>
@@ -127,7 +147,7 @@
             <input type="password" class="form-control" name="newPassword" minlength="6" required>
           </div>
           <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">
-            <%= profile.hasSetPassword ? 'Update password' : 'Set password' %>
+            <%= buttonText %>
           </button>
           <span id="pwdStatus" class="ms-3 small"></span>
         </form>

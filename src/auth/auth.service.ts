@@ -86,7 +86,12 @@ export class AuthService {
     const user = await this.users.findById(userId);
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.hasSetPassword) {
+    // PPZ users never need the current-password challenge: they may have
+    // come in via handoff and never seen their auto-generated bcrypt hash.
+    // The active session is the proof of identity. Non-PPZ users still get
+    // the standard challenge once they've explicitly set a password.
+    const requireCurrent = user.hasSetPassword && !user.ppzId;
+    if (requireCurrent) {
       if (!currentPassword) {
         throw new BadRequestException('Current password is required');
       }
