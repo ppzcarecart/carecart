@@ -21,7 +21,6 @@ const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
       <a href="/" class="cc-pill">Shop</a>
       <% if (user) { %>
         <a href="/cart" class="cc-pill">Cart</a>
-        <a href="/orders" class="cc-pill">Orders</a>
         <% if (user.role === 'admin' || user.role === 'manager') { %>
           <a href="/admin" class="cc-pill cc-pill-outline">Admin</a>
         <% } %>
