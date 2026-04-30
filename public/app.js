@@ -733,6 +733,22 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
+    async syncAllPpzUsers(btn) {
+      if (!confirm('Refresh balance and lifetime for every PPZ-linked user? This calls the partner app once per user and may take a few seconds.')) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Syncing…';
+      try {
+        const r = await api('/api/points/sync-all', { method: 'POST' });
+        btn.textContent = `Synced ${r.synced} of ${r.total} (skipped ${r.skipped}, failed ${r.failed})`;
+        setTimeout(() => location.reload(), 900);
+        return;
+      } catch (e) {
+        alert(e.message);
+      }
+      btn.textContent = original;
+      btn.disabled = false;
+    },
     async syncUserFromPpz(btn, userId) {
       const original = btn.textContent;
       btn.disabled = true;

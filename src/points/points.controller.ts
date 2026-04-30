@@ -24,6 +24,16 @@ export class PointsController {
   }
 
   /**
+   * Admin/manager: pull the latest profile for every user that has a
+   * ppzId. Returns counts so the caller can show "synced X of Y".
+   */
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Post('sync-all')
+  syncAll() {
+    return this.points.syncAllPpzUsers();
+  }
+
+  /**
    * Admin/manager: pull the latest profile from the partner app for a
    * specific user (balance, lifetime, team, name, contact, address).
    * Useful when staff want fresh values without waiting for the user

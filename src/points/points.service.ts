@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 
 import { PointsTransaction } from './entities/points-transaction.entity';
 import { PointsClient, PpzUpdateResult, PpzUser } from './points.client';
@@ -307,6 +307,45 @@ export class PointsService {
 
     const remote = await this.client.getUser(user.ppzId);
     return { user: await this.applyRemoteToUser(user, remote), remote };
+  }
+
+  /**
+   * Bulk-sync every user that has a ppzId. Used by the /admin/users
+   * "Sync all PPZ users" action so the displayed balance / lifetime /
+   * team match the partner app at a single point in time. Runs with a
+   * small concurrency cap so we don't hammer the partner endpoint.
+   */
+  async syncAllPpzUsers(): Promise<{
+    total: number;
+    synced: number;
+    failed: number;
+    skipped: number;
+  }> {
+    const users = await this.userRepo.find({
+      where: { ppzId: Not(IsNull()) },
+      select: ['id'],
+    });
+    let synced = 0;
+    let failed = 0;
+    let skipped = 0;
+    const concurrency = 3;
+    for (let i = 0; i < users.length; i += concurrency) {
+      const batch = users.slice(i, i + concurrency);
+      const results = await Promise.allSettled(
+        batch.map((u) => this.syncProfile(u.id)),
+      );
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const v = r.value as any;
+          if (v.notLinked || v.notConfigured) skipped++;
+          else synced++;
+        } else {
+          this.logger.warn(`syncAll: ${r.reason?.message || r.reason}`);
+          failed++;
+        }
+      }
+    }
+    return { total: users.length, synced, failed, skipped };
   }
 
   /**
