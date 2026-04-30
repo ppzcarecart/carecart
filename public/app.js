@@ -1,4 +1,14 @@
 // Tiny client-side helpers used by the EJS views.
+
+// Register the service worker so the app installs as a PWA on mobile.
+// The registration is fire-and-forget — if it fails (older browsers,
+// http://, etc.) the rest of the JS still works.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 window.ppz = (function () {
   async function api(path, options = {}) {
     const res = await fetch(path, {
