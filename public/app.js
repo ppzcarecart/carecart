@@ -538,6 +538,16 @@ window.ppz = (function () {
     }, document.getElementById('collectionStatus'));
   }
 
+  async function savePartnerSettings(form) {
+    const fd = new FormData(form);
+    await patchSettingsBulk({
+      'partner.closeUrl': (fd.get('partner.closeUrl') || '').toString().trim(),
+    }, document.getElementById('partnerStatus'));
+    // Refresh the in-page value so a follow-up Home tap uses the new URL
+    // without requiring a reload.
+    window.ppzPartnerCloseUrl = (fd.get('partner.closeUrl') || '').toString().trim();
+  }
+
   async function saveDeliverySettings(form) {
     const fd = new FormData(form);
     const enabled = !!form.querySelector('input[name="delivery.enabled"]')?.checked;
@@ -682,15 +692,21 @@ window.ppz = (function () {
       }
     } catch (e) {}
 
-    try {
-      window.location.href = 'papazao://close';
-      // Some partner apps need a moment to handle the scheme. If
-      // history.back fires too soon it can navigate before close.
-      setTimeout(() => {
-        try { history.back(); } catch (e) {}
-      }, 250);
-      return;
-    } catch (e) {}
+    // Configurable URL scheme — admin sets it in /admin/settings →
+    // Partner integration. Empty string disables this attempt and
+    // falls straight through to history.back().
+    const closeUrl = (window.ppzPartnerCloseUrl || '').trim();
+    if (closeUrl) {
+      try {
+        window.location.href = closeUrl;
+        // Some partner apps need a moment to handle the scheme. If
+        // history.back fires too soon it can navigate before close.
+        setTimeout(() => {
+          try { history.back(); } catch (e) {}
+        }, 250);
+        return;
+      } catch (e) {}
+    }
 
     try { history.back(); } catch (e) {}
   }
@@ -705,6 +721,7 @@ window.ppz = (function () {
     savePointsRate,
     saveCollectionPoint,
     saveDeliverySettings,
+    savePartnerSettings,
     saveVendorCollection,
     saveVendorDelivery,
     pickFulfilment,

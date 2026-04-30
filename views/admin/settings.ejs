@@ -73,6 +73,35 @@
 
       <div class="admin-panel" style="max-width: 720px;">
         <div class="panel-head">
+          <h3>Partner integration</h3>
+          <span class="muted">Mobile bottom-nav "Home" button</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            URL the in-app webview navigates to when a customer taps
+            <strong>Home</strong> on the mobile bottom nav. The partner
+            app's webview delegate intercepts this URL and dismisses
+            the webview. Use a custom scheme like
+            <code>papazao://close</code> or whatever the partner team's
+            deep-link interceptor expects. Leave blank to disable —
+            Home will just call <code>history.back()</code>.
+          </p>
+          <form id="partnerForm" onsubmit="event.preventDefault(); ppz.savePartnerSettings(this)">
+            <div class="mb-3" style="max-width: 460px;">
+              <label>Close URL (deep link)</label>
+              <input class="form-control" name="partner.closeUrl"
+                value="<%= settings.partner.closeUrl %>"
+                placeholder="papazao://close"
+                spellcheck="false" autocapitalize="off">
+            </div>
+            <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save partner settings</button>
+            <span id="partnerStatus" class="ms-3 small"></span>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
           <h3>Delivery</h3>
           <span class="muted"><%= settings.delivery.enabled ? 'Enabled' : 'Disabled' %></span>
         </div>

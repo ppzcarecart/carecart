@@ -21,6 +21,7 @@ const WRITABLE_KEYS = new Set([
   'collection.hours',
   'delivery.enabled',
   'delivery.feeCents',
+  'partner.closeUrl',
 ]);
 
 @Controller('api/settings')

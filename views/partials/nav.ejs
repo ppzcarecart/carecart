@@ -105,4 +105,10 @@ const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
   </script>
 <% } %>
 
+<script>
+  // Configurable deep-link target for the mobile bottom-nav "Home"
+  // button. Set in /admin/settings → Partner integration. Empty string
+  // falls back to history.back() inside ppz.exitToApp().
+  window.ppzPartnerCloseUrl = <%- JSON.stringify(typeof partnerCloseUrl !== 'undefined' ? partnerCloseUrl : '') %>;
+</script>
 <script src="/static/app.js"></script>

@@ -354,6 +354,9 @@ export class ViewsController {
           enabled: all['delivery.enabled'] === 'true',
           feeCents: parseInt(all['delivery.feeCents'] || '0', 10),
         },
+        partner: {
+          closeUrl: all['partner.closeUrl'] || '',
+        },
       },
     };
   }

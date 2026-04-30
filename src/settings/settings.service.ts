@@ -17,6 +17,12 @@ const DEFAULTS: Record<string, string> = {
   // Default delivery fee (in cents) used when a product has no override
   // and the vendor hasn't set their own.
   'delivery.feeCents': '500',
+  // Deep-link URL the mobile bottom-nav "Home" button navigates to in
+  // order to close the in-app webview and return to the partner native
+  // app. The partner app's webview delegate intercepts this URL and
+  // dismisses the webview. Empty value = the button only does
+  // history.back().
+  'partner.closeUrl': 'papazao://close',
 };
 
 @Injectable()
