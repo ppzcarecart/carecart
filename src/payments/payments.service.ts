@@ -44,7 +44,12 @@ export class PaymentsService {
     // system (idempotent). The points provider stub will no-op until the API
     // base url is configured.
     if (order.pointsTotal > 0 && order.customerId) {
-      await this.points.redeem(order.customerId, order.pointsTotal, order.id);
+      await this.points.redeem(
+        order.customerId,
+        order.pointsTotal,
+        order.id,
+        order.number,
+      );
     }
 
     // If totalCents is 0 (entirely points-priced), skip the gateway and mark paid.
@@ -86,7 +91,12 @@ export class PaymentsService {
     } else if (event.type.includes('failed')) {
       const order = await this.orders.findById(event.orderId);
       if (order && order.pointsTotal > 0 && order.customerId) {
-        await this.points.reverse(order.customerId, order.pointsTotal, order.id);
+        await this.points.reverse(
+          order.customerId,
+          order.pointsTotal,
+          order.id,
+          order.number,
+        );
       }
       await this.orders.setPayment(event.orderId, event.reference, 'cancelled');
     }

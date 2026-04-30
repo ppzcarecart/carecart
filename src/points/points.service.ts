@@ -50,7 +50,12 @@ export class PointsService {
    * Deduct PPZ currency for an order. Local audit row is recorded even if
    * the remote call no-ops because the API isn't configured yet.
    */
-  async redeem(userId: string, amount: number, orderId: string) {
+  async redeem(
+    userId: string,
+    amount: number,
+    orderId: string,
+    orderNumber?: string,
+  ) {
     if (amount <= 0) return { skipped: true };
     const tx = this.repo.create({
       userId,
@@ -72,7 +77,9 @@ export class PointsService {
       const res = await this.client.deduct({
         ppzid: user.ppzId,
         amount,
-        reason: `carecart order ${orderId}`,
+        // Use the human-readable order number in the partner app's
+        // transaction history; fall back to the UUID only if missing.
+        reason: `carecart order ${orderNumber || orderId}`,
       });
       if ('notConfigured' in res) {
         await this.repo.save(tx);
@@ -158,7 +165,12 @@ export class PointsService {
   }
 
   /** Reverse PPZ redeem (e.g. payment failed after redeem). */
-  async reverse(userId: string, amount: number, orderId: string) {
+  async reverse(
+    userId: string,
+    amount: number,
+    orderId: string,
+    orderNumber?: string,
+  ) {
     if (amount <= 0) return { skipped: true };
     const tx = this.repo.create({
       userId,
@@ -179,7 +191,7 @@ export class PointsService {
       const res = await this.client.add({
         ppzid: user.ppzId,
         amount,
-        reason: `carecart order ${orderId} reversed`,
+        reason: `carecart order ${orderNumber || orderId} reversed`,
       });
       if ('notConfigured' in res) {
         await this.repo.save(tx);
