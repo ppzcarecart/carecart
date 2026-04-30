@@ -39,10 +39,6 @@ const avatarInitial = (avatarKey || '?').trim().charAt(0).toUpperCase();
            style="background: linear-gradient(135deg, <%= avatarPalette[0] %> 0%, <%= avatarPalette[1] %> 100%);">
           <span><%= avatarInitial %></span>
         </a>
-        <button class="cc-pill cc-pill-icon" onclick="ppz.logout()" title="Logout" aria-label="Logout">
-          <span class="d-none d-md-inline">Logout</span>
-          <span class="d-md-none">⏻</span>
-        </button>
       <% } else { %>
         <a href="/login" class="cc-pill cc-pill-primary">Sign in</a>
       <% } %>
