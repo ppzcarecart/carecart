@@ -93,28 +93,76 @@ flutter run
 
 ## What's actually being tested
 
-The bit we care about is in [`lib/webview_screen.dart`](lib/webview_screen.dart):
+Carecart's `ppz.exitToApp()` (see `public/app.js`) tries **three** native
+bridges in order. This sample wires up all three so the production
+partner-app team can pick whichever fits their stack — and verify each
+one works end-to-end before committing.
+
+All three end up calling `Navigator.pop(context)`. See
+[`lib/webview_screen.dart`](lib/webview_screen.dart).
+
+### 1. iOS WKWebView script message handler
+
+Carecart calls:
+
+```js
+window.webkit.messageHandlers.closeWebView.postMessage(null)
+```
+
+In Flutter we just register a JavaScript channel named `closeWebView`:
+
+```dart
+..addJavaScriptChannel(
+  'closeWebView',
+  onMessageReceived: (_) => _close(),
+);
+```
+
+On iOS, `webview_flutter` publishes the channel at exactly
+`window.webkit.messageHandlers.closeWebView`, so carecart's iOS path
+hits this handler with no extra glue.
+
+### 2. Android `window.Android.closeWebView()`
+
+Carecart's Android path (the convention most production Android partner
+apps use via `@JavascriptInterface`) calls:
+
+```js
+window.Android.closeWebView()
+```
+
+Flutter's channel API only exposes `window.<name>.postMessage(...)`, not
+arbitrary methods on a named object, so we inject a tiny shim on every
+`onPageFinished` that defines `window.Android.closeWebView` to forward
+to the same Flutter channel:
+
+```js
+window.Android = window.Android || {};
+window.Android.closeWebView = function () {
+  window.closeWebView.postMessage('close');
+};
+```
+
+### 3. URL-scheme deep link
+
+If neither bridge is registered, carecart falls back to
+`window.location.href = '<closeUrl>'` (defaults to `papazao://close`).
+We catch it in `onNavigationRequest` before the webview tries to load
+the unknown scheme:
 
 ```dart
 onNavigationRequest: (req) {
   if (close.isNotEmpty && req.url.startsWith(close)) {
-    if (mounted) Navigator.pop(context);
+    _close();
     return NavigationDecision.prevent;
   }
   return NavigationDecision.navigate;
 },
 ```
 
-When carecart's bottom-nav **Home** button fires, its JS does
-`window.location.href = '<closeUrl>'`. The webview asks Flutter "should I
-navigate to this?" via `onNavigationRequest`. We check the URL, recognise
-it as the close command, return `NavigationDecision.prevent` (so the
-webview never tries to actually load `papazao://close` — it can't), and
-pop the screen.
-
-That's the full integration. The production partner app does the
-equivalent in its native `WKWebView` / `WebView` delegate (see the main
-carecart README's *Partner integration* section).
+The production partner app does the equivalent in its native
+`WKWebView` / `WebView` delegate (see the main carecart README's
+*Partner integration* section).
 
 ## Troubleshooting
 
@@ -138,6 +186,10 @@ Hand the production iOS / Android team:
 - The carecart base URL.
 - The H5 handoff URL pattern: `/h5/login?ppzid=…&email=…`.
 - The Close URL value from `/admin/settings → Partner integration`.
-- The 4-line interception snippet they need (see this app's
-  `webview_screen.dart` for Flutter, or the carecart README for the
-  Swift / Kotlin equivalents).
+- Confirmation of which of the three close paths their stack will use
+  (iOS message handler `closeWebView`, Android JS interface
+  `Android.closeWebView`, or URL scheme) — this sample proves all three
+  work, so the choice is theirs.
+- The relevant interception snippet from this app's
+  `webview_screen.dart` (Flutter) or the carecart README (Swift /
+  Kotlin equivalents).
