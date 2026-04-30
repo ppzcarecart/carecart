@@ -723,6 +723,45 @@ window.ppz = (function () {
     async setOrderStatus(id, status) {
       await api('/api/orders/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
     },
+    async addPointsToUser(form, userId) {
+      const fd = new FormData(form);
+      const amount = parseInt(fd.get('amount'), 10);
+      const reason = (fd.get('reason') || '').toString().trim();
+      const errEl = document.getElementById('addPointsError');
+      if (errEl) errEl.textContent = '';
+      if (!Number.isFinite(amount) || amount <= 0) {
+        if (errEl) errEl.textContent = 'Amount must be a positive whole number.';
+        return;
+      }
+      if (!reason) {
+        if (errEl) errEl.textContent = 'Please enter a reason.';
+        return;
+      }
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding…'; }
+      try {
+        const r = await api('/api/points/users/' + userId + '/add', {
+          method: 'POST',
+          body: JSON.stringify({ amount, reason }),
+        });
+        // Update displayed balance + lifetime in place, then dismiss modal.
+        const cur = document.getElementById('td-ppzCurrency');
+        const life = document.getElementById('td-lifetime');
+        if (cur && r.newPpzCurrency != null) cur.textContent = Number(r.newPpzCurrency).toLocaleString();
+        if (life && r.newLifetimePpzCurrency != null) life.textContent = Number(r.newLifetimePpzCurrency).toLocaleString();
+        // Reset form, close modal via Bootstrap.
+        form.reset();
+        const modal = document.getElementById('addPointsModal');
+        if (modal && window.bootstrap?.Modal) {
+          const inst = window.bootstrap.Modal.getInstance(modal);
+          if (inst) inst.hide();
+        }
+      } catch (e) {
+        if (errEl) errEl.textContent = e.message || 'Add points failed';
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm add'; }
+      }
+    },
     async submitRefund(form, id) {
       const fd = new FormData(form);
       const reason = (fd.get('reason') || '').toString().trim();

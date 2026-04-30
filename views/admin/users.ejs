@@ -39,7 +39,11 @@
                 <% users.forEach(u => { %>
                   <tr>
                     <td>
-                      <strong><%= u.name %></strong>
+                      <% if (user.role === 'admin') { %>
+                        <strong><a href="/admin/users/<%= u.id %>" class="text-reset"><%= u.name %></a></strong>
+                      <% } else { %>
+                        <strong><%= u.name %></strong>
+                      <% } %>
                       <% if (u.vendorStoreName) { %><div class="text-muted" style="font-size:.82rem"><%= u.vendorStoreName %></div><% } %>
                     </td>
                     <td>

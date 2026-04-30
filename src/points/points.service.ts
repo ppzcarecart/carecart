@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -94,6 +99,68 @@ export class PointsService {
     } catch (e: any) {
       tx.status = 'failed';
       tx.meta = { error: e.message, code: e.code };
+      await this.repo.save(tx);
+      throw e;
+    }
+  }
+
+  /**
+   * Admin-only operation: credit a fixed amount to a PPZ-linked user.
+   * Calls the partner API with operation: add and the supplied reason as
+   * the description, then updates our cached balance from the response.
+   * Records a points_transactions row tagged meta.type = 'admin_add'.
+   */
+  async addPoints(userId: string, amount: number, reason: string) {
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      throw new BadRequestException('amount must be a positive integer');
+    }
+    const trimmed = (reason || '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('A reason is required');
+    }
+    if (trimmed.length > 500) {
+      throw new BadRequestException('Reason is too long (max 500)');
+    }
+    const user = await this.users.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.ppzId) {
+      throw new BadRequestException('User is not linked to a PPZ account');
+    }
+    if (!this.client.isConfigured()) {
+      throw new BadRequestException('PPZ API is not configured');
+    }
+
+    const tx = this.repo.create({
+      userId,
+      kind: 'adjust',
+      amount,
+      status: 'pending',
+      meta: { type: 'admin_add', reason: trimmed },
+    });
+    await this.repo.save(tx);
+
+    try {
+      const res = await this.client.add({
+        ppzid: user.ppzId,
+        amount,
+        reason: trimmed,
+      });
+      if ('notConfigured' in res) {
+        throw new BadRequestException('PPZ API is not configured');
+      }
+      await this.applyResultToUser(user, res);
+      tx.status = 'confirmed';
+      tx.externalRef = String(res.newPPZCurrency);
+      tx.meta = { type: 'admin_add', reason: trimmed, ...(res as any) };
+      await this.repo.save(tx);
+      return {
+        ok: true,
+        newPpzCurrency: res.newPPZCurrency,
+        newLifetimePpzCurrency: res.newLifetimePPZCurrency,
+      };
+    } catch (e: any) {
+      tx.status = 'failed';
+      tx.meta = { type: 'admin_add', reason: trimmed, error: e.message };
       await this.repo.save(tx);
       throw e;
     }

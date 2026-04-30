@@ -222,6 +222,24 @@ export class ViewsController {
     return { title: 'Users', user, users, activePath: '/admin/users' };
   }
 
+  @Roles(Role.ADMIN)
+  @Get('admin/users/:id')
+  @Render('admin/user-detail')
+  async adminUserDetail(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    const target = await this.users.findById(id);
+    if (!target) throw new NotFoundException('User not found');
+    return {
+      title: target.name,
+      user,
+      target,
+      activePath: '/admin/users',
+      returnTo: '/admin/users',
+    };
+  }
+
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/products')
   @Render('admin/products')
