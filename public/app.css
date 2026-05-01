@@ -1023,7 +1023,7 @@ a:hover { color: var(--brand-dark); }
 }
 .cc-scan-body .profile-dl { margin-top: 6px; }
 .cc-scan-body .scan-items {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   padding: 0;
   list-style: none;
   font-size: .9rem;
@@ -1033,6 +1033,44 @@ a:hover { color: var(--brand-dark); }
   border-bottom: 1px dashed var(--line);
 }
 .cc-scan-body .scan-items li:last-child { border-bottom: none; }
+.cc-scan-body .scan-subhead {
+  margin-top: 12px;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+/* Collapsible details block in the scan-result modal. Uses the native
+   <details> element so it works without JS and keeps keyboard
+   accessibility (Enter / Space toggle, focus ring on summary). */
+.cc-scan-body .scan-details {
+  margin-top: 10px;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+.cc-scan-body .scan-details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--brand-dark);
+  user-select: none;
+}
+.cc-scan-body .scan-details > summary::-webkit-details-marker { display: none; }
+.cc-scan-body .scan-details > summary::after {
+  content: '▾';
+  font-size: .8rem;
+  transition: transform .15s ease;
+}
+.cc-scan-body .scan-details[open] > summary::after { transform: rotate(180deg); }
+.cc-scan-body .scan-details[open] > summary { margin-bottom: 6px; }
+.cc-scan-body .scan-details .profile-dl { margin-top: 0; }
 
 .cc-scan-actions {
   display: flex; gap: 10px; flex-wrap: wrap;

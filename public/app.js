@@ -752,15 +752,44 @@ window.ppz = (function () {
     function buildBody(outcome) {
       const o = outcome.order;
       let html = '';
-      html += `<p class="lede">${escapeHtml(outcome.message)}</p>`;
+
+      // Skip the lede on a successful match — the modal title
+      // ("Ready to collect") already tells staff what to do, and a
+      // second sentence saying the same thing wastes vertical space.
+      // Keep the lede for non-success outcomes since those messages
+      // carry context beyond the title (e.g. why the order is in a
+      // bad state).
+      if (outcome.result !== 'success') {
+        html += `<p class="lede">${escapeHtml(outcome.message)}</p>`;
+      }
       if (!o) return html;
 
+      // Always-visible block: just Order, Status, Customer (and the
+      // collected timestamp on duplicates — that's the critical info
+      // for staff to identify what happened). Everything else lives
+      // behind a collapsible to keep the modal small on phones.
       html += `<dl class="profile-dl">`;
       html += `<dt>Order</dt><dd><strong>${escapeHtml(o.number)}</strong></dd>`;
       html += `<dt>Status</dt><dd><span class="badge-status ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></dd>`;
       if (o.customerName) {
         html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}</dd>`;
       }
+      if (o.collectedAt) {
+        html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
+      }
+      html += `</dl>`;
+
+      // Collapsible: email, contact, ppz id, total, and items list.
+      // Only render the <details> at all if there's something to put
+      // inside it — otherwise we'd ship an empty toggle.
+      const hasMore =
+        o.customerEmail || o.customerContact || o.customerPpzId ||
+        o.totalCents || (o.items && o.items.length);
+      if (!hasMore) return html;
+
+      html += `<details class="scan-details">`;
+      html += `<summary>More details</summary>`;
+      html += `<dl class="profile-dl">`;
       if (o.customerEmail) {
         html += `<dt>Email</dt><dd>${escapeHtml(o.customerEmail)}</dd>`;
       }
@@ -771,18 +800,16 @@ window.ppz = (function () {
         html += `<dt>PPZ ID</dt><dd>${escapeHtml(o.customerPpzId)}</dd>`;
       }
       html += `<dt>Total</dt><dd>$${(o.totalCents/100).toFixed(2)}${o.pointsTotal > 0 ? ' + ' + Number(o.pointsTotal).toLocaleString() + ' pts' : ''}</dd>`;
-      if (o.collectedAt) {
-        html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
-      }
       html += `</dl>`;
-
       if (o.items && o.items.length) {
+        html += `<div class="scan-subhead">Items</div>`;
         html += `<ul class="scan-items">`;
         html += o.items.map((it) =>
           `<li>${escapeHtml(it.productName)} ×${it.quantity}${it.vendorName ? ' <span class="text-muted">(' + escapeHtml(it.vendorName) + ')</span>' : ''}</li>`
         ).join('');
         html += `</ul>`;
       }
+      html += `</details>`;
       return html;
     }
 
