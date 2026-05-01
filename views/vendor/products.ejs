@@ -18,7 +18,7 @@
           <% if (!products.length) { %>
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">You haven't added any products yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -42,11 +42,11 @@
                       </div>
                     </div>
                   </td>
-                  <td class="num">$<%= (p.priceCents/100).toFixed(2) %></td>
-                  <td class="num"><%= p.pointsPrice ?? '–' %></td>
-                  <td class="num"><%= p.stock %></td>
-                  <td class="num"><%= (p.variants || []).length %></td>
-                  <td><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
+                  <td class="num" data-label="Price">$<%= (p.priceCents/100).toFixed(2) %></td>
+                  <td class="num" data-label="Points"><%= p.pointsPrice ?? '–' %></td>
+                  <td class="num" data-label="Stock"><%= p.stock %></td>
+                  <td class="num" data-label="Variants"><%= (p.variants || []).length %></td>
+                  <td data-label="Status"><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
                   <td class="actions">
                     <a href="/vendor/products/<%= p.id %>/edit" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;">Edit</a>
                     <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button>

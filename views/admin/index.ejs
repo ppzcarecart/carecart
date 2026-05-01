@@ -85,7 +85,7 @@
           <% if (!orders.length) { %>
             <div class="cc-empty" style="margin: 0; border: none; border-radius: 0;">No orders yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr><th>Number</th><th>Customer</th><th>CType</th><th>Status</th><th class="num">Total</th><th>Created</th></tr>
               </thead>
@@ -94,17 +94,17 @@
                   <% const ctype = o.customer ? (o.customer.ppzId ? 'PPZ' : 'CC') : 'NA'; %>
                   <tr>
                     <td><strong><a href="/admin/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
-                    <td><%= o.customer ? o.customer.email : '-' %></td>
-                    <td>
+                    <td data-label="Customer"><%= o.customer ? o.customer.email : '-' %></td>
+                    <td data-label="Type">
                       <% if (ctype === 'NA') { %>
                         <span class="text-muted">—</span>
                       <% } else { %>
                         <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
                       <% } %>
                     </td>
-                    <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
-                    <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
-                    <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+                    <td data-label="Status"><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
+                    <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
+                    <td class="text-muted" data-label="Created"><%= new Date(o.createdAt).toLocaleString() %></td>
                   </tr>
                 <% }); %>
               </tbody>

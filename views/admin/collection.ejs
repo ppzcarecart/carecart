@@ -60,7 +60,7 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
           <% if (!logs.length) { %>
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No scans logged yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr>
                   <th>When</th>
@@ -83,16 +83,16 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
                   %>
                   <tr>
                     <td class="text-muted"><%= new Date(log.createdAt).toLocaleString() %></td>
-                    <td>
+                    <td data-label="Order">
                       <% if (log.order) { %>
                         <strong><a href="/admin/orders/<%= log.order.id %>" class="text-reset"><%= log.order.number %></a></strong>
                       <% } else { %>
                         <span class="text-muted"><%= log.scannedValue %></span>
                       <% } %>
                     </td>
-                    <td><span class="<%= cls %>"><%= log.result.replace(/_/g, ' ') %></span></td>
-                    <td><%= log.scannedBy ? log.scannedBy.name : '—' %></td>
-                    <td class="text-muted" style="font-size:.85rem;"><%= log.notes || '' %></td>
+                    <td data-label="Result"><span class="<%= cls %>"><%= log.result.replace(/_/g, ' ') %></span></td>
+                    <td data-label="By"><%= log.scannedBy ? log.scannedBy.name : '—' %></td>
+                    <td class="text-muted" data-label="Notes" style="font-size:.85rem;"><%= log.notes || '' %></td>
                   </tr>
                 <% }); %>
               </tbody>

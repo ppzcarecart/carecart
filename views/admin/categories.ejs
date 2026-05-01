@@ -28,7 +28,7 @@
           <% if (!categories.length) { %>
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No categories yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th class="actions">Actions</th></tr></thead>
               <tbody>
               <% categories.forEach(c => { %>
@@ -36,8 +36,8 @@
                   <td><strong><%= c.name %></strong>
                     <% if (c.description) { %><div class="text-muted" style="font-size:.82rem"><%= c.description %></div><% } %>
                   </td>
-                  <td><code><%= c.slug %></code></td>
-                  <td><span class="tag <%= c.active ? 'tag-active' : 'tag-inactive' %>"><%= c.active ? 'active' : 'inactive' %></span></td>
+                  <td data-label="Slug"><code><%= c.slug %></code></td>
+                  <td data-label="Status"><span class="tag <%= c.active ? 'tag-active' : 'tag-inactive' %>"><%= c.active ? 'active' : 'inactive' %></span></td>
                   <td class="actions"><button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteCategory('<%= c.id %>')">Delete</button></td>
                 </tr>
               <% }); %>

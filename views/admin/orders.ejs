@@ -17,7 +17,7 @@
           <% if (!orders.length) { %>
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No orders yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr>
                   <th>Number</th>
@@ -36,15 +36,15 @@
                 %>
                 <tr>
                   <td><strong><a href="/admin/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
-                  <td><%= o.customer ? o.customer.email : '-' %></td>
-                  <td>
+                  <td data-label="Customer"><%= o.customer ? o.customer.email : '-' %></td>
+                  <td data-label="Type">
                     <% if (ctype === 'NA') { %>
                       <span class="text-muted">—</span>
                     <% } else { %>
                       <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
                     <% } %>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <select <%= o.status === 'refunded' ? 'disabled' : '' %>
                       onchange="ppz.setOrderStatus('<%= o.id %>', this.value)"
                       title="<%= o.status === 'refunded' ? 'Refunded orders cannot change status' : '' %>">
@@ -53,9 +53,9 @@
                       <% }); %>
                     </select>
                   </td>
-                  <td class="num">$<%= (o.totalCents/100).toFixed(2) %></td>
-                  <td class="num"><%= o.pointsTotal ? Number(o.pointsTotal).toLocaleString() : '–' %></td>
-                  <td class="text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
+                  <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
+                  <td class="num" data-label="Points"><%= o.pointsTotal ? Number(o.pointsTotal).toLocaleString() : '–' %></td>
+                  <td class="text-muted" data-label="Created"><%= new Date(o.createdAt).toLocaleString() %></td>
                 </tr>
               <% }); %>
               </tbody>

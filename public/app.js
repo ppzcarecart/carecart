@@ -838,16 +838,61 @@ window.ppz = (function () {
       setStatus('Idle');
     }
 
+    function errToString(e) {
+      if (!e) return 'unknown error';
+      if (typeof e === 'string') return e;
+      if (e.message) return e.message;
+      if (e.name) return e.name;
+      try { return JSON.stringify(e); } catch (_) { return String(e); }
+    }
+
     async function start() {
       if (typeof Html5Qrcode === 'undefined') {
-        alert('Scanner library failed to load. Check your network.');
+        alert('Scanner library failed to load. Check your network and reload.');
+        return;
+      }
+      if (
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !== 'function'
+      ) {
+        alert(
+          'Camera not available in this browser.\n\n' +
+          'Make sure the page is loaded over HTTPS (not HTTP). On iOS, open this page in Safari (Chrome/in-app browsers may block camera access).',
+        );
         return;
       }
       if (scanner) return;
+      // Enumerate cameras first — on Android the bare facingMode hint
+      // sometimes fails with a generic OverconstrainedError. Picking a
+      // device id explicitly is more reliable.
+      setStatus('Requesting camera permission…');
+      let cameraId = { facingMode: { ideal: 'environment' } };
+      try {
+        const cams = await Html5Qrcode.getCameras();
+        if (cams && cams.length) {
+          const back = cams.find((c) => /back|rear|environment/i.test(c.label || ''));
+          // Default to the last camera, which on most phones is the
+          // back-facing one even when labels are empty (no permission yet).
+          cameraId = (back || cams[cams.length - 1]).id;
+        }
+      } catch (enumErr) {
+        // getCameras() can throw NotAllowedError if permission was denied
+        // earlier. Surface a helpful message and stop here.
+        const m = errToString(enumErr);
+        if (/NotAllowed|Permission/i.test(m) || (enumErr && enumErr.name === 'NotAllowedError')) {
+          alert(
+            'Camera permission was denied. Open browser settings for this site and allow camera access, then try again.',
+          );
+          setStatus('Permission denied');
+          return;
+        }
+        // Otherwise fall through and try facingMode below.
+      }
+
       try {
         scanner = new Html5Qrcode('reader');
         await scanner.start(
-          { facingMode: 'environment' },
+          cameraId,
           { fps: 10, qrbox: { width: 240, height: 240 } },
           (decoded) => lookup(decoded),
           () => {},
@@ -857,7 +902,16 @@ window.ppz = (function () {
         setStatus('Camera ready · point at QR');
       } catch (e) {
         scanner = null;
-        alert('Could not start camera: ' + e.message);
+        const msg = errToString(e);
+        setStatus('Camera failed: ' + msg);
+        alert(
+          'Could not start camera: ' + msg +
+          '\n\nCommon fixes:\n' +
+          '• The page must be served over HTTPS\n' +
+          '• Allow camera permission for this site\n' +
+          '• Close other apps using the camera\n' +
+          '• On iOS, use Safari (in-app browsers may block the camera)',
+        );
       }
     }
 

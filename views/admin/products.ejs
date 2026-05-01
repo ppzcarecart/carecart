@@ -18,7 +18,7 @@
           <% if (!products.length) { %>
             <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No products yet.</div>
           <% } else { %>
-            <table class="admin-table">
+            <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -45,12 +45,12 @@
                       </div>
                     </div>
                   </td>
-                  <td><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
-                  <td class="num">$<%= (p.priceCents/100).toFixed(2) %></td>
-                  <td class="num"><%= p.pointsPrice ?? '–' %></td>
-                  <td class="num"><%= p.stock %></td>
-                  <td><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
-                  <td>
+                  <td data-label="Vendor"><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
+                  <td class="num" data-label="Price">$<%= (p.priceCents/100).toFixed(2) %></td>
+                  <td class="num" data-label="Points"><%= p.pointsPrice ?? '–' %></td>
+                  <td class="num" data-label="Stock"><%= p.stock %></td>
+                  <td data-label="Active"><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
+                  <td data-label="Featured">
                     <label class="cc-switch">
                       <input type="checkbox" <%= p.featured ? 'checked' : '' %>
                         onchange="ppz.setFeatured('<%= p.id %>', this.checked, this)">

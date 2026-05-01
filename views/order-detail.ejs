@@ -118,7 +118,7 @@ const canRefund =
           <h3>Items <span class="muted">(<%= order.items.length %>)</span></h3>
         </div>
         <div class="panel-body">
-          <table class="admin-table">
+          <table class="admin-table" data-mobile="cards">
             <thead>
               <tr>
                 <th>Product</th>
@@ -140,19 +140,19 @@ const canRefund =
                       </div>
                     <% } %>
                   </td>
-                  <td><%= it.vendor ? (it.vendor.vendorStoreName || it.vendor.name) : '—' %></td>
-                  <td class="num"><%= it.quantity %></td>
-                  <td>
+                  <td data-label="Vendor"><%= it.vendor ? (it.vendor.vendorStoreName || it.vendor.name) : '—' %></td>
+                  <td class="num" data-label="Qty"><%= it.quantity %></td>
+                  <td data-label="Mode">
                     <span class="tag <%= it.pricingMode === 'points' ? 'tag-vendor' : 'tag-customer' %>"><%= it.pricingMode %></span>
                   </td>
-                  <td class="num">
+                  <td class="num" data-label="Unit">
                     <% if (it.pricingMode === 'price') { %>
                       $<%= (it.unitPriceCents/100).toFixed(2) %>
                     <% } else { %>
                       <%= Number(it.unitPoints).toLocaleString() %> pts
                     <% } %>
                   </td>
-                  <td class="num">
+                  <td class="num" data-label="Line total">
                     <% if (it.pricingMode === 'price') { %>
                       $<%= (it.unitPriceCents * it.quantity / 100).toFixed(2) %>
                     <% } else { %>

@@ -768,10 +768,122 @@ a:hover { color: var(--brand-dark); }
   .cc-user { display: none !important; }
 }
 
-/* Sidebar should not be sticky once it stacks above the content. */
+/* Keep the admin/vendor entry pill visible on mobile — Shop/Cart pills
+   are duplicated in the bottom nav so we hide just those, but the
+   Admin/Vendor outline pill is the only top-of-app way back to the
+   dashboard once you're deep in a sub-page. */
+@media (max-width: 800px) {
+  .cc-nav .cc-links .cc-pill:not(.cc-pill-outline):not(.cc-pill-primary) {
+    display: none;
+  }
+  .cc-nav .cc-links .cc-pill { display: none; }
+  .cc-nav .cc-links .cc-pill-outline,
+  .cc-nav .cc-links .cc-pill-primary { display: inline-flex; }
+}
+
+/* Admin/vendor sidebar → horizontal chip strip on mobile so the page
+   header isn't pushed below a tall list of links. Sticks to top of
+   .admin-main and scrolls horizontally. */
 @media (max-width: 900px) {
-  .admin-sidebar { position: static; }
-  .admin-layout { gap: 16px; }
+  .admin-shell { padding: 12px 0 80px; }
+  .admin-layout { gap: 10px; }
+  .admin-sidebar {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px;
+    gap: 6px;
+    scrollbar-width: none;
+  }
+  .admin-sidebar::-webkit-scrollbar { display: none; }
+  .admin-sidebar .group-label { display: none; }
+  .admin-sidebar a {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .admin-sidebar a.is-active {
+    background: var(--brand-soft);
+    color: var(--brand-dark);
+    border-color: transparent;
+  }
+  .admin-sidebar .icon { width: 16px; height: 16px; font-size: 12px; }
+}
+
+/* Tighten the admin page chrome on phones. */
+@media (max-width: 600px) {
+  .admin-panel { margin-bottom: 14px; border-radius: 12px; }
+  .admin-panel .panel-head { padding: 14px 16px; }
+  .admin-panel .panel-body.padded { padding: 14px; }
+  .profile-dl { grid-template-columns: 1fr; row-gap: 4px; }
+  .profile-dl dt { margin-top: 8px; }
+  .profile-dl dd { margin-bottom: 4px; }
+  /* Order-detail totals card: full-width on phones. */
+  .admin-panel[style*="margin-left: auto"] {
+    max-width: none !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* Card-mode admin tables. Add `data-mobile="cards"` to the <table> and
+   `data-label="Status"` to each <td> (except the first, which becomes
+   the card title). Below 600px the table reflows into one card per row
+   with label/value pairs — tap targets stay big and nothing overflows. */
+@media (max-width: 600px) {
+  .admin-table[data-mobile="cards"],
+  .admin-table[data-mobile="cards"] tbody {
+    display: block;
+    width: 100%;
+  }
+  .admin-table[data-mobile="cards"] thead { display: none; }
+  .admin-table[data-mobile="cards"] tr {
+    display: block;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+  }
+  .admin-table[data-mobile="cards"] tbody tr:last-child { border-bottom: none; }
+  .admin-table[data-mobile="cards"] tbody tr:hover td { background: transparent; }
+  .admin-table[data-mobile="cards"] td {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: none;
+    text-align: left;
+    min-width: 0;
+  }
+  .admin-table[data-mobile="cards"] td:first-child {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .admin-table[data-mobile="cards"] td[data-label]::before {
+    content: attr(data-label);
+    color: var(--ink-soft);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex: 0 0 96px;
+    align-self: center;
+  }
+  .admin-table[data-mobile="cards"] td.num { font-variant-numeric: tabular-nums; }
+  .admin-table[data-mobile="cards"] td.actions {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .admin-table[data-mobile="cards"] td.actions::before { display: none; }
 }
 
 /* Cart summary should flow inline on mobile, not stick at the top. */
