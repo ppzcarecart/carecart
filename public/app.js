@@ -953,23 +953,41 @@ window.ppz = (function () {
     function showCameraBusyHelp() {
       const ua = navigator.userAgent || '';
       const isAndroidWebView = /Android/.test(ua) && /;\s*wv\)/.test(ua);
+
+      // Inside an Android WebView, "could not start video source" is
+      // almost always the host (partner) app missing runtime CAMERA
+      // permission — declaring it in AndroidManifest is necessary but
+      // not sufficient on Android 6+. The WebView grants the page's
+      // request, but the underlying Camera2 open in the host process
+      // fails. Lead with that fix because it's the actual cause ~95%
+      // of the time we see this from inside a WebView.
+      if (isAndroidWebView) {
+        setStatus('Camera busy — see help');
+        alert(
+          'Could not open the camera from inside the partner app.\n\n' +
+          'Most likely cause: the partner app has CAMERA in its AndroidManifest but never received the runtime permission grant. Even though the WebView is granting the page\'s request, the Android camera service refuses to open the device.\n\n' +
+          'Quick fix (no rebuild):\n' +
+          '1. Open phone Settings → Apps → [partner app name] → Permissions → Camera → Allow.\n' +
+          '2. Reopen the partner app and tap Start camera again.\n\n' +
+          'Permanent fix (in the partner app code):\n' +
+          '• Call Permission.camera.request() (permission_handler package) in initState before loading the WebView.\n' +
+          '• Or implement a native runtime-permission request before opening the carecart URL.\n\n' +
+          'Other things to rule out:\n' +
+          '• Close any other camera app (WhatsApp, Zoom, Camera).\n' +
+          '• Fully kill the partner app (swipe out of recent apps), don\'t just hot-reload.\n' +
+          '• Confirm the device camera works in standalone Chrome at this URL — if it does, the issue is definitely the host app.'
+        );
+        return;
+      }
+
       const lines = [
         'The camera permission is granted, but the camera hardware is locked or in use elsewhere.',
         '',
         'Try in this order:',
         '1. Close any other camera app (Camera, WhatsApp, Zoom, Google Meet, Snapchat).',
-        '2. Fully close and reopen the partner app — swipe it out of the recent-apps list, then launch again. (Hot-reload during development sometimes leaves the WebView holding the camera handle.)',
-        '3. Lock + unlock the screen, or reboot the phone, if the camera service has gotten stuck.',
+        '2. Lock + unlock the screen, or reboot the phone, if the camera service has gotten stuck.',
+        '3. On a desktop, check the OS privacy panel (System Settings → Privacy & Security → Camera) and make sure the browser is allowed.',
       ];
-      if (isAndroidWebView) {
-        lines.push(
-          '4. To confirm the issue is the host app and not the device, open this same URL in standalone Chrome on the same phone. If the camera works there, the partner app needs to release any open camera handle before navigating to /admin/collection.',
-        );
-      } else {
-        lines.push(
-          '4. On a desktop, check the OS privacy panel (System Settings → Privacy & Security → Camera) and make sure the browser is allowed.',
-        );
-      }
       setStatus('Camera busy — see help');
       alert(lines.join('\n'));
     }

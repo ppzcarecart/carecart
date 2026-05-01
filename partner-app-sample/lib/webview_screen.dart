@@ -1,7 +1,10 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 /// Embeds the carecart H5 handoff URL in a WebView and listens for the
 /// "close webview" signal on all three carecart-supported paths so the
@@ -70,13 +73,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
   void initState() {
     super.initState();
 
-    // Pre-request runtime CAMERA permission so when the user opens
-    // /admin/collection inside this webview and taps "Start camera",
-    // the OS already has the permission. Without this the WebView's
-    // permission grant succeeds but the underlying camera stream
-    // fails silently. Fire-and-forget — if the user denies, the page
-    // will just show its own permission-help dialog.
-    Permission.camera.request();
+    // Android 6+: declaring CAMERA in AndroidManifest only grants the
+    // capability — the OS still requires the user (or the app) to
+    // grant the permission at runtime. The WebView's
+    // setOnPlatformPermissionRequest below grants the *page's*
+    // request, but the underlying Camera2 open inside this host
+    // process then fails with NotReadableError ("could not start
+    // video source") unless the host process has runtime CAMERA too.
+    // Fire-and-forget — if denied, the page surfaces its own help.
+    if (Platform.isAndroid) {
+      Permission.camera.request();
+    }
 
     final handoff = Uri.parse(
       '${widget.baseUrl}/h5/login'
@@ -84,7 +91,20 @@ class _WebViewScreenState extends State<WebViewScreen> {
       '&email=${Uri.encodeComponent(widget.email)}',
     );
 
-    final controller = WebViewController()
+    // On Android, we have to construct the controller via the platform
+    // creation params so we can opt-in to media playback (carecart's
+    // getUserMedia / camera). On iOS the default params are sufficient
+    // because WKWebView reads NSCameraUsageDescription from Info.plist.
+    final PlatformWebViewControllerCreationParams params = Platform.isAndroid
+        ? AndroidWebViewControllerCreationParams()
+        : (Platform.isIOS
+            ? WebKitWebViewControllerCreationParams(
+                allowsInlineMediaPlayback: true,
+                mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+              )
+            : const PlatformWebViewControllerCreationParams());
+
+    final controller = WebViewController.fromPlatformCreationParams(params)
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
       // (1) iOS — Flutter publishes this channel as
@@ -95,28 +115,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'closeWebView',
         onMessageReceived: (_) => _close(),
       );
-
-    // Android only: by default WebView denies every page-level
-    // permission request (camera, mic, location, etc.) without ever
-    // surfacing the prompt to the user. carecart's QR scanner needs
-    // camera access, so we explicitly grant camera/mic when the page
-    // asks. Other request types (location, MIDI, protected media) are
-    // denied to keep the permission surface minimal.
-    if (controller.platform is AndroidWebViewController) {
-      final android = controller.platform as AndroidWebViewController;
-      android.setOnPlatformPermissionRequest((request) async {
-        final wantsCamera = request.types.any(
-          (t) =>
-              t == WebViewPermissionResourceType.camera ||
-              t == WebViewPermissionResourceType.microphone,
-        );
-        if (wantsCamera) {
-          await request.grant();
-        } else {
-          await request.deny();
-        }
-      });
-    }
 
     controller.setNavigationDelegate(
       NavigationDelegate(
@@ -143,6 +141,19 @@ class _WebViewScreenState extends State<WebViewScreen> {
         },
       ),
     );
+
+    // Android-specific: auto-grant camera/mic permission requests from
+    // pages inside the WebView. Without this, getUserMedia() inside
+    // carecart silently fails on Android because the platform side
+    // doesn't surface the prompt.
+    if (Platform.isAndroid &&
+        controller.platform is AndroidWebViewController) {
+      final android = controller.platform as AndroidWebViewController;
+      android.setMediaPlaybackRequiresUserGesture(false);
+      android.setOnPlatformPermissionRequest((request) {
+        request.grant();
+      });
+    }
 
     controller.loadRequest(handoff);
     _controller = controller;
