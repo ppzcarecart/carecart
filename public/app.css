@@ -1004,6 +1004,82 @@ a:hover { color: var(--brand-dark); }
 }
 
 /* ============================================================ */
+/* Customer orders list (cards, mobile-friendly)                */
+/* ============================================================ */
+
+.cc-orders-title {
+  margin: 24px 0 4px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: 1.8rem;
+}
+.cc-orders-lede { margin-bottom: 18px; font-size: 0.95rem; }
+
+.cc-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cc-order-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.cc-order-card:hover { box-shadow: var(--shadow-sm); }
+.cc-order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.cc-order-number {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.98rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cc-order-number:hover { color: var(--brand-dark); text-decoration: underline; }
+.cc-order-head .badge-status { flex-shrink: 0; }
+.cc-order-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+.cc-order-meta { font-size: 0.85rem; }
+.cc-order-qr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background .15s ease, color .15s ease;
+}
+.cc-order-qr-btn:hover { background: var(--brand-soft); color: var(--brand-dark); }
+.cc-order-qr-btn::after { content: '→'; font-size: .9rem; }
+
+@media (max-width: 600px) {
+  .cc-orders-title { font-size: 1.4rem; margin-top: 14px; }
+  .cc-orders-lede { font-size: 0.88rem; line-height: 1.45; margin-bottom: 12px; }
+  .cc-order-card { padding: 12px 14px; }
+}
+
+/* ============================================================ */
 /* About Multivendor card (profile, mobile only)                */
 /* ============================================================ */
 

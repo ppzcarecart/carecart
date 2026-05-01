@@ -6,55 +6,44 @@ function fmtCollected(d) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
+function fmtPlaced(d) {
+  const dt = new Date(d);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
 %>
 <div class="container">
-  <h1 class="mt-4 mb-1" style="font-weight:700; letter-spacing:-0.01em;">Your orders</h1>
-  <p class="text-muted">Tap an order number for full details. The QR is your collection ticket.</p>
+  <h1 class="cc-orders-title">Your orders</h1>
+  <p class="text-muted cc-orders-lede">Tap an order number for full details. The QR is your collection ticket.</p>
 
   <% if (!orders.length) { %>
     <div class="cc-empty mt-3">No orders yet. <a href="/">Start shopping</a>.</div>
   <% } else { %>
-    <div class="table-responsive">
-      <table class="table align-middle mt-2" style="background: var(--surface); border-radius: var(--radius); overflow: hidden;">
-        <thead>
-          <tr>
-            <th class="ps-3">Order Number</th>
-            <th>Status</th>
-            <th>QR Collect</th>
-            <th class="pe-3">Placed</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% orders.forEach(o => { %>
-            <%
-            const isCollection = o.fulfilmentMethod === 'collection';
-            const showQrButton = isCollection
-              && !o.collectedAt
-              && (o.status === 'paid' || o.status === 'fulfilled');
-            %>
-            <tr>
-              <td class="ps-3"><strong><a href="/orders/<%= o.id %>" class="text-reset"><%= o.number %></a></strong></td>
-              <td><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
-              <td>
-                <% if (o.collectedAt) { %>
-                  <span class="text-muted" style="font-size:.85rem;">
-                    Collected <%= fmtCollected(o.collectedAt) %>
-                  </span>
-                <% } else if (showQrButton) { %>
-                  <a href="/orders/<%= o.id %>/qr" class="cc-btn cc-btn-outline" style="padding:4px 12px; font-size:.85rem;">
-                    QR Collect
-                  </a>
-                <% } else if (!isCollection) { %>
-                  <span class="text-muted" style="font-size:.85rem;">Delivery</span>
-                <% } else { %>
-                  <span class="text-muted" style="font-size:.85rem;">—</span>
-                <% } %>
-              </td>
-              <td class="pe-3 text-muted"><%= new Date(o.createdAt).toLocaleString() %></td>
-            </tr>
-          <% }); %>
-        </tbody>
-      </table>
+    <div class="cc-orders">
+      <% orders.forEach(o => { %>
+        <%
+        const isCollection = o.fulfilmentMethod === 'collection';
+        const showQrButton = isCollection
+          && !o.collectedAt
+          && (o.status === 'paid' || o.status === 'fulfilled');
+        %>
+        <div class="cc-order-card">
+          <div class="cc-order-head">
+            <a href="/orders/<%= o.id %>" class="cc-order-number"><%= o.number %></a>
+            <span class="badge-status <%= o.status %>"><%= o.status %></span>
+          </div>
+          <div class="cc-order-foot">
+            <span class="cc-order-meta text-muted">Placed <%= fmtPlaced(o.createdAt) %></span>
+            <% if (o.collectedAt) { %>
+              <span class="cc-order-meta text-muted">Collected <%= fmtCollected(o.collectedAt) %></span>
+            <% } else if (showQrButton) { %>
+              <a href="/orders/<%= o.id %>/qr" class="cc-order-qr-btn">QR Collect</a>
+            <% } else if (!isCollection) { %>
+              <span class="cc-order-meta text-muted">Delivery</span>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
     </div>
   <% } %>
 </div>
