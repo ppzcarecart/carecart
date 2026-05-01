@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'settings_store.dart';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+/// Settings as embeddable content (no Scaffold/AppBar of its own) so
+/// it can live as a tab inside HomeScreen's IndexedStack — the
+/// surrounding Scaffold supplies the AppBar title and bottom nav, and
+/// state survives tab toggles because IndexedStack keeps both children
+/// mounted.
+///
+/// [onChanged] fires after every mutation (account add/edit/delete,
+/// active switch, endpoint save) so the parent can reload its own
+/// snapshot of SettingsData — otherwise Home's account-switcher popup
+/// would go stale until the user toggled tabs.
+class SettingsContent extends StatefulWidget {
+  final VoidCallback? onChanged;
+  const SettingsContent({super.key, this.onChanged});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<SettingsContent> createState() => _SettingsContentState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsContentState extends State<SettingsContent> {
   final _baseCtrl = TextEditingController();
   final _closeCtrl = TextEditingController();
   SettingsData? _data;
@@ -29,6 +40,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  void _notifyChanged() => widget.onChanged?.call();
+
   Future<void> _saveEndpoints() async {
     await SettingsStore.saveEndpoints(
       baseUrl: _baseCtrl.text.trim().isEmpty
@@ -36,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : _baseCtrl.text.trim(),
       closeUrl: _closeCtrl.text.trim(),
     );
+    _notifyChanged();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Endpoints saved')),
@@ -51,6 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       label: result.label,
     );
     await _load();
+    _notifyChanged();
   }
 
   Future<void> _editAccount(Account account) async {
@@ -64,6 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     await _load();
+    _notifyChanged();
   }
 
   Future<void> _deleteAccount(Account account) async {
@@ -87,11 +103,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirm != true) return;
     await SettingsStore.deleteAccount(account.id);
     await _load();
+    _notifyChanged();
   }
 
   Future<void> _setActive(Account account) async {
     await SettingsStore.setActive(account.id);
     await _load();
+    _notifyChanged();
   }
 
   Future<_AccountFormResult?> _showAccountEditor({Account? initial}) {
@@ -112,132 +130,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final data = _data;
     if (data == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Accounts',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: _addAccount,
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (data.accounts.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'No accounts yet. Tap Add to create one.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          else
-            ...data.accounts.map((a) {
-              final isActive = a.id == data.activeAccountId;
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: Icon(
-                    isActive
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey,
-                  ),
-                  title: Text(
-                    a.displayName,
-                    style: TextStyle(
-                      fontWeight:
-                          isActive ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text('PPZ ${a.ppzId} · ${a.email}'),
-                  onTap: isActive ? null : () => _setActive(a),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          _editAccount(a);
-                          break;
-                        case 'delete':
-                          _deleteAccount(a);
-                          break;
-                        case 'activate':
-                          _setActive(a);
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      if (!isActive)
-                        const PopupMenuItem(
-                          value: 'activate',
-                          child: Text('Set active'),
-                        ),
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      ),
-                    ],
+    return ListView(
+      // Bottom padding clears the bottom nav + the FAB protruding
+      // above it so the Save button isn't trapped under the FAB.
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Accounts',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: _addAccount,
+              icon: const Icon(Icons.add),
+              label: const Text('Add'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (data.accounts.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              'No accounts yet. Tap Add to create one.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          )
+        else
+          ...data.accounts.map((a) {
+            final isActive = a.id == data.activeAccountId;
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              child: ListTile(
+                leading: Icon(
+                  isActive
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey,
+                ),
+                title: Text(
+                  a.displayName,
+                  style: TextStyle(
+                    fontWeight:
+                        isActive ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
-              );
-            }),
-          const SizedBox(height: 28),
-          const Text(
-            'carecart endpoints',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                subtitle: Text('PPZ ${a.ppzId} · ${a.email}'),
+                onTap: isActive ? null : () => _setActive(a),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'edit':
+                        _editAccount(a);
+                        break;
+                      case 'delete':
+                        _deleteAccount(a);
+                        break;
+                      case 'activate':
+                        _setActive(a);
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (!isActive)
+                      const PopupMenuItem(
+                        value: 'activate',
+                        child: Text('Set active'),
+                      ),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        const SizedBox(height: 28),
+        const Text(
+          'carecart endpoints',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _baseCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Base URL',
+            hintText: SettingsStore.defaultBaseUrl,
+            border: OutlineInputBorder(),
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _baseCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Base URL',
-              hintText: SettingsStore.defaultBaseUrl,
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.url,
-            autocorrect: false,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _closeCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Close deep-link URL',
+            hintText: SettingsStore.defaultCloseUrl,
+            border: OutlineInputBorder(),
+            helperText: 'Carecart navigates here when the user taps Home '
+                'on the bottom nav. We intercept and pop the webview.',
+            helperMaxLines: 3,
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _closeCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Close deep-link URL',
-              hintText: SettingsStore.defaultCloseUrl,
-              border: OutlineInputBorder(),
-              helperText: 'Carecart navigates here when the user taps Home '
-                  'on the bottom nav. We intercept and pop the webview.',
-              helperMaxLines: 3,
-            ),
-            keyboardType: TextInputType.url,
-            autocorrect: false,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+        ),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: _saveEndpoints,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
           ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _saveEndpoints,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('Save endpoints'),
-          ),
-        ],
-      ),
+          child: const Text('Save endpoints'),
+        ),
+      ],
     );
   }
 }

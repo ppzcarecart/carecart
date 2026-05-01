@@ -3,10 +3,10 @@ import 'settings_screen.dart';
 import 'settings_store.dart';
 import 'webview_screen.dart';
 
-/// The Shop entry point lives in the floating-center button of the
-/// bottom nav bar; the home body is a quiet welcome card so the FAB is
-/// the only thing tugging at attention. The header chip lets you switch
-/// between configured accounts.
+/// Home + Settings live as two tabs of an IndexedStack so the bottom
+/// nav (with the floating Shop FAB) stays put when the user toggles
+/// between them — no route push, no Back arrow, both tabs preserve
+/// their own state across switches.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,7 +15,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _tabHome = 0;
+  static const _tabSettings = 1;
+
   SettingsData? _data;
+  int _currentTab = _tabHome;
 
   @override
   void initState() {
@@ -29,12 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _data = s);
   }
 
-  Future<void> _openSettings() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
-    _load();
+  void _setTab(int tab) {
+    if (_currentTab == tab) return;
+    setState(() => _currentTab = tab);
+    // Returning to Home — re-read settings so the active-account chip
+    // reflects any edits made on the Settings tab.
+    if (tab == _tabHome) _load();
   }
 
   Future<void> _switchAccount(Account account) async {
@@ -55,6 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Add an account in Settings first.'),
         ),
       );
+      // Drop the user on the Settings tab so they can fix it without
+      // hunting for the right control.
+      _setTab(_tabSettings);
       return;
     }
     final closedVia = await Navigator.push<String>(
@@ -70,9 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (!mounted) return;
     if (closedVia != null && closedVia.isNotEmpty) {
-      // The whole point of this sample is verifying which close-bridge
-      // carecart actually used; surfacing it on return makes that
-      // visible to whoever is QAing the integration.
+      // Surfacing which close-bridge fired is the point of this sample;
+      // we only show the toast when a session had errors (handled
+      // upstream — null means happy path).
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Closed via $closedVia'),
@@ -85,13 +92,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _data;
-    final active = data?.activeAccount;
     final hasAccounts = data != null && data.accounts.isNotEmpty;
+    final isHome = _currentTab == _tabHome;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
       appBar: AppBar(
-        title: const Text('Partner App'),
+        title: Text(isHome ? 'Partner App' : 'Settings'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -101,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.switch_account_outlined),
               onSelected: (id) {
                 if (id == '__add__') {
-                  _openSettings();
+                  _setTab(_tabSettings);
                   return;
                 }
                 final acc = data.accounts.firstWhere((a) => a.id == id);
@@ -160,53 +167,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          // Bottom padding accounts for the bar + the FAB protruding
-          // above it, so content never crowds the nav.
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const _BrandTile(),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome to carecart',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Tap the Shop button below to launch',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 28),
-              if (data == null)
-                const Text('…')
-              else if (active == null)
-                Column(
-                  children: [
-                    Text(
-                      'No account configured',
-                      style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.tonal(
-                      onPressed: _openSettings,
-                      child: const Text('Add an account'),
-                    ),
-                  ],
-                )
-              else
-                _ActiveAccountChip(
-                  account: active,
-                  totalAccounts: data.accounts.length,
-                  onTap: _openSettings,
-                ),
-            ],
-          ),
-        ),
+      // IndexedStack keeps both tabs mounted, so SettingsContent's
+      // text-field state, scroll position, and any in-flight edits
+      // survive when the user toggles back to Home.
+      body: IndexedStack(
+        index: _currentTab,
+        children: [
+          _HomeBody(data: data, onAddAccount: () => _setTab(_tabSettings)),
+          SettingsContent(onChanged: _load),
+        ],
       ),
       floatingActionButton: _ShopFab(onTap: _openShop),
       // centerDocked + a CircularNotchedRectangle on the BottomAppBar
@@ -215,8 +184,70 @@ class _HomeScreenState extends State<HomeScreen> {
       // breaks the bar's top edge.
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _BottomBar(
-        onHome: () {},
-        onSettings: _openSettings,
+        currentTab: _currentTab,
+        onHome: () => _setTab(_tabHome),
+        onSettings: () => _setTab(_tabSettings),
+      ),
+    );
+  }
+}
+
+class _HomeBody extends StatelessWidget {
+  final SettingsData? data;
+  final VoidCallback onAddAccount;
+
+  const _HomeBody({required this.data, required this.onAddAccount});
+
+  @override
+  Widget build(BuildContext context) {
+    final d = data;
+    final active = d?.activeAccount;
+    return Center(
+      child: Padding(
+        // Bottom padding accounts for the bar + the FAB protruding
+        // above it, so content never crowds the nav.
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const _BrandTile(),
+            const SizedBox(height: 24),
+            Text(
+              'Welcome to carecart',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tap the Shop button below to launch',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 28),
+            if (d == null)
+              const Text('…')
+            else if (active == null)
+              Column(
+                children: [
+                  Text(
+                    'No account configured',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.tonal(
+                    onPressed: onAddAccount,
+                    child: const Text('Add an account'),
+                  ),
+                ],
+              )
+            else
+              _ActiveAccountChip(
+                account: active,
+                totalAccounts: d.accounts.length,
+                onTap: onAddAccount,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -271,10 +302,15 @@ class _ShopFab extends StatelessWidget {
 }
 
 class _BottomBar extends StatelessWidget {
+  final int currentTab;
   final VoidCallback onHome;
   final VoidCallback onSettings;
 
-  const _BottomBar({required this.onHome, required this.onSettings});
+  const _BottomBar({
+    required this.currentTab,
+    required this.onHome,
+    required this.onSettings,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +327,7 @@ class _BottomBar extends StatelessWidget {
             child: _BarItem(
               icon: Icons.home_rounded,
               label: 'Home',
-              active: true,
+              active: currentTab == 0,
               onTap: onHome,
             ),
           ),
@@ -303,7 +339,7 @@ class _BottomBar extends StatelessWidget {
             child: _BarItem(
               icon: Icons.settings_outlined,
               label: 'Settings',
-              active: false,
+              active: currentTab == 1,
               onTap: onSettings,
             ),
           ),
