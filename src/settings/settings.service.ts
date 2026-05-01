@@ -130,7 +130,12 @@ export class SettingsService implements OnModuleInit {
    * non-empty imageUrl. Bad JSON yields []. Caller decides whether to
    * render based on home.banners.enabled.
    */
-  homeBanners(): Array<{ imageUrl: string; linkUrl: string }> {
+  homeBanners(): Array<{
+    imageUrl: string;
+    linkUrl: string;
+    caption: string;
+    subcaption: string;
+  }> {
     const raw = this.get('home.banners') || '[]';
     try {
       const parsed = JSON.parse(raw);
@@ -141,6 +146,9 @@ export class SettingsService implements OnModuleInit {
         .map((b) => ({
           imageUrl: String(b.imageUrl).trim(),
           linkUrl: typeof b.linkUrl === 'string' ? b.linkUrl.trim() : '',
+          caption: typeof b.caption === 'string' ? b.caption.trim() : '',
+          subcaption:
+            typeof b.subcaption === 'string' ? b.subcaption.trim() : '',
         }));
     } catch {
       return [];

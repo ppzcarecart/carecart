@@ -601,12 +601,62 @@ window.ppz = (function () {
     for (let i = 0; i < 5; i++) {
       const imageUrl = (fd.get(`banner_image_${i}`) || '').toString().trim();
       const linkUrl = (fd.get(`banner_link_${i}`) || '').toString().trim();
-      if (imageUrl) banners.push({ imageUrl, linkUrl });
+      const caption = (fd.get(`banner_caption_${i}`) || '').toString().trim();
+      const subcaption = (fd.get(`banner_subcaption_${i}`) || '').toString().trim();
+      if (imageUrl) banners.push({ imageUrl, linkUrl, caption, subcaption });
     }
     await patchSettingsBulk({
       'home.banners.enabled': enabled ? 'true' : 'false',
       'home.banners': JSON.stringify(banners),
     }, document.getElementById('bannersStatus'));
+  }
+
+  // Pre-fill the banners form with three product-themed samples so a
+  // fresh admin can preview the carousel in one click. Doesn't save —
+  // the admin still has to hit "Save banners" to commit, so they can
+  // tweak captions / images / links first.
+  const SAMPLE_BANNERS = [
+    {
+      imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80',
+      caption: 'Closet refresh',
+      subcaption: 'Up to 30% off select apparel',
+      linkUrl: '/?category=apparel',
+    },
+    {
+      imageUrl: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1600&q=80',
+      caption: 'Wellness essentials',
+      subcaption: 'Reset your evening routine',
+      linkUrl: '/?category=wellness',
+    },
+    {
+      imageUrl: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1600&q=80',
+      caption: 'Carry the day',
+      subcaption: 'New accessories for everyday use',
+      linkUrl: '/?category=accessories',
+    },
+  ];
+  function loadSampleBanners() {
+    const form = document.getElementById('bannersForm');
+    if (!form) return;
+    SAMPLE_BANNERS.forEach((b, i) => {
+      const img = form.querySelector(`[name="banner_image_${i}"]`);
+      const cap = form.querySelector(`[name="banner_caption_${i}"]`);
+      const sub = form.querySelector(`[name="banner_subcaption_${i}"]`);
+      const link = form.querySelector(`[name="banner_link_${i}"]`);
+      const thumb = document.querySelector(`.cc-banner-edit-thumb[data-idx="${i}"]`);
+      if (img) img.value = b.imageUrl;
+      if (cap) cap.value = b.caption;
+      if (sub) sub.value = b.subcaption;
+      if (link) link.value = b.linkUrl;
+      if (thumb) thumb.style.backgroundImage = `url('${b.imageUrl}')`;
+    });
+    const enabled = form.querySelector('#bannersEnabled');
+    if (enabled) enabled.checked = true;
+    const status = document.getElementById('bannersStatus');
+    if (status) {
+      status.style.color = 'var(--brand)';
+      status.textContent = 'Sample banners loaded — click Save banners to commit';
+    }
   }
 
   async function uploadBannerImage(idx, input) {
@@ -1326,6 +1376,7 @@ window.ppz = (function () {
     uploadHeroTile,
     saveBanners,
     uploadBannerImage,
+    loadSampleBanners,
     saveVendorCollection,
     saveVendorDelivery,
     pickFulfilment,

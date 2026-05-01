@@ -85,21 +85,36 @@
             the carousel. Empty slots are skipped.
           </p>
           <form id="bannersForm" onsubmit="event.preventDefault(); ppz.saveBanners(this)">
-            <div class="form-check form-switch mb-3">
-              <input class="form-check-input" type="checkbox" id="bannersEnabled" name="home.banners.enabled" <%= bannersEnabled ? 'checked' : '' %>>
-              <label class="form-check-label" for="bannersEnabled">
-                Show banner carousel on home page
-              </label>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" id="bannersEnabled" name="home.banners.enabled" <%= bannersEnabled ? 'checked' : '' %>>
+                <label class="form-check-label" for="bannersEnabled">
+                  Show banner carousel on home page
+                </label>
+              </div>
+              <button type="button" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="ppz.loadSampleBanners()">
+                Load sample banners
+              </button>
             </div>
 
             <% [0,1,2,3,4].forEach(function(i) {
-              const b = banners[i] || { imageUrl: '', linkUrl: '' };
+              const b = banners[i] || { imageUrl: '', linkUrl: '', caption: '', subcaption: '' };
             %>
               <div class="cc-banner-edit">
                 <div class="cc-banner-edit-thumb" data-idx="<%= i %>" style="background-image: url('<%= b.imageUrl %>');"></div>
                 <div class="flex-grow-1">
                   <label class="text-muted" style="font-size:.78rem;">Banner <%= i + 1 %> · image URL</label>
                   <input class="form-control mb-2" name="banner_image_<%= i %>" data-banner-img="<%= i %>" value="<%= b.imageUrl %>" placeholder="https://…">
+                  <div class="row g-2 mb-2">
+                    <div class="col-md-6">
+                      <label class="text-muted" style="font-size:.78rem;">Caption (optional)</label>
+                      <input class="form-control" name="banner_caption_<%= i %>" value="<%= b.caption || '' %>" placeholder="e.g. Closet refresh">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="text-muted" style="font-size:.78rem;">Subcaption (optional)</label>
+                      <input class="form-control" name="banner_subcaption_<%= i %>" value="<%= b.subcaption || '' %>" placeholder="e.g. Up to 30% off apparel">
+                    </div>
+                  </div>
                   <label class="text-muted" style="font-size:.78rem;">Click-through URL (optional)</label>
                   <input class="form-control" name="banner_link_<%= i %>" value="<%= b.linkUrl %>" placeholder="https://…">
                 </div>
