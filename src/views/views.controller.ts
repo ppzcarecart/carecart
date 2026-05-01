@@ -59,14 +59,14 @@ export class ViewsController {
       }),
       skipRails
         ? Promise.resolve([])
-        : this.products.list({ activeOnly: true, featuredOnly: true, limit: 8 }),
+        : this.products.list({ activeOnly: true, featuredOnly: true, limit: 4 }),
       skipRails
         ? Promise.resolve([])
         : this.products.list({
             activeOnly: true,
             newSince,
             excludeFeatured: true,
-            limit: 8,
+            limit: 4,
           }),
     ]);
     const reqUser = (req as any).user || null;

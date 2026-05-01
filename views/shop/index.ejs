@@ -34,7 +34,7 @@
       <h2>Featured</h2>
       <span class="muted">Hand-picked by the team</span>
     </div>
-    <div class="cc-grid">
+    <div class="cc-grid cc-grid-rail">
       <% featured.forEach(product => { %>
         <%- include('../partials/product-card', { product, isPpzMember }) %>
       <% }); %>
@@ -46,7 +46,7 @@
       <h2>New arrivals</h2>
       <span class="muted">Added in the last 7 days</span>
     </div>
-    <div class="cc-grid">
+    <div class="cc-grid cc-grid-rail">
       <% newProducts.forEach(product => { %>
         <%- include('../partials/product-card', { product, isPpzMember }) %>
       <% }); %>
