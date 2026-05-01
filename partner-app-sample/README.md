@@ -131,19 +131,6 @@ carecart README's *Partner integration* section).
 - **Can't see network traffic** → use Chrome DevTools at
   `chrome://inspect/#devices` while the emulator is running and the
   webview is loaded. You'll see all the requests and console logs.
-- **Manage Collection scanner: "Could not start video source"** →
-  this is the camera failing to open inside the WebView even though
-  the WebView granted the page's permission request. On Android the
-  most common cause is the host (partner) app missing **runtime**
-  CAMERA permission — manifest alone declares the capability, but
-  Android 6+ still requires user grant. Quick fix: phone Settings →
-  Apps → carecart_partner_sample → Permissions → Camera → Allow.
-  The sample also calls `Permission.camera.request()` in
-  `webview_screen.dart`'s `initState` so a fresh install prompts
-  automatically; if you previously denied it the prompt won't
-  reappear and you have to flip it manually. Also fully kill the
-  partner app between code changes — hot-reload sometimes leaves the
-  WebView holding the camera handle.
 
 ## Once you're satisfied
 

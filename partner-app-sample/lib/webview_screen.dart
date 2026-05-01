@@ -73,14 +73,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
   void initState() {
     super.initState();
 
-    // Android 6+: declaring CAMERA in AndroidManifest only grants the
-    // capability — the OS still requires the user (or the app) to
-    // grant the permission at runtime. The WebView's
-    // setOnPlatformPermissionRequest below grants the *page's*
-    // request, but the underlying Camera2 open inside this host
-    // process then fails with NotReadableError ("could not start
-    // video source") unless the host process has runtime CAMERA too.
-    // Fire-and-forget — if denied, the page surfaces its own help.
+    // Manifest declares CAMERA, but Android 6+ also needs a runtime
+    // grant on the host process — without it the WebView's permission
+    // grant succeeds at the page level but the underlying Camera2
+    // open is refused, surfacing in JS as NotReadableError. Fire and
+    // forget; the OS only prompts on first run, and if it's already
+    // denied the user has to flip it in Settings → Apps → Permissions.
     if (Platform.isAndroid) {
       Permission.camera.request();
     }
@@ -171,17 +169,51 @@ class _WebViewScreenState extends State<WebViewScreen> {
       // No AppBar — full-screen webview so the only way to exit is via
       // the carecart Home button (which is what we're testing). Android
       // system back still works as a manual escape hatch.
-      body: SafeArea(
-        child: Stack(
-          children: [
-            WebViewWidget(controller: _controller),
-            if (_loading)
-              const LinearProgressIndicator(
-                minHeight: 2,
-                backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          SafeArea(child: WebViewWidget(controller: _controller)),
+          // Branded splash that fades out once the page paints. The
+          // WebView itself renders white during navigation; covering
+          // it with a styled overlay makes the wait feel intentional
+          // instead of looking like the app froze.
+          IgnorePointer(
+            ignoring: !_loading,
+            child: AnimatedOpacity(
+              opacity: _loading ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: Container(
+                color: Colors.white,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/icon.png',
+                      width: 88,
+                      height: 88,
+                    ),
+                    const SizedBox(height: 22),
+                    const SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Opening carecart…',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
