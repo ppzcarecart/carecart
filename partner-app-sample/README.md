@@ -17,8 +17,11 @@ actually closes the webview and lands the user back in the native app.
 
 ```
 partner-app-sample/
-├── pubspec.yaml             // Flutter manifest + dependencies
+├── pubspec.yaml             // Flutter manifest + deps + launcher-icon config
 ├── analysis_options.yaml    // lint config
+├── assets/
+│   ├── icon.png             // 1024×1024 carecart icon master
+│   └── icon-fg.png          // adaptive-icon foreground (transparent)
 ├── lib/
 │   ├── main.dart            // app entry, theme
 │   ├── home_screen.dart     // Shop tile + settings link
@@ -62,6 +65,29 @@ flutter pub get
 
 `flutter create .` is non-destructive — it adds `android/`, `ios/`,
 `linux/`, etc. and leaves your existing `lib/` and `pubspec.yaml` alone.
+
+### Generate the carecart launcher icon
+
+The repo ships with the carecart icon master at
+[`assets/icon.png`](assets/icon.png) (1024×1024) and the adaptive-icon
+foreground at [`assets/icon-fg.png`](assets/icon-fg.png). Run
+`flutter_launcher_icons` once and it'll write the per-platform icon
+files into the `android/` and `ios/` projects you just generated:
+
+```bash
+dart run flutter_launcher_icons
+```
+
+That populates:
+
+- Android: `android/app/src/main/res/mipmap-*/ic_launcher.png` plus
+  the adaptive-icon XML and foreground at every density (mdpi → xxxhdpi)
+- iOS: `ios/Runner/Assets.xcassets/AppIcon.appiconset/*.png` at every
+  size the App Store / home screen needs
+
+Re-run the command any time you tweak `assets/icon.png` or
+`assets/icon-fg.png`. The config is in `pubspec.yaml` under
+`flutter_launcher_icons:`.
 
 ### Add camera permission to the platform projects
 
