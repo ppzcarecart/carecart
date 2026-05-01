@@ -4,18 +4,53 @@
 
   <section class="cc-hero">
     <div class="cc-hero-text">
-      <span class="cc-hero-eyebrow">Multi-vendor marketplace</span>
-      <h1>Thoughtful goods, by trusted vendors.</h1>
-      <p>Browse curated apparel, wellness essentials, and lifestyle picks. Pay with cash or redeem your points — your call.</p>
-      <a href="#catalogue" class="cc-btn cc-btn-primary">Shop now</a>
+      <% if (hero.eyebrow) { %><span class="cc-hero-eyebrow"><%= hero.eyebrow %></span><% } %>
+      <% if (hero.heading) { %><h1><%= hero.heading %></h1><% } %>
+      <% if (hero.subheading) { %><p><%= hero.subheading %></p><% } %>
+      <% if (hero.ctaLabel && hero.ctaHref) { %>
+        <a href="<%= hero.ctaHref %>" class="cc-btn cc-btn-primary"><%= hero.ctaLabel %></a>
+      <% } %>
     </div>
     <div class="cc-hero-art" aria-hidden="true">
-      <div class="cc-hero-tile cc-hero-tile-1" style="background-image: url('https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80')"></div>
-      <div class="cc-hero-tile cc-hero-tile-2" style="background-image: url('https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?auto=format&fit=crop&w=400&q=80')"></div>
-      <div class="cc-hero-tile cc-hero-tile-3" style="background-image: url('https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=400&q=80')"></div>
-      <div class="cc-hero-tile cc-hero-tile-4" style="background-image: url('https://images.unsplash.com/photo-1602874801006-a7e5c0c43eaf?auto=format&fit=crop&w=400&q=80')"></div>
+      <% if (hero.tile1) { %><div class="cc-hero-tile cc-hero-tile-1" style="background-image: url('<%= hero.tile1 %>')"></div><% } %>
+      <% if (hero.tile2) { %><div class="cc-hero-tile cc-hero-tile-2" style="background-image: url('<%= hero.tile2 %>')"></div><% } %>
+      <% if (hero.tile3) { %><div class="cc-hero-tile cc-hero-tile-3" style="background-image: url('<%= hero.tile3 %>')"></div><% } %>
     </div>
   </section>
+
+  <% if (banners && banners.length) { %>
+    <!-- Promo banner carousel — admin-managed under /admin/settings.
+         Uses Bootstrap's carousel (already loaded via foot.ejs) for
+         autoplay, swipe gestures on touch, prev/next, and indicators. -->
+    <div id="homeBanners" class="cc-banners carousel slide" data-bs-ride="carousel" data-bs-interval="4500" data-bs-pause="hover">
+      <div class="carousel-inner">
+        <% banners.forEach((b, i) => { %>
+          <div class="carousel-item <%= i === 0 ? 'active' : '' %>">
+            <% if (b.linkUrl) { %>
+              <a href="<%= b.linkUrl %>" target="_blank" rel="noopener">
+                <img src="<%= b.imageUrl %>" alt="" loading="lazy">
+              </a>
+            <% } else { %>
+              <img src="<%= b.imageUrl %>" alt="" loading="lazy">
+            <% } %>
+          </div>
+        <% }); %>
+      </div>
+      <% if (banners.length > 1) { %>
+        <button class="carousel-control-prev" type="button" data-bs-target="#homeBanners" data-bs-slide="prev" aria-label="Previous">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#homeBanners" data-bs-slide="next" aria-label="Next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+        <div class="carousel-indicators">
+          <% banners.forEach((b, i) => { %>
+            <button type="button" data-bs-target="#homeBanners" data-bs-slide-to="<%= i %>" class="<%= i === 0 ? 'active' : '' %>" aria-label="Banner <%= i + 1 %>"></button>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+  <% } %>
 
   <% if (categories && categories.length) { %>
     <div class="cc-section-head">

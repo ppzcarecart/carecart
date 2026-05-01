@@ -74,6 +74,9 @@ export class ViewsController {
     this.products.enrichForView(products, isPpzMember);
     this.products.enrichForView(featured, isPpzMember);
     this.products.enrichForView(newProducts, isPpzMember);
+    const hero = this.settings.homeHero();
+    const bannersEnabled = this.settings.homeBannersEnabled();
+    const banners = bannersEnabled ? this.settings.homeBanners() : [];
     return {
       title: 'carecart',
       user: reqUser,
@@ -83,6 +86,8 @@ export class ViewsController {
       newProducts,
       categories,
       activeCategorySlug: categorySlug || 'all',
+      hero,
+      banners,
     };
   }
 
@@ -431,6 +436,9 @@ export class ViewsController {
           closeUrl: all['partner.closeUrl'] || '',
         },
       },
+      hero: this.settings.homeHero(),
+      bannersEnabled: this.settings.homeBannersEnabled(),
+      banners: this.settings.homeBanners(),
     };
   }
 

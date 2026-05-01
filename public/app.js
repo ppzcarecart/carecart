@@ -558,6 +558,76 @@ window.ppz = (function () {
     }, document.getElementById('deliveryStatus'));
   }
 
+  async function saveHero(form) {
+    const fd = new FormData(form);
+    await patchSettingsBulk({
+      'home.hero.eyebrow': (fd.get('home.hero.eyebrow') || '').toString(),
+      'home.hero.heading': (fd.get('home.hero.heading') || '').toString(),
+      'home.hero.subheading': (fd.get('home.hero.subheading') || '').toString(),
+      'home.hero.ctaLabel': (fd.get('home.hero.ctaLabel') || '').toString(),
+      'home.hero.ctaHref': (fd.get('home.hero.ctaHref') || '').toString(),
+      'home.hero.tile1': (fd.get('home.hero.tile1') || '').toString(),
+      'home.hero.tile2': (fd.get('home.hero.tile2') || '').toString(),
+      'home.hero.tile3': (fd.get('home.hero.tile3') || '').toString(),
+    }, document.getElementById('heroStatus'));
+  }
+
+  // Upload a hero tile image. Updates both the URL field and the
+  // thumbnail preview so the admin sees the new image immediately;
+  // the value lands on the server only when they click Save hero.
+  async function uploadHeroTile(idx, input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const status = document.getElementById('heroStatus');
+    if (status) { status.textContent = 'Uploading…'; status.style.color = ''; }
+    try {
+      const r = await uploadFile(file);
+      const url = r.url || r.path || '';
+      const inp = document.querySelector(`[data-tile-input="${idx}"]`);
+      if (inp) inp.value = url;
+      const thumb = document.querySelector(`.cc-tile-thumb[data-idx="${idx}"]`);
+      if (thumb && url) thumb.style.backgroundImage = `url('${url}')`;
+      if (status) { status.style.color = 'var(--brand)'; status.textContent = 'Image uploaded — click Save to apply'; }
+    } catch (e) {
+      if (status) { status.style.color = '#b91c1c'; status.textContent = e.message || 'Upload failed'; }
+    }
+    input.value = '';
+  }
+
+  async function saveBanners(form) {
+    const fd = new FormData(form);
+    const enabled = !!form.querySelector('input[name="home.banners.enabled"]')?.checked;
+    const banners = [];
+    for (let i = 0; i < 5; i++) {
+      const imageUrl = (fd.get(`banner_image_${i}`) || '').toString().trim();
+      const linkUrl = (fd.get(`banner_link_${i}`) || '').toString().trim();
+      if (imageUrl) banners.push({ imageUrl, linkUrl });
+    }
+    await patchSettingsBulk({
+      'home.banners.enabled': enabled ? 'true' : 'false',
+      'home.banners': JSON.stringify(banners),
+    }, document.getElementById('bannersStatus'));
+  }
+
+  async function uploadBannerImage(idx, input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const status = document.getElementById('bannersStatus');
+    if (status) { status.textContent = 'Uploading…'; status.style.color = ''; }
+    try {
+      const r = await uploadFile(file);
+      const url = r.url || r.path || '';
+      const inp = document.querySelector(`[data-banner-img="${idx}"]`);
+      if (inp) inp.value = url;
+      const thumb = document.querySelector(`.cc-banner-edit-thumb[data-idx="${idx}"]`);
+      if (thumb && url) thumb.style.backgroundImage = `url('${url}')`;
+      if (status) { status.style.color = 'var(--brand)'; status.textContent = 'Image uploaded — click Save to apply'; }
+    } catch (e) {
+      if (status) { status.style.color = '#b91c1c'; status.textContent = e.message || 'Upload failed'; }
+    }
+    input.value = '';
+  }
+
   async function patchSelf(payload, statusEl) {
     if (statusEl) { statusEl.textContent = ''; statusEl.style.color = ''; }
     try {
@@ -1252,6 +1322,10 @@ window.ppz = (function () {
     saveCollectionPoint,
     saveDeliverySettings,
     savePartnerSettings,
+    saveHero,
+    uploadHeroTile,
+    saveBanners,
+    uploadBannerImage,
     saveVendorCollection,
     saveVendorDelivery,
     pickFulfilment,

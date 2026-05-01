@@ -102,6 +102,110 @@
 
       <div class="admin-panel" style="max-width: 720px;">
         <div class="panel-head">
+          <h3>Home page hero</h3>
+          <span class="muted">Heading, subheading, CTA, and image tiles</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            Edit the marketing copy and the three image tiles shown at
+            the top of the home page. CTA URL can be a hash anchor on
+            the same page (<code>#catalogue</code>) or a full URL.
+          </p>
+          <form id="heroForm" onsubmit="event.preventDefault(); ppz.saveHero(this)">
+            <div class="mb-3" style="max-width: 460px;">
+              <label>Eyebrow (small label above heading)</label>
+              <input class="form-control" name="home.hero.eyebrow" value="<%= hero.eyebrow %>">
+            </div>
+            <div class="mb-3">
+              <label>Heading</label>
+              <input class="form-control" name="home.hero.heading" value="<%= hero.heading %>">
+            </div>
+            <div class="mb-3">
+              <label>Subheading</label>
+              <textarea class="form-control" name="home.hero.subheading" rows="3"><%= hero.subheading %></textarea>
+            </div>
+            <div class="row">
+              <div class="col-md-5 mb-3">
+                <label>CTA button label</label>
+                <input class="form-control" name="home.hero.ctaLabel" value="<%= hero.ctaLabel %>">
+              </div>
+              <div class="col-md-7 mb-3">
+                <label>CTA button URL</label>
+                <input class="form-control" name="home.hero.ctaHref" value="<%= hero.ctaHref %>" placeholder="#catalogue or https://…">
+              </div>
+            </div>
+
+            <hr class="mt-2 mb-3">
+            <p class="text-muted" style="font-size:.85rem; margin-bottom:14px;">
+              Image tiles. Upload a file or paste a URL. Tile 1 is the
+              tall left image; tiles 2 and 3 stack on the right.
+            </p>
+            <% [1,2,3].forEach(function(n) { %>
+              <div class="cc-tile-edit">
+                <div class="cc-tile-thumb" data-idx="<%= n %>" style="background-image: url('<%= hero['tile' + n] || '' %>');"></div>
+                <div class="flex-grow-1">
+                  <label class="text-muted" style="font-size:.78rem;">Tile <%= n %> · image URL</label>
+                  <input class="form-control" name="home.hero.tile<%= n %>" data-tile-input="<%= n %>" value="<%= hero['tile' + n] || '' %>" placeholder="https://…">
+                </div>
+                <div>
+                  <input type="file" id="tileFile<%= n %>" accept="image/*" hidden onchange="ppz.uploadHeroTile(<%= n %>, this)">
+                  <button type="button" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="document.getElementById('tileFile<%= n %>').click()">Upload</button>
+                </div>
+              </div>
+            <% }); %>
+
+            <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save hero</button>
+            <span id="heroStatus" class="ms-3 small"></span>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
+          <h3>Home page banners</h3>
+          <span class="muted">Auto-scrolling carousel below the hero</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            Up to <strong>5 banners</strong>. Each can link to a URL
+            (opens in a new tab). Auto-scrolls every 4.5s, pauses on
+            hover, swipes on touch. Toggle the switch to show or hide
+            the carousel. Empty slots are skipped.
+          </p>
+          <form id="bannersForm" onsubmit="event.preventDefault(); ppz.saveBanners(this)">
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="bannersEnabled" name="home.banners.enabled" <%= bannersEnabled ? 'checked' : '' %>>
+              <label class="form-check-label" for="bannersEnabled">
+                Show banner carousel on home page
+              </label>
+            </div>
+
+            <% [0,1,2,3,4].forEach(function(i) {
+              const b = banners[i] || { imageUrl: '', linkUrl: '' };
+            %>
+              <div class="cc-banner-edit">
+                <div class="cc-banner-edit-thumb" data-idx="<%= i %>" style="background-image: url('<%= b.imageUrl %>');"></div>
+                <div class="flex-grow-1">
+                  <label class="text-muted" style="font-size:.78rem;">Banner <%= i + 1 %> · image URL</label>
+                  <input class="form-control mb-2" name="banner_image_<%= i %>" data-banner-img="<%= i %>" value="<%= b.imageUrl %>" placeholder="https://…">
+                  <label class="text-muted" style="font-size:.78rem;">Click-through URL (optional)</label>
+                  <input class="form-control" name="banner_link_<%= i %>" value="<%= b.linkUrl %>" placeholder="https://…">
+                </div>
+                <div class="d-flex flex-column gap-2">
+                  <input type="file" id="bannerFile<%= i %>" accept="image/*" hidden onchange="ppz.uploadBannerImage(<%= i %>, this)">
+                  <button type="button" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;" onclick="document.getElementById('bannerFile<%= i %>').click()">Upload</button>
+                </div>
+              </div>
+            <% }); %>
+
+            <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save banners</button>
+            <span id="bannersStatus" class="ms-3 small"></span>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
           <h3>Delivery</h3>
           <span class="muted"><%= settings.delivery.enabled ? 'Enabled' : 'Disabled' %></span>
         </div>

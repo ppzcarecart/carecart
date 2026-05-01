@@ -1013,6 +1013,94 @@ a:hover { color: var(--brand-dark); }
 }
 
 /* ============================================================ */
+/* Home page promo banner carousel                              */
+/* ============================================================ */
+
+.cc-banners {
+  margin: 0 0 36px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.cc-banners .carousel-inner,
+.cc-banners .carousel-item {
+  background: #f1f5f9;
+}
+/* Locked aspect ratio so banners reflow without layout jumps when
+   the carousel changes slides. 21:9 on desktop reads as a marketing
+   strip; 16:9 on phones gives the image more vertical room. */
+.cc-banners .carousel-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  object-fit: cover;
+}
+@media (max-width: 800px) {
+  .cc-banners { margin-bottom: 24px; border-radius: 14px; }
+  .cc-banners .carousel-item img { aspect-ratio: 16 / 9; }
+}
+.cc-banners .carousel-item a { display: block; }
+.cc-banners .carousel-control-prev,
+.cc-banners .carousel-control-next {
+  width: 7%;
+  opacity: 0.55;
+  transition: opacity .15s ease;
+}
+.cc-banners .carousel-control-prev:hover,
+.cc-banners .carousel-control-next:hover { opacity: 0.9; }
+.cc-banners .carousel-indicators { margin-bottom: 10px; }
+.cc-banners .carousel-indicators [data-bs-target] {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  border: 0;
+  margin: 0 4px;
+  opacity: 0.5;
+}
+.cc-banners .carousel-indicators .active { opacity: 1; }
+
+/* ============================================================ */
+/* Admin: hero tile + banner edit rows                          */
+/* ============================================================ */
+
+.cc-tile-edit,
+.cc-banner-edit {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: #fafbfc;
+  align-items: flex-start;
+}
+.cc-tile-edit { align-items: center; }
+
+.cc-tile-thumb,
+.cc-banner-edit-thumb {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #f1f5f9 center / cover no-repeat;
+  flex-shrink: 0;
+}
+.cc-tile-thumb { width: 64px; height: 64px; }
+.cc-banner-edit-thumb { width: 92px; height: 92px; }
+
+@media (max-width: 600px) {
+  .cc-tile-edit,
+  .cc-banner-edit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .cc-tile-thumb,
+  .cc-banner-edit-thumb {
+    width: 100%;
+    height: 120px;
+  }
+}
+
+/* ============================================================ */
 /* Customer orders list (cards, mobile-friendly)                */
 /* ============================================================ */
 

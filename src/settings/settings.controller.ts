@@ -22,6 +22,18 @@ const WRITABLE_KEYS = new Set([
   'delivery.enabled',
   'delivery.feeCents',
   'partner.closeUrl',
+  // Home page hero
+  'home.hero.eyebrow',
+  'home.hero.heading',
+  'home.hero.subheading',
+  'home.hero.ctaLabel',
+  'home.hero.ctaHref',
+  'home.hero.tile1',
+  'home.hero.tile2',
+  'home.hero.tile3',
+  // Home page banners
+  'home.banners.enabled',
+  'home.banners',
 ]);
 
 @Controller('api/settings')
@@ -62,6 +74,20 @@ export class SettingsController {
         throw new BadRequestException(`Unknown or read-only setting: ${k}`);
       }
       updates[k] = v == null ? '' : String(v);
+    }
+    // Defensive validation for the one key that holds structured JSON.
+    // We don't want a typo to brick the home page until an admin reverts it.
+    if (typeof updates['home.banners'] === 'string') {
+      try {
+        const parsed = JSON.parse(updates['home.banners'] || '[]');
+        if (!Array.isArray(parsed)) throw new Error('expected array');
+        if (parsed.length > 5) {
+          throw new BadRequestException('home.banners can hold at most 5 entries');
+        }
+      } catch (e) {
+        if (e instanceof BadRequestException) throw e;
+        throw new BadRequestException('home.banners must be valid JSON array');
+      }
     }
     for (const [k, v] of Object.entries(updates)) {
       await this.settings.set(k, v);
