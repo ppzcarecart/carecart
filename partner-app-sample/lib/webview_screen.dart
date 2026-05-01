@@ -53,6 +53,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   late final Uri _handoff;
   bool _loading = true;
   WebResourceError? _error;
+  bool _hadErrorDuringSession = false;
   bool _cameraPermanentlyDenied = false;
 
   /// Shim that defines window.Android.closeWebView so carecart's
@@ -149,6 +150,7 @@ class _WebViewScreenState extends State<WebViewScreen>
           setState(() {
             _loading = false;
             _error = err;
+            _hadErrorDuringSession = true;
           });
         },
         onNavigationRequest: (req) {
@@ -224,9 +226,12 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _close(String source) {
-    if (mounted && Navigator.canPop(context)) {
-      Navigator.pop(context, source);
-    }
+    if (!mounted || !Navigator.canPop(context)) return;
+    // Only surface the close-bridge in the snackbar if something went
+    // wrong during this session; on the happy path the toast is just
+    // noise. Errors are the case where knowing which bridge ran is
+    // diagnostically useful.
+    Navigator.pop(context, _hadErrorDuringSession ? source : null);
   }
 
   void _retry() {
