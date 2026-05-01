@@ -312,6 +312,14 @@ a:hover { color: var(--brand-dark); }
   background: var(--surface);
 }
 .cc-footer .container { display: flex; justify-content: space-between; align-items: center; }
+.cc-footer-link {
+  background: none; border: 0; padding: 0;
+  color: inherit; font: inherit; cursor: pointer;
+  text-decoration: none;
+  transition: color .12s ease;
+}
+.cc-footer-link:hover { color: var(--brand-dark); text-decoration: underline; }
+.cc-footer-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
 
 /* ---------- Admin / Vendor shell ---------- */
 .admin-shell { padding: 24px 0 80px; }

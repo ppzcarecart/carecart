@@ -1,9 +1,30 @@
   <footer class="cc-footer">
     <div class="container">
-      <div>&copy; <%= new Date().getFullYear() %> carecart</div>
+      <button type="button" class="cc-footer-link" data-bs-toggle="modal" data-bs-target="#devInfoModal">
+        &copy; <%= new Date().getFullYear() %> carecart
+      </button>
       <div class="text-muted">Multi-vendor commerce</div>
     </div>
   </footer>
+
+  <div class="modal fade" id="devInfoModal" tabindex="-1" aria-labelledby="devInfoTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="devInfoTitle">Developer Information</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p style="margin:0 0 6px;"><strong>Powered by SkenPay Ltd</strong></p>
+          <p style="margin:0 0 6px;">Jeremiah Ng</p>
+          <p style="margin:0;">
+            Email: <a href="mailto:jeremiah@skenpay.com">jeremiah@skenpay.com</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
