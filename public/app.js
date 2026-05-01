@@ -1060,9 +1060,7 @@ window.ppz = (function () {
     }
 
     function onStarted() {
-      el('startBtn').disabled = true;
-      el('stopBtn').disabled = false;
-      setStatus('Camera ready · point at QR');
+      setStatus('Point camera at the QR');
     }
 
     async function start() {
@@ -1158,16 +1156,69 @@ window.ppz = (function () {
       if (!scanner) return;
       try { await scanner.stop(); await scanner.clear(); } catch (e) {}
       scanner = null;
-      el('startBtn').disabled = false;
-      el('stopBtn').disabled = true;
-      setStatus('Stopped');
     }
 
-    function manual() {
-      const inp = el('manualInput');
-      const v = inp ? inp.value.trim() : '';
-      if (!v) { inp && inp.focus(); return; }
-      lookup(v);
+    // Live search: trigger a lookup when the typed value either matches
+    // the order-number shape (ORD-XXXX-NNN) or the user hits Enter.
+    // Avoids spamming the modal with "not found" while the user is
+    // still typing partial input.
+    function looksLikeOrderNumber(v) {
+      return /^ORD-[A-Z0-9]+-\d+$/i.test(v);
+    }
+
+    function bindLiveSearch() {
+      const input = el('manualInput');
+      if (!input) return;
+      let debounce;
+      input.addEventListener('input', () => {
+        clearTimeout(debounce);
+        const v = input.value.trim();
+        if (!v) return;
+        if (looksLikeOrderNumber(v)) {
+          debounce = setTimeout(() => lookup(v), 350);
+        }
+      });
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          clearTimeout(debounce);
+          const v = input.value.trim();
+          if (v) lookup(v);
+        }
+      });
+    }
+
+    // Auto-init: when the page contains a #reader element (i.e. it's
+    // the Manage Collection page), start the camera as soon as the DOM
+    // is ready and stop it whenever the user navigates away. No
+    // start/stop buttons needed.
+    function autoInit() {
+      if (!el('reader')) return;
+      // Defer slightly so the html5-qrcode CDN script has parsed.
+      setTimeout(() => start(), 50);
+      bindLiveSearch();
+
+      // pagehide covers normal navigation, tab close, and bfcache
+      // restore. beforeunload is a belt-and-braces fallback.
+      const releaseCamera = () => { stop(); };
+      window.addEventListener('pagehide', releaseCamera);
+      window.addEventListener('beforeunload', releaseCamera);
+
+      // Also stop when the tab is hidden (battery / privacy) and
+      // restart when it's foregrounded again.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stop();
+        } else if (!scanner) {
+          setTimeout(() => start(), 50);
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoInit);
+    } else {
+      autoInit();
     }
 
     // ESC closes the modal. Bound once at module load — no-op if the
@@ -1176,7 +1227,7 @@ window.ppz = (function () {
       if (ev.key === 'Escape' && modalOpen) dismiss();
     });
 
-    return { start, stop, manual, markCollected, dismiss };
+    return { start, stop, markCollected, dismiss };
   })();
 
   return {

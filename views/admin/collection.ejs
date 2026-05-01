@@ -23,23 +23,22 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
       <div class="admin-panel">
         <div class="panel-head">
           <h3>Scanner</h3>
-          <span class="muted" id="scannerStatus">Idle</span>
+          <span class="muted" id="scannerStatus">Starting camera…</span>
         </div>
         <div class="panel-body padded">
-          <div class="d-flex gap-2 flex-wrap mb-3">
-            <button id="startBtn" class="cc-btn cc-btn-primary" onclick="ppz.collection.start()">
-              Start camera
-            </button>
-            <button id="stopBtn" class="cc-btn cc-btn-outline" onclick="ppz.collection.stop()" disabled>
-              Stop camera
-            </button>
-            <div class="d-flex align-items-center gap-2 ms-auto">
-              <input id="manualInput" class="form-control" placeholder="Or type order number" style="max-width:240px;">
-              <button class="cc-btn cc-btn-outline" onclick="ppz.collection.manual()">Look up</button>
-            </div>
-          </div>
+          <!-- Camera viewport. Auto-starts on page load and auto-stops
+               when the user navigates away — no Start/Stop buttons. -->
+          <div id="reader" style="max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 240px;"></div>
 
-          <div id="reader" style="max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 60px;"></div>
+          <!-- Live-search fallback. Triggers automatically when the
+               value looks like a complete order number, or on Enter. -->
+          <div class="cc-scan-search mt-3">
+            <svg class="cc-scan-search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="20" y1="20" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="manualInput" type="search" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Search order number">
+          </div>
         </div>
       </div>
 
