@@ -720,6 +720,7 @@ window.ppz = (function () {
   const collection = (() => {
     let scanner = null;
     let busy = false;
+    let modalOpen = false;
     const lastValue = { v: null, at: 0 };
 
     function el(id) { return document.getElementById(id); }
@@ -731,65 +732,124 @@ window.ppz = (function () {
       }[c]));
     }
 
-    function renderResult(outcome) {
-      const box = el('scanResult');
-      if (!box) return;
-      const o = outcome.order;
-      const tone = {
-        success: 'paid',
-        duplicate: 'awaiting_payment',
-        unauthorized_vendor: 'cancelled',
-        not_found: 'cancelled',
-        invalid_state: 'awaiting_payment',
-      }[outcome.result] || '';
-      const heading = {
+    // Map a scan result to {tone, title}. tone drives the modal border:
+    //   success → green, duplicate → red, everything else → grey.
+    function toneFor(result) {
+      if (result === 'success') return 'success';
+      if (result === 'duplicate') return 'danger';
+      return 'warning';
+    }
+    function titleFor(result) {
+      return ({
         success: 'Ready to collect',
-        duplicate: '⚠ Duplicate collection',
+        duplicate: 'Duplicate collection',
         unauthorized_vendor: 'Not your vendor',
-        not_found: 'Order not found',
+        not_found: 'Invalid code',
         invalid_state: 'Cannot collect',
-      }[outcome.result] || outcome.result;
+      }[result]) || 'Scan result';
+    }
 
+    function buildBody(outcome) {
+      const o = outcome.order;
       let html = '';
-      html += `<div class="admin-panel" style="margin:0;">`;
-      html += `<div class="panel-head"><h3>${escapeHtml(heading)}</h3>`;
-      html += `<span class="badge-status ${tone}">${escapeHtml(outcome.result.replace(/_/g, ' '))}</span></div>`;
-      html += `<div class="panel-body padded">`;
-      html += `<p style="margin:0 0 10px;">${escapeHtml(outcome.message)}</p>`;
-      if (o) {
-        html += `<dl class="profile-dl" style="margin-top:6px;">`;
-        html += `<dt>Order</dt><dd><strong>${escapeHtml(o.number)}</strong></dd>`;
-        html += `<dt>Status</dt><dd><span class="badge-status ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></dd>`;
-        if (o.customerName) html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}${o.customerEmail ? ' · <span class="text-muted">' + escapeHtml(o.customerEmail) + '</span>' : ''}</dd>`;
-        html += `<dt>Total</dt><dd>$${(o.totalCents/100).toFixed(2)}${o.pointsTotal > 0 ? ' + ' + Number(o.pointsTotal).toLocaleString() + ' pts' : ''}</dd>`;
-        if (o.items && o.items.length) {
-          html += `<dt>Items</dt><dd>`;
-          html += o.items.map((it) => `${escapeHtml(it.productName)} ×${it.quantity}${it.vendorName ? ' <span class="text-muted">(' + escapeHtml(it.vendorName) + ')</span>' : ''}`).join('<br>');
-          html += `</dd>`;
-        }
-        if (o.collectedAt) {
-          html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
-        }
-        html += `</dl>`;
+      html += `<p class="lede">${escapeHtml(outcome.message)}</p>`;
+      if (!o) return html;
+
+      html += `<dl class="profile-dl">`;
+      html += `<dt>Order</dt><dd><strong>${escapeHtml(o.number)}</strong></dd>`;
+      html += `<dt>Status</dt><dd><span class="badge-status ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></dd>`;
+      if (o.customerName) {
+        html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}</dd>`;
       }
-      if (outcome.result === 'success' && o) {
-        html += `<div class="d-flex gap-2 mt-3">`;
-        html += `<button class="cc-btn cc-btn-primary" onclick="ppz.collection.markCollected('${escapeHtml(o.number)}')">Mark as collected</button>`;
-        html += `<button class="cc-btn cc-btn-ghost" onclick="ppz.collection.dismiss()">Cancel</button>`;
-        html += `</div>`;
-      } else {
-        html += `<div class="d-flex gap-2 mt-3">`;
-        html += `<button class="cc-btn cc-btn-outline" onclick="ppz.collection.dismiss()">Dismiss</button>`;
-        html += `</div>`;
+      if (o.customerEmail) {
+        html += `<dt>Email</dt><dd>${escapeHtml(o.customerEmail)}</dd>`;
       }
-      html += `</div></div>`;
-      box.innerHTML = html;
-      box.style.display = 'block';
+      if (o.customerContact) {
+        html += `<dt>Contact</dt><dd>${escapeHtml(o.customerContact)}</dd>`;
+      }
+      if (o.customerPpzId) {
+        html += `<dt>PPZ ID</dt><dd>${escapeHtml(o.customerPpzId)}</dd>`;
+      }
+      html += `<dt>Total</dt><dd>$${(o.totalCents/100).toFixed(2)}${o.pointsTotal > 0 ? ' + ' + Number(o.pointsTotal).toLocaleString() + ' pts' : ''}</dd>`;
+      if (o.collectedAt) {
+        html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
+      }
+      html += `</dl>`;
+
+      if (o.items && o.items.length) {
+        html += `<ul class="scan-items">`;
+        html += o.items.map((it) =>
+          `<li>${escapeHtml(it.productName)} ×${it.quantity}${it.vendorName ? ' <span class="text-muted">(' + escapeHtml(it.vendorName) + ')</span>' : ''}</li>`
+        ).join('');
+        html += `</ul>`;
+      }
+      return html;
+    }
+
+    function buildActions(outcome) {
+      if (outcome.result === 'success' && outcome.order) {
+        return (
+          `<button type="button" class="cc-btn cc-btn-ghost" onclick="ppz.collection.dismiss()">Cancel</button>` +
+          `<button type="button" class="cc-btn cc-btn-primary" onclick="ppz.collection.markCollected('${escapeHtml(outcome.order.number)}')">Mark as collected</button>`
+        );
+      }
+      return `<button type="button" class="cc-btn cc-btn-primary" onclick="ppz.collection.dismiss()">OK</button>`;
+    }
+
+    async function pauseScanner() {
+      if (!scanner) return;
+      try {
+        // html5-qrcode exposes pause(true) to keep the camera stream
+        // alive but stop firing the decode callback while the modal is up.
+        if (typeof scanner.pause === 'function') scanner.pause(true);
+      } catch (_) {}
+    }
+    function resumeScanner() {
+      if (!scanner) return;
+      try {
+        if (typeof scanner.resume === 'function') scanner.resume();
+      } catch (_) {}
+    }
+
+    function openModal() {
+      const m = el('scanModal');
+      if (!m) return;
+      m.classList.add('is-open');
+      m.setAttribute('aria-hidden', 'false');
+      modalOpen = true;
+      pauseScanner();
+      try { if (navigator.vibrate) navigator.vibrate(40); } catch (_) {}
+    }
+    function closeModal() {
+      const m = el('scanModal');
+      if (!m) return;
+      m.classList.remove('is-open');
+      m.setAttribute('aria-hidden', 'true');
+      modalOpen = false;
+      // Reset debounce so the next scan of the same QR re-opens the
+      // dialog (e.g. staff scans, dismisses, then re-scans the same QR).
+      lastValue.v = null;
+      resumeScanner();
+    }
+
+    function renderResult(outcome) {
+      const dialog = el('scanDialog');
+      const title = el('scanTitle');
+      const body = el('scanBody');
+      const actions = el('scanActions');
+      if (!dialog || !title || !body || !actions) return;
+
+      dialog.classList.remove('tone-success', 'tone-warning', 'tone-danger');
+      dialog.classList.add('tone-' + toneFor(outcome.result));
+      title.textContent = titleFor(outcome.result);
+      body.innerHTML = buildBody(outcome);
+      actions.innerHTML = buildActions(outcome);
+      openModal();
     }
 
     async function lookup(value) {
       const v = (value || '').trim();
-      if (!v || busy) return;
+      if (!v || busy || modalOpen) return;
       // Debounce: same value within 1.5s is ignored (the camera scans
       // the same QR multiple times per second otherwise).
       const now = Date.now();
@@ -820,10 +880,12 @@ window.ppz = (function () {
           method: 'POST',
           body: JSON.stringify({ value }),
         });
+        // Close the confirm dialog and re-render the new outcome so
+        // the success flash is visible briefly before the reload.
+        closeModal();
         renderResult(outcome);
-        setStatus('Idle — ready for next scan');
-        // Reload after a beat so the logs table reflects the new entry.
-        setTimeout(() => location.reload(), 1500);
+        setStatus('Collected — refreshing logs…');
+        setTimeout(() => location.reload(), 900);
       } catch (e) {
         setStatus('Error: ' + e.message);
       } finally {
@@ -832,9 +894,7 @@ window.ppz = (function () {
     }
 
     function dismiss() {
-      const box = el('scanResult');
-      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
-      lastValue.v = null;
+      closeModal();
       setStatus('Idle');
     }
 
@@ -993,6 +1053,12 @@ window.ppz = (function () {
       if (!v) { inp && inp.focus(); return; }
       lookup(v);
     }
+
+    // ESC closes the modal. Bound once at module load — no-op if the
+    // page doesn't actually have a #scanModal in the DOM.
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && modalOpen) dismiss();
+    });
 
     return { start, stop, manual, markCollected, dismiss };
   })();

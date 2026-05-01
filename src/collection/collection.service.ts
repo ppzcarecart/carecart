@@ -15,6 +15,8 @@ export interface ScanOutcome {
     status: string;
     customerName?: string;
     customerEmail?: string;
+    customerContact?: string;
+    customerPpzId?: string;
     fulfilmentMethod: string;
     totalCents: number;
     pointsTotal: number;
@@ -210,6 +212,8 @@ export class CollectionService {
       status: order.status,
       customerName: order.customer?.name,
       customerEmail: order.customer?.email,
+      customerContact: (order.customer as any)?.contact,
+      customerPpzId: order.customer?.ppzId,
       fulfilmentMethod: order.fulfilmentMethod,
       totalCents: order.totalCents,
       pointsTotal: order.pointsTotal,
