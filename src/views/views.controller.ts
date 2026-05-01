@@ -436,6 +436,21 @@ export class ViewsController {
           closeUrl: all['partner.closeUrl'] || '',
         },
       },
+    };
+  }
+
+  // Page Edit — admin/manager-only CMS-style editor for the storefront
+  // home page (hero copy, hero tiles, promo banner carousel). Lives
+  // separate from /admin/settings so the marketing-edit surface is
+  // grouped on its own.
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/pages')
+  @Render('admin/pages')
+  async pagesEditor(@CurrentUser() user: any) {
+    return {
+      title: 'Page Edit',
+      user,
+      activePath: '/admin/pages',
       hero: this.settings.homeHero(),
       bannersEnabled: this.settings.homeBannersEnabled(),
       banners: this.settings.homeBanners(),
