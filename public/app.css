@@ -530,6 +530,7 @@ a:hover { color: var(--brand-dark); }
 }
 .badge-status.paid { background: #d1fae5; color: #065f46; }
 .badge-status.fulfilled { background: var(--brand-soft); color: var(--brand-dark); }
+.badge-status.collected { background: #cffafe; color: #155e75; }
 .badge-status.cancelled, .badge-status.refunded { background: #fee2e2; color: #991b1b; }
 .badge-status.awaiting_payment, .badge-status.pending { background: #fef3c7; color: #92400e; }
 

@@ -6,6 +6,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { CartModule } from '../cart/cart.module';
 import { UsersModule } from '../users/users.module';
 import { SettingsModule } from '../settings/settings.module';
+import { CollectionModule } from '../collection/collection.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { SettingsModule } from '../settings/settings.module';
     CartModule,
     UsersModule,
     SettingsModule,
+    CollectionModule,
   ],
   controllers: [ViewsController],
 })

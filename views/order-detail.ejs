@@ -178,6 +178,34 @@ const canRefund =
         </div>
       <% } %>
 
+      <% if (order.collectedAt) { %>
+        <div class="admin-panel">
+          <div class="panel-head">
+            <h3>Collection</h3>
+            <span class="muted">Picked up</span>
+          </div>
+          <div class="panel-body padded">
+            <p style="margin:0;">
+              <strong><%= new Date(order.collectedAt).toLocaleString() %></strong>
+              <% if (order.collectedBy) { %>
+                · marked by <%= order.collectedBy.name %>
+              <% } %>
+            </p>
+          </div>
+        </div>
+      <% } else if (order.fulfilmentMethod === 'collection' && (order.status === 'paid' || order.status === 'fulfilled') && isCustomer) { %>
+        <div class="admin-panel">
+          <div class="panel-body padded" style="text-align:center;">
+            <a href="/orders/<%= order.id %>/qr" class="cc-btn cc-btn-primary">
+              Show collection QR
+            </a>
+            <div class="text-muted mt-2" style="font-size:.85rem;">
+              Show this QR at the counter to collect your order.
+            </div>
+          </div>
+        </div>
+      <% } %>
+
       <div class="admin-panel" style="max-width: 480px; margin-left: auto;">
         <div class="panel-body padded">
           <div class="d-flex justify-content-between mb-2">

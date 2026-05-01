@@ -23,6 +23,8 @@ import { OrdersService } from '../orders/orders.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
+import { CollectionService } from '../collection/collection.service';
+import * as QRCode from 'qrcode';
 
 @Controller()
 export class ViewsController {
@@ -33,6 +35,7 @@ export class ViewsController {
     private cart: CartService,
     private users: UsersService,
     private settings: SettingsService,
+    private collection: CollectionService,
   ) {}
 
   @Public()
@@ -155,6 +158,40 @@ export class ViewsController {
       customer: order.customer,
       activePath: '',
       returnTo: '/orders',
+    };
+  }
+
+  // Customer-facing QR ticket. Only visible while the order is still
+  // pending collection — once collected we send the customer back to
+  // the order detail page where the collected timestamp shows.
+  @Get('orders/:id/qr')
+  @Render('shop/order-qr')
+  async customerOrderQr(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.customerId !== user.id) {
+      throw new ForbiddenException();
+    }
+    if (order.fulfilmentMethod !== 'collection') {
+      throw new ForbiddenException(
+        'This is a delivery order, no collection QR is needed.',
+      );
+    }
+    const qrSvg = await QRCode.toString(order.number, {
+      type: 'svg',
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 260,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    });
+    return {
+      title: 'Collect ' + order.number,
+      user,
+      order,
+      qrSvg,
     };
   }
 
@@ -322,6 +359,42 @@ export class ViewsController {
       customer: order.customer,
       activePath: '/vendor',
       returnTo: '/vendor',
+    };
+  }
+
+  // Camera-based QR scanner for collection. Admin/manager can collect
+  // for any vendor; the vendor variant below limits scope server-side.
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/collection')
+  @Render('admin/collection')
+  async adminCollection(@CurrentUser() user: any) {
+    const logs = await this.collection.listLogs({
+      id: user.id,
+      role: user.role,
+    });
+    return {
+      title: 'Manage Collection',
+      user,
+      logs,
+      activePath: '/admin/collection',
+      scope: 'all',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/collection')
+  @Render('admin/collection')
+  async vendorCollection(@CurrentUser() user: any) {
+    const logs = await this.collection.listLogs({
+      id: user.id,
+      role: user.role,
+    });
+    return {
+      title: 'Manage Collection',
+      user,
+      logs,
+      activePath: '/vendor/collection',
+      scope: user.role === Role.VENDOR ? 'vendor' : 'all',
     };
   }
 

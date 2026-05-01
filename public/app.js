@@ -711,9 +711,179 @@ window.ppz = (function () {
     try { history.back(); } catch (e) {}
   }
 
+  // ---- Collection scanner ----
+  // Used by /admin/collection and /vendor/collection. Wraps html5-qrcode
+  // (loaded via CDN on those pages only) and the /api/collection
+  // endpoints. Renders the scan result inline and lets staff confirm
+  // "Mark as collected" — duplicates and unauthorized scans short-circuit
+  // and surface a warning.
+  const collection = (() => {
+    let scanner = null;
+    let busy = false;
+    const lastValue = { v: null, at: 0 };
+
+    function el(id) { return document.getElementById(id); }
+    function setStatus(s) { const n = el('scannerStatus'); if (n) n.textContent = s; }
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    function renderResult(outcome) {
+      const box = el('scanResult');
+      if (!box) return;
+      const o = outcome.order;
+      const tone = {
+        success: 'paid',
+        duplicate: 'awaiting_payment',
+        unauthorized_vendor: 'cancelled',
+        not_found: 'cancelled',
+        invalid_state: 'awaiting_payment',
+      }[outcome.result] || '';
+      const heading = {
+        success: 'Ready to collect',
+        duplicate: '⚠ Duplicate collection',
+        unauthorized_vendor: 'Not your vendor',
+        not_found: 'Order not found',
+        invalid_state: 'Cannot collect',
+      }[outcome.result] || outcome.result;
+
+      let html = '';
+      html += `<div class="admin-panel" style="margin:0;">`;
+      html += `<div class="panel-head"><h3>${escapeHtml(heading)}</h3>`;
+      html += `<span class="badge-status ${tone}">${escapeHtml(outcome.result.replace(/_/g, ' '))}</span></div>`;
+      html += `<div class="panel-body padded">`;
+      html += `<p style="margin:0 0 10px;">${escapeHtml(outcome.message)}</p>`;
+      if (o) {
+        html += `<dl class="profile-dl" style="margin-top:6px;">`;
+        html += `<dt>Order</dt><dd><strong>${escapeHtml(o.number)}</strong></dd>`;
+        html += `<dt>Status</dt><dd><span class="badge-status ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></dd>`;
+        if (o.customerName) html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}${o.customerEmail ? ' · <span class="text-muted">' + escapeHtml(o.customerEmail) + '</span>' : ''}</dd>`;
+        html += `<dt>Total</dt><dd>$${(o.totalCents/100).toFixed(2)}${o.pointsTotal > 0 ? ' + ' + Number(o.pointsTotal).toLocaleString() + ' pts' : ''}</dd>`;
+        if (o.items && o.items.length) {
+          html += `<dt>Items</dt><dd>`;
+          html += o.items.map((it) => `${escapeHtml(it.productName)} ×${it.quantity}${it.vendorName ? ' <span class="text-muted">(' + escapeHtml(it.vendorName) + ')</span>' : ''}`).join('<br>');
+          html += `</dd>`;
+        }
+        if (o.collectedAt) {
+          html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
+        }
+        html += `</dl>`;
+      }
+      if (outcome.result === 'success' && o) {
+        html += `<div class="d-flex gap-2 mt-3">`;
+        html += `<button class="cc-btn cc-btn-primary" onclick="ppz.collection.markCollected('${escapeHtml(o.number)}')">Mark as collected</button>`;
+        html += `<button class="cc-btn cc-btn-ghost" onclick="ppz.collection.dismiss()">Cancel</button>`;
+        html += `</div>`;
+      } else {
+        html += `<div class="d-flex gap-2 mt-3">`;
+        html += `<button class="cc-btn cc-btn-outline" onclick="ppz.collection.dismiss()">Dismiss</button>`;
+        html += `</div>`;
+      }
+      html += `</div></div>`;
+      box.innerHTML = html;
+      box.style.display = 'block';
+    }
+
+    async function lookup(value) {
+      const v = (value || '').trim();
+      if (!v || busy) return;
+      // Debounce: same value within 1.5s is ignored (the camera scans
+      // the same QR multiple times per second otherwise).
+      const now = Date.now();
+      if (lastValue.v === v && now - lastValue.at < 1500) return;
+      lastValue.v = v;
+      lastValue.at = now;
+      busy = true;
+      setStatus('Looking up ' + v + '…');
+      try {
+        const outcome = await api('/api/collection/scan', {
+          method: 'POST',
+          body: JSON.stringify({ value: v }),
+        });
+        renderResult(outcome);
+        setStatus(outcome.result === 'success' ? 'Found — confirm to collect' : 'Idle');
+      } catch (e) {
+        setStatus('Error: ' + e.message);
+      } finally {
+        busy = false;
+      }
+    }
+
+    async function markCollected(value) {
+      busy = true;
+      setStatus('Marking as collected…');
+      try {
+        const outcome = await api('/api/collection/mark', {
+          method: 'POST',
+          body: JSON.stringify({ value }),
+        });
+        renderResult(outcome);
+        setStatus('Idle — ready for next scan');
+        // Reload after a beat so the logs table reflects the new entry.
+        setTimeout(() => location.reload(), 1500);
+      } catch (e) {
+        setStatus('Error: ' + e.message);
+      } finally {
+        busy = false;
+      }
+    }
+
+    function dismiss() {
+      const box = el('scanResult');
+      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+      lastValue.v = null;
+      setStatus('Idle');
+    }
+
+    async function start() {
+      if (typeof Html5Qrcode === 'undefined') {
+        alert('Scanner library failed to load. Check your network.');
+        return;
+      }
+      if (scanner) return;
+      try {
+        scanner = new Html5Qrcode('reader');
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decoded) => lookup(decoded),
+          () => {},
+        );
+        el('startBtn').disabled = true;
+        el('stopBtn').disabled = false;
+        setStatus('Camera ready · point at QR');
+      } catch (e) {
+        scanner = null;
+        alert('Could not start camera: ' + e.message);
+      }
+    }
+
+    async function stop() {
+      if (!scanner) return;
+      try { await scanner.stop(); await scanner.clear(); } catch (e) {}
+      scanner = null;
+      el('startBtn').disabled = false;
+      el('stopBtn').disabled = true;
+      setStatus('Stopped');
+    }
+
+    function manual() {
+      const inp = el('manualInput');
+      const v = inp ? inp.value.trim() : '';
+      if (!v) { inp && inp.focus(); return; }
+      lookup(v);
+    }
+
+    return { start, stop, manual, markCollected, dismiss };
+  })();
+
   return {
     imgFallback,
     exitToApp,
+    collection,
     refreshPoints,
     syncProfile,
     changePassword,

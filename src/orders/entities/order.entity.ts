@@ -17,6 +17,7 @@ export type OrderStatus =
   | 'awaiting_payment'
   | 'paid'
   | 'fulfilled'
+  | 'collected'
   | 'cancelled'
   | 'refunded';
 
@@ -83,6 +84,20 @@ export class Order {
   // refund time and surfaced under "Remarks" on the order detail page.
   @Column({ type: 'text', nullable: true })
   refundReason?: string;
+
+  // When the order is handed over at the collection point. Set by the
+  // QR scanner flow under /admin/collection (or /vendor/collection).
+  // Once set, status is locked to 'collected' and further scans of the
+  // same QR are recorded as duplicates in CollectionLog.
+  @Column({ type: 'timestamptz', nullable: true })
+  collectedAt?: Date;
+
+  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'collectedById' })
+  collectedBy?: User;
+
+  @Column({ nullable: true })
+  collectedById?: string;
 
   // Selected payment provider, e.g. 'stripe' or future gateway
   @Column({ nullable: true })

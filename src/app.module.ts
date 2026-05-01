@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
+import { CollectionModule } from './collection/collection.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PointsModule } from './points/points.module';
 import { UploadsModule } from './uploads/uploads.module';
@@ -48,6 +49,7 @@ import { SamplesService } from './database/samples.service';
     ProductsModule,
     CartModule,
     OrdersModule,
+    CollectionModule,
     PaymentsModule,
     PointsModule,
     UploadsModule,
