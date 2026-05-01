@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -55,6 +56,8 @@ class _WebViewScreenState extends State<WebViewScreen>
   WebResourceError? _error;
   bool _hadErrorDuringSession = false;
   bool _cameraPermanentlyDenied = false;
+  bool _initialLoadComplete = false;
+  Timer? _fadeTimer;
 
   /// Shim that defines window.Android.closeWebView so carecart's
   /// production-style window.Android.closeWebView() call can reach the
@@ -123,6 +126,12 @@ class _WebViewScreenState extends State<WebViewScreen>
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (_) {
+          // Cancel any pending fade — if a fresh navigation starts
+          // while we were about to drop the splash (the redirect-chain
+          // case: /h5/login → /shop), keep the splash up so the user
+          // doesn't see a flash of white between hops.
+          _fadeTimer?.cancel();
+          if (_initialLoadComplete) return;
           if (mounted) {
             setState(() {
               _loading = true;
@@ -136,7 +145,20 @@ class _WebViewScreenState extends State<WebViewScreen>
           try {
             await controller.runJavaScript(_androidBridgeShim);
           } catch (_) {}
-          if (mounted) setState(() => _loading = false);
+          if (!mounted) return;
+          if (_initialLoadComplete) return;
+          // Debounce: only fade when no further navigation begins
+          // within the window. The H5 handoff redirects login → shop,
+          // and we don't want the splash to flash off and back on
+          // between those two hops.
+          _fadeTimer?.cancel();
+          _fadeTimer = Timer(const Duration(milliseconds: 350), () {
+            if (!mounted) return;
+            setState(() {
+              _loading = false;
+              _initialLoadComplete = true;
+            });
+          });
         },
         onWebResourceError: (err) {
           // Skip sub-resource failures (favicon 404s, blocked tracking
@@ -185,6 +207,7 @@ class _WebViewScreenState extends State<WebViewScreen>
 
   @override
   void dispose() {
+    _fadeTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -235,9 +258,11 @@ class _WebViewScreenState extends State<WebViewScreen>
   }
 
   void _retry() {
+    _fadeTimer?.cancel();
     setState(() {
       _error = null;
       _loading = true;
+      _initialLoadComplete = false;
     });
     _controller.loadRequest(_handoff);
   }
@@ -267,10 +292,30 @@ class _WebViewScreenState extends State<WebViewScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/icon.png',
-                      width: 88,
-                      height: 88,
+                    // Render the launcher tile ourselves: brand-color
+                    // squircle + the transparent foreground icon, with
+                    // padding around it. icon.png alone is the masked
+                    // master and looks cropped when shown raw because
+                    // its content reaches the canvas edge.
+                    Container(
+                      width: 96,
+                      height: 96,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/icon-fg.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                     const SizedBox(height: 22),
                     const SizedBox(
