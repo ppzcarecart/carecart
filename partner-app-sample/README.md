@@ -63,6 +63,33 @@ flutter pub get
 `flutter create .` is non-destructive — it adds `android/`, `ios/`,
 `linux/`, etc. and leaves your existing `lib/` and `pubspec.yaml` alone.
 
+### Add camera permission to the platform projects
+
+The carecart **Manage Collection** page uses the device camera to scan
+collection QRs. The Android WebView and iOS WKWebView won't request
+camera access until the host app has the right manifest entries — even
+with the runtime permission grant code in `lib/webview_screen.dart`.
+
+After running `flutter create .`, edit two files:
+
+**`android/app/src/main/AndroidManifest.xml`** — add inside `<manifest>`,
+above the existing `<application>` tag:
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+```
+
+**`ios/Runner/Info.plist`** — add inside the top-level `<dict>`:
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>Carecart needs the camera to scan collection QR codes.</string>
+```
+
+Without these the camera silently fails when staff tap **Start camera**
+inside the webview, even though the page itself shows no error.
+
 ## Open in Android Studio
 
 1. Android Studio → **Open** → pick the `partner-app-sample` folder.
@@ -164,6 +191,44 @@ The production partner app does the equivalent in its native
 `WKWebView` / `WebView` delegate (see the main carecart README's
 *Partner integration* section).
 
+### 4. Camera access for the Manage Collection scanner
+
+When admin/manager/vendor open `/admin/collection` (or
+`/vendor/collection`) and tap **Start camera**, the page calls
+`navigator.mediaDevices.getUserMedia`. For that to work inside an
+Android WebView the host app has to:
+
+1. **Hold the runtime CAMERA permission** — we call
+   `Permission.camera.request()` in `_WebViewScreenState.initState`
+   so the user is prompted the first time they open the webview.
+2. **Grant the per-page permission request** — Android's WebView
+   denies every `getUserMedia` call by default. We use
+   `AndroidWebViewController.setOnPlatformPermissionRequest` to
+   `grant()` camera/microphone requests and `deny()` the rest:
+
+   ```dart
+   if (controller.platform is AndroidWebViewController) {
+     final android = controller.platform as AndroidWebViewController;
+     android.setOnPlatformPermissionRequest((request) async {
+       final wantsCamera = request.types.any((t) =>
+           t == WebViewPermissionResourceType.camera ||
+           t == WebViewPermissionResourceType.microphone);
+       if (wantsCamera) await request.grant();
+       else await request.deny();
+     });
+   }
+   ```
+
+iOS WKWebView shows a native camera prompt automatically when the page
+calls `getUserMedia`, provided `NSCameraUsageDescription` is present in
+`Info.plist`.
+
+The production partner app needs the equivalent: CAMERA in the
+manifest, the runtime permission grant, and either
+`onPermissionRequest` (native Android `WebChromeClient`) or
+`setOnPlatformPermissionRequest` (Flutter) to grant the page's camera
+request.
+
 ## Troubleshooting
 
 - **"Tap to open Shop" does nothing** → you haven't saved a PPZ ID +
@@ -179,6 +244,17 @@ The production partner app does the equivalent in its native
 - **Can't see network traffic** → use Chrome DevTools at
   `chrome://inspect/#devices` while the emulator is running and the
   webview is loaded. You'll see all the requests and console logs.
+- **Camera blocked on Manage Collection / Start camera** → three things
+  to check, in order:
+  1. The CAMERA `<uses-permission>` is in
+     `android/app/src/main/AndroidManifest.xml` (see *First-time setup*).
+  2. The user actually granted camera permission to the host app.
+     Settings → Apps → carecart_partner_sample → Permissions → Camera.
+  3. Hot-restart isn't enough after editing the manifest — fully kill
+     the app and `flutter run` again so the new permission registers.
+  Inside the webview the page detects "I'm in an Android WebView" and
+  surfaces a hint pointing the user to fix the host app, but it can't
+  fix it for them.
 
 ## Once you're satisfied
 
@@ -190,6 +266,12 @@ Hand the production iOS / Android team:
   (iOS message handler `closeWebView`, Android JS interface
   `Android.closeWebView`, or URL scheme) — this sample proves all three
   work, so the choice is theirs.
+- The camera-access checklist for `/admin/collection`:
+  - Android: CAMERA in manifest + runtime permission grant +
+    `WebChromeClient.onPermissionRequest` (or Flutter's
+    `setOnPlatformPermissionRequest`) granting camera/mic.
+  - iOS: `NSCameraUsageDescription` in `Info.plist` — WKWebView prompts
+    automatically.
 - The relevant interception snippet from this app's
   `webview_screen.dart` (Flutter) or the carecart README (Swift /
   Kotlin equivalents).

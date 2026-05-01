@@ -917,10 +917,26 @@ window.ppz = (function () {
       const ua = navigator.userAgent || '';
       const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
       const isAndroid = /Android/.test(ua);
+      // Android WebView marker — Chrome adds "; wv)" inside the device
+      // parens when the page is rendered inside an Android WebView
+      // (i.e. embedded in a native app), as opposed to standalone
+      // Chrome. Reliable enough to branch on.
+      const isAndroidWebView = isAndroid && /;\s*wv\)/.test(ua);
       const inApp = /FBAN|FBAV|Instagram|Line\/|Twitter|MicroMessenger|Snapchat/.test(ua);
 
       let steps = '';
-      if (inApp) {
+      if (isAndroidWebView) {
+        // The page can't fix this on its own — the host (partner) app
+        // has to grant the camera permission to its WebView. Tell the
+        // user exactly what to ask for so they don't get stuck.
+        steps =
+          'You\'re inside the partner app\'s Android WebView, which is blocking camera access.\n\n' +
+          'The partner app needs:\n' +
+          '1. CAMERA permission in AndroidManifest.xml\n' +
+          '2. The user (you) to grant camera permission to the partner app — Settings → Apps → [partner app] → Permissions → Camera → Allow\n' +
+          '3. The partner app must grant the WebView\'s camera request (Android WebView denies by default — implement WebChromeClient.onPermissionRequest, or in Flutter: setOnPlatformPermissionRequest)\n\n' +
+          'Until the partner app is updated, open this page in Chrome on the same phone and the scanner will work there.';
+      } else if (inApp) {
         steps =
           'You\'re in an in-app browser (Facebook, Instagram, etc.) which usually blocks camera access.\n\n' +
           'Open this page in your real browser instead:\n' +

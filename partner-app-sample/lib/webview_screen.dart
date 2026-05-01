@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 /// Embeds the carecart H5 handoff URL in a WebView and listens for the
 /// "close webview" signal on all three carecart-supported paths so the
@@ -68,6 +70,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
   void initState() {
     super.initState();
 
+    // Pre-request runtime CAMERA permission so when the user opens
+    // /admin/collection inside this webview and taps "Start camera",
+    // the OS already has the permission. Without this the WebView's
+    // permission grant succeeds but the underlying camera stream
+    // fails silently. Fire-and-forget — if the user denies, the page
+    // will just show its own permission-help dialog.
+    Permission.camera.request();
+
     final handoff = Uri.parse(
       '${widget.baseUrl}/h5/login'
       '?ppzid=${Uri.encodeComponent(widget.ppzId)}'
@@ -85,6 +95,28 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'closeWebView',
         onMessageReceived: (_) => _close(),
       );
+
+    // Android only: by default WebView denies every page-level
+    // permission request (camera, mic, location, etc.) without ever
+    // surfacing the prompt to the user. carecart's QR scanner needs
+    // camera access, so we explicitly grant camera/mic when the page
+    // asks. Other request types (location, MIDI, protected media) are
+    // denied to keep the permission surface minimal.
+    if (controller.platform is AndroidWebViewController) {
+      final android = controller.platform as AndroidWebViewController;
+      android.setOnPlatformPermissionRequest((request) async {
+        final wantsCamera = request.types.any(
+          (t) =>
+              t == WebViewPermissionResourceType.camera ||
+              t == WebViewPermissionResourceType.microphone,
+        );
+        if (wantsCamera) {
+          await request.grant();
+        } else {
+          await request.deny();
+        }
+      });
+    }
 
     controller.setNavigationDelegate(
       NavigationDelegate(
