@@ -27,8 +27,10 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
         </div>
         <div class="panel-body padded">
           <!-- Camera viewport. Auto-starts on page load and auto-stops
-               when the user navigates away — no Start/Stop buttons. -->
-          <div id="reader" style="max-width: 480px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 240px;"></div>
+               when the user navigates away — no Start/Stop buttons.
+               Sized small (~40% of the old footprint) so the search
+               input and logs stay above the fold on phones. -->
+          <div id="reader" style="max-width: 200px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 100px;"></div>
 
           <!-- Live-search fallback. Triggers automatically when the
                value looks like a complete order number, or on Enter. -->

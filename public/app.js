@@ -1052,7 +1052,17 @@ window.ppz = (function () {
       const s = new Html5Qrcode('reader');
       await s.start(
         source,
-        { fps: 10, qrbox: { width: 240, height: 240 } },
+        {
+          fps: 10,
+          // Scale the QR target box to ~70% of the shorter viewport
+          // edge. The viewport is small (~200px) so a fixed 240px box
+          // wouldn't fit; a function makes it adapt if we ever resize.
+          qrbox: (vw, vh) => {
+            const minEdge = Math.min(vw, vh);
+            const size = Math.floor(minEdge * 0.7);
+            return { width: size, height: size };
+          },
+        },
         (decoded) => lookup(decoded),
         () => {},
       );
