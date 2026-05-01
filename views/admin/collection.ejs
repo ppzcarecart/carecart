@@ -12,11 +12,6 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
       <div class="admin-page-header">
         <div>
           <h1>Manage Collection</h1>
-          <p class="lede">
-            Scan a customer's collection QR with the camera. Verify the
-            order, then mark it as collected.<% if (scope === 'vendor') { %>
-            You can only scan orders that contain your products.<% } %>
-          </p>
         </div>
       </div>
 
@@ -41,6 +36,12 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
             </svg>
             <input id="manualInput" type="search" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Search order number">
           </div>
+
+          <p class="text-muted text-center mt-3 mb-0" style="font-size:.85rem;">
+            Scan a customer's collection QR with the camera, then verify
+            the order and mark it as collected.<% if (scope === 'vendor') { %>
+            You can only scan orders that contain your products.<% } %>
+          </p>
         </div>
       </div>
 
