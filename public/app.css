@@ -944,19 +944,52 @@ a:hover { color: var(--brand-dark); }
   .image-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
 }
 
-/* Admin page header: wrap and let CTA buttons drop below the title. */
+/* Admin page header on phones: stack title above actions, shrink the
+   actions so two side-by-side buttons fit on one row instead of
+   wrapping, and tighten the lede so the dashboard is denser. */
 @media (max-width: 600px) {
-  .admin-page-header { flex-direction: column; align-items: stretch; }
-  .admin-page-header h1 { font-size: 1.5rem; }
-  .admin-page-header .d-flex { flex-wrap: wrap; }
+  .admin-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .admin-page-header h1 { font-size: 1.4rem; }
+  .admin-page-header .lede {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    margin-top: 2px;
+  }
+  /* Action buttons share row, smaller padding + font, full-width-of-row.
+     flex:1 makes both equal width regardless of label length. */
+  .admin-page-header .d-flex {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .admin-page-header .d-flex .cc-btn {
+    flex: 1 1 0;
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
 }
 
 /* Stat cards: tighter on phones so we get 2 per row. */
-@media (max-width: 480px) {
-  .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .admin-stat { padding: 14px; gap: 10px; }
-  .admin-stat .stat-icon { width: 36px; height: 36px; font-size: 0.95rem; }
-  .admin-stat .stat-value { font-size: 1.2rem; }
+@media (max-width: 600px) {
+  .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+  .admin-stat {
+    padding: 12px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+  .admin-stat .stat-icon { width: 34px; height: 34px; font-size: 0.9rem; border-radius: 10px; }
+  .admin-stat .stat-label { font-size: 0.7rem; }
+  .admin-stat .stat-value { font-size: 1.15rem; }
+}
+/* Tightest screens: drop the icon to avoid two-line value text. */
+@media (max-width: 360px) {
+  .admin-stat { padding: 10px; gap: 8px; }
+  .admin-stat .stat-icon { width: 30px; height: 30px; font-size: 0.85rem; }
 }
 
 /* Modal padding reduces on phones. */
