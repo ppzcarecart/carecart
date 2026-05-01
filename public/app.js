@@ -940,6 +940,40 @@ window.ppz = (function () {
       return /NotAllowed|Permission|denied|blocked/i.test(m);
     }
 
+    // Camera hardware couldn't be opened — typically another app is
+    // holding it, the WebView host process didn't release a previous
+    // session, or the OS camera service is wedged.
+    function isCameraBusy(e) {
+      if (!e) return false;
+      if (e.name === 'NotReadableError' || e.name === 'TrackStartError') return true;
+      const m = errToString(e);
+      return /NotReadable|TrackStart|could not start video|in use|busy/i.test(m);
+    }
+
+    function showCameraBusyHelp() {
+      const ua = navigator.userAgent || '';
+      const isAndroidWebView = /Android/.test(ua) && /;\s*wv\)/.test(ua);
+      const lines = [
+        'The camera permission is granted, but the camera hardware is locked or in use elsewhere.',
+        '',
+        'Try in this order:',
+        '1. Close any other camera app (Camera, WhatsApp, Zoom, Google Meet, Snapchat).',
+        '2. Fully close and reopen the partner app — swipe it out of the recent-apps list, then launch again. (Hot-reload during development sometimes leaves the WebView holding the camera handle.)',
+        '3. Lock + unlock the screen, or reboot the phone, if the camera service has gotten stuck.',
+      ];
+      if (isAndroidWebView) {
+        lines.push(
+          '4. To confirm the issue is the host app and not the device, open this same URL in standalone Chrome on the same phone. If the camera works there, the partner app needs to release any open camera handle before navigating to /admin/collection.',
+        );
+      } else {
+        lines.push(
+          '4. On a desktop, check the OS privacy panel (System Settings → Privacy & Security → Camera) and make sure the browser is allowed.',
+        );
+      }
+      setStatus('Camera busy — see help');
+      alert(lines.join('\n'));
+    }
+
     function showPermissionHelp() {
       const ua = navigator.userAgent || '';
       const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
@@ -1040,18 +1074,19 @@ window.ppz = (function () {
         onStarted();
         return;
       } catch (e1) {
-        if (isPermissionDenied(e1)) {
-          scanner = null;
-          showPermissionHelp();
-          return;
-        }
-        // Other errors (OverconstrainedError on some Android, etc.) —
-        // fall through to explicit camera enumeration.
+        scanner = null;
+        if (isPermissionDenied(e1)) { showPermissionHelp(); return; }
+        // Other errors (OverconstrainedError on some Android,
+        // NotReadableError when the back camera is held by another
+        // process) — fall through to explicit enumeration so we can
+        // try each camera in turn.
       }
 
-      // Try 2 — enumerate, then start with a specific device id. Useful
-      // on Android phones where facingMode rejects with a generic
-      // OverconstrainedError.
+      // Try 2 — enumerate, then walk the camera list trying each one
+      // until we find one we can actually open. Order matters: prefer
+      // the back camera, then the front. This covers the case where the
+      // back camera is in use by another app but the front is free.
+      let lastError = null;
       try {
         const cams = await Html5Qrcode.getCameras();
         if (!cams || !cams.length) {
@@ -1059,26 +1094,46 @@ window.ppz = (function () {
           alert('No cameras were detected on this device.');
           return;
         }
-        const back = cams.find((c) => /back|rear|environment/i.test(c.label || ''));
-        const pick = back || cams[cams.length - 1];
-        scanner = await tryStartWith(pick.id);
-        onStarted();
-      } catch (e2) {
-        scanner = null;
-        if (isPermissionDenied(e2)) {
-          showPermissionHelp();
-          return;
+        const back = cams.filter((c) => /back|rear|environment/i.test(c.label || ''));
+        const front = cams.filter((c) => /front|user|self/i.test(c.label || ''));
+        const remaining = cams.filter((c) => !back.includes(c) && !front.includes(c));
+        const ordered = [...back, ...remaining, ...front];
+
+        for (const cam of ordered) {
+          try {
+            scanner = await tryStartWith(cam.id);
+            onStarted();
+            return;
+          } catch (camErr) {
+            lastError = camErr;
+            // If the user explicitly denied permission for this camera,
+            // bail out — trying the next won't help.
+            if (isPermissionDenied(camErr)) {
+              showPermissionHelp();
+              return;
+            }
+            // Otherwise keep trying.
+          }
         }
-        const msg = errToString(e2);
-        setStatus('Camera failed: ' + msg);
-        alert(
-          'Could not start camera: ' + msg +
-          '\n\nCommon fixes:\n' +
-          '• The page must be loaded over HTTPS\n' +
-          '• Close other apps that may be using the camera\n' +
-          '• On iOS, open this page in Safari (not Chrome / in-app browsers)',
-        );
+      } catch (e2) {
+        lastError = e2;
+        if (isPermissionDenied(e2)) { showPermissionHelp(); return; }
       }
+
+      // Every camera failed. Surface the best help we can given the
+      // last error type.
+      scanner = null;
+      if (isCameraBusy(lastError)) { showCameraBusyHelp(); return; }
+      const msg = errToString(lastError);
+      setStatus('Camera failed: ' + msg);
+      alert(
+        'Could not start camera: ' + msg +
+        '\n\nCommon fixes:\n' +
+        '• The page must be loaded over HTTPS\n' +
+        '• Close other apps that may be using the camera\n' +
+        '• Fully restart the partner app (swipe it out of recent apps)\n' +
+        '• On iOS, open this page in Safari (not Chrome / in-app browsers)',
+      );
     }
 
     async function stop() {
