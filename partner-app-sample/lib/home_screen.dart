@@ -56,9 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
-    await Navigator.push(
+    final closedVia = await Navigator.push<String>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<String>(
         builder: (_) => WebViewScreen(
           ppzId: active.ppzId,
           email: active.email,
@@ -67,6 +67,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    if (!mounted) return;
+    if (closedVia != null && closedVia.isNotEmpty) {
+      // The whole point of this sample is verifying which close-bridge
+      // carecart actually used; surfacing it on return makes that
+      // visible to whoever is QAing the integration.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Closed via $closedVia'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override

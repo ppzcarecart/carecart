@@ -25,7 +25,10 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 ///   3. URL-scheme deep link (defaults to papazao://close). Caught in
 ///      onNavigationRequest before the webview tries to load it.
 ///
-/// All three end up calling Navigator.pop(context).
+/// All three pop with a String describing which bridge fired, so the
+/// home screen can surface it in a snackbar — that confirmation is the
+/// point of this sample, since the production team needs to know which
+/// bridge their stack actually exercised in real testing.
 class WebViewScreen extends StatefulWidget {
   final String ppzId;
   final String email;
@@ -44,9 +47,13 @@ class WebViewScreen extends StatefulWidget {
   State<WebViewScreen> createState() => _WebViewScreenState();
 }
 
-class _WebViewScreenState extends State<WebViewScreen> {
+class _WebViewScreenState extends State<WebViewScreen>
+    with WidgetsBindingObserver {
   late final WebViewController _controller;
+  late final Uri _handoff;
   bool _loading = true;
+  WebResourceError? _error;
+  bool _cameraPermanentlyDenied = false;
 
   /// Shim that defines window.Android.closeWebView so carecart's
   /// production-style window.Android.closeWebView() call can reach the
@@ -72,18 +79,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkCameraPermission();
 
-    // Manifest declares CAMERA, but Android 6+ also needs a runtime
-    // grant on the host process — without it the WebView's permission
-    // grant succeeds at the page level but the underlying Camera2
-    // open is refused, surfacing in JS as NotReadableError. Fire and
-    // forget; the OS only prompts on first run, and if it's already
-    // denied the user has to flip it in Settings → Apps → Permissions.
-    if (Platform.isAndroid) {
-      Permission.camera.request();
-    }
-
-    final handoff = Uri.parse(
+    _handoff = Uri.parse(
       '${widget.baseUrl}/h5/login'
       '?ppzid=${Uri.encodeComponent(widget.ppzId)}'
       '&email=${Uri.encodeComponent(widget.email)}',
@@ -105,19 +104,30 @@ class _WebViewScreenState extends State<WebViewScreen> {
     final controller = WebViewController.fromPlatformCreationParams(params)
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
-      // (1) iOS — Flutter publishes this channel as
-      // window.webkit.messageHandlers.closeWebView on WKWebView, which
-      // is exactly what carecart's exitToApp() calls first. The same
-      // callback also fires for the Android shim path below.
+      // The same channel fires from two different sources, distinguished
+      // by platform: on iOS it's carecart's WKWebView script message
+      // handler; on Android it's our injected window.Android shim
+      // forwarding here. Tagging the source is the point of this sample
+      // — it tells the production team which bridge their stack actually
+      // exercised during testing.
       ..addJavaScriptChannel(
         'closeWebView',
-        onMessageReceived: (_) => _close(),
+        onMessageReceived: (_) => _close(
+          Platform.isIOS
+              ? 'iOS message handler (closeWebView)'
+              : 'Android JS interface (window.Android.closeWebView)',
+        ),
       );
 
     controller.setNavigationDelegate(
       NavigationDelegate(
         onPageStarted: (_) {
-          if (mounted) setState(() => _loading = true);
+          if (mounted) {
+            setState(() {
+              _loading = true;
+              _error = null;
+            });
+          }
         },
         onPageFinished: (_) async {
           // (2) Android — install the window.Android shim. Harmless on
@@ -127,12 +137,26 @@ class _WebViewScreenState extends State<WebViewScreen> {
           } catch (_) {}
           if (mounted) setState(() => _loading = false);
         },
+        onWebResourceError: (err) {
+          // Skip sub-resource failures (favicon 404s, blocked tracking
+          // pixels, ad domains) — those don't break the page and would
+          // create noisy false-positive error states. Only main-frame
+          // failures actually mean the user is stuck. isForMainFrame is
+          // null on iOS, so we treat null as "could be main" and only
+          // suppress when explicitly false (Android sub-resource case).
+          if (err.isForMainFrame == false) return;
+          if (!mounted) return;
+          setState(() {
+            _loading = false;
+            _error = err;
+          });
+        },
         onNavigationRequest: (req) {
           // (3) URL-scheme fallback. Carecart fires this if neither
           // bridge above is registered.
           final close = widget.closeUrl.trim();
           if (close.isNotEmpty && req.url.startsWith(close)) {
-            _close();
+            _close('URL scheme ($close)');
             return NavigationDecision.prevent;
           }
           return NavigationDecision.navigate;
@@ -153,14 +177,64 @@ class _WebViewScreenState extends State<WebViewScreen> {
       });
     }
 
-    controller.loadRequest(handoff);
+    controller.loadRequest(_handoff);
     _controller = controller;
   }
 
-  void _close() {
-    if (mounted && Navigator.canPop(context)) {
-      Navigator.pop(context);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When the user returns from system Settings (after tapping
+    // "Open Settings" in the camera-denied banner) re-check the camera
+    // grant so the banner clears without a manual reload.
+    if (state == AppLifecycleState.resumed) {
+      _refreshCameraStatus();
     }
+  }
+
+  Future<void> _checkCameraPermission() async {
+    // Manifest declares CAMERA, but Android 6+ also needs a runtime
+    // grant on the host process — without it the WebView's per-page
+    // permission grant succeeds but the underlying Camera2 open is
+    // refused, surfacing in JS as NotReadableError. We capture the
+    // result so we can show a recovery banner if the user has
+    // permanently denied: that state can only be flipped from system
+    // Settings, never from a re-prompt.
+    if (!Platform.isAndroid) return;
+    final status = await Permission.camera.request();
+    if (!mounted) return;
+    if (status.isPermanentlyDenied) {
+      setState(() => _cameraPermanentlyDenied = true);
+    }
+  }
+
+  Future<void> _refreshCameraStatus() async {
+    if (!Platform.isAndroid) return;
+    final status = await Permission.camera.status;
+    if (!mounted) return;
+    final denied = status.isPermanentlyDenied;
+    if (denied != _cameraPermanentlyDenied) {
+      setState(() => _cameraPermanentlyDenied = denied);
+    }
+  }
+
+  void _close(String source) {
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context, source);
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    _controller.loadRequest(_handoff);
   }
 
   @override
@@ -177,9 +251,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
           // it with a styled overlay makes the wait feel intentional
           // instead of looking like the app froze.
           IgnorePointer(
-            ignoring: !_loading,
+            ignoring: !_loading || _error != null,
             child: AnimatedOpacity(
-              opacity: _loading ? 1.0 : 0.0,
+              opacity: _loading && _error == null ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
               child: Container(
@@ -213,7 +287,135 @@ class _WebViewScreenState extends State<WebViewScreen> {
               ),
             ),
           ),
+          if (_error != null)
+            _ErrorOverlay(
+              error: _error!,
+              url: _handoff,
+              onRetry: _retry,
+              onBack: () => Navigator.of(context).maybePop(),
+            ),
+          if (_cameraPermanentlyDenied)
+            const Align(
+              alignment: Alignment.topCenter,
+              child: SafeArea(child: _CameraDeniedBanner()),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _ErrorOverlay extends StatelessWidget {
+  final WebResourceError error;
+  final Uri url;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+
+  const _ErrorOverlay({
+    required this.error,
+    required this.url,
+    required this.onRetry,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final desc = error.description.isNotEmpty
+        ? error.description
+        : 'No further detail from the WebView.';
+    final type = error.errorType?.toString().split('.').last ?? 'unknown';
+    return Container(
+      color: Colors.white,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 56,
+            color: Colors.grey[600],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            "Couldn't load carecart",
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            desc,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[700], fontSize: 13),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'code ${error.errorCode} · $type',
+            style: TextStyle(color: Colors.grey[500], fontSize: 11),
+          ),
+          const SizedBox(height: 14),
+          SelectableText(
+            url.toString(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 11,
+              fontFamily: 'monospace',
+            ),
+          ),
+          const SizedBox(height: 26),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onBack,
+            child: const Text('Back'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CameraDeniedBanner extends StatelessWidget {
+  const _CameraDeniedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Colors.amber[900]!;
+    return Material(
+      color: const Color(0xFFFFF4D6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(Icons.camera_alt_outlined, size: 18, color: accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Camera permission is blocked. The QR scanner won't open until you allow it in Settings.",
+                style: TextStyle(fontSize: 12, color: accent, height: 1.3),
+              ),
+            ),
+            const SizedBox(width: 6),
+            TextButton(
+              onPressed: openAppSettings,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'Open Settings',
+                style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
