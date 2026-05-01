@@ -1004,6 +1004,33 @@ a:hover { color: var(--brand-dark); }
 }
 
 /* ============================================================ */
+/* About Multivendor card (profile, mobile only)                */
+/* ============================================================ */
+
+.cc-about-card { display: none; }
+@media (max-width: 800px) { .cc-about-card { display: block; } }
+
+.cc-about-details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--brand-dark);
+  user-select: none;
+}
+.cc-about-details > summary::-webkit-details-marker { display: none; }
+.cc-about-details > summary::after {
+  content: '▾';
+  font-size: 0.75rem;
+  transition: transform .15s ease;
+}
+.cc-about-details[open] > summary::after { transform: rotate(180deg); }
+
+/* ============================================================ */
 /* Manage Collection: collapsible logs                          */
 /* ============================================================ */
 
