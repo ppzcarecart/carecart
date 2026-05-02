@@ -6,10 +6,14 @@ const ppzMember = (typeof isPpzMember !== 'undefined') ? isPpzMember : false;
 const showPpzPrice = ppzMember && product.ppzPriceCents != null;
 const cashCents = showPpzPrice ? product.ppzPriceCents : product.priceCents;
 const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
-// effectivePointsPrice is set by ProductsService.enrichForView when the
-// viewer is a member; falls back to manual pointsPrice for safety.
+// effectivePointsPrice + effectiveRedeem* are decorated by
+// ProductsService.enrichForView when the viewer is a member; the
+// redeem fields reflect the hybrid offset (points → cents discount,
+// capped at product price; remainder paid in cash).
 const ptsValue = (product.effectivePointsPrice != null) ? product.effectivePointsPrice : (ppzMember ? product.pointsPrice : null);
 const showPoints = ppzMember && ptsValue;
+const redeemPoints = product.effectiveRedeemPoints != null ? product.effectiveRedeemPoints : ptsValue;
+const redeemCashCents = product.effectiveRedeemCashCents != null ? product.effectiveRedeemCashCents : 0;
 %>
 <a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
   <div class="cc-thumb">
@@ -29,7 +33,9 @@ const showPoints = ppzMember && ptsValue;
         <span class="amount-strike">$<%= (product.priceCents / 100).toFixed(2) %></span>
       <% } %>
       <% if (showPoints) { %>
-        <span class="points">or <%= ptsValue %> pts</span>
+        <span class="points">
+          or <%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
+        </span>
       <% } %>
     </div>
   </div>

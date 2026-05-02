@@ -45,14 +45,28 @@ export class ProductsService {
    * Decorate fetched products with the resolved cash + points price for
    * the current viewer (PPZ member or not). Templates read these
    * pre-computed fields instead of reaching back into the manual
-   * pointsPrice on the entity.
+   * pointsPrice on the entity. Includes the hybrid redeem preview
+   * (cash leftover + points actually charged after the offset cap) so
+   * cards and product pages render "or N pts at $X" identically.
    */
   enrichForView(products: Product[], isPpzMember: boolean): Product[] {
+    const ppd = this.settings.pointsPerDollar();
     for (const p of products) {
       const r = this.resolvePricing(p, undefined, isPpzMember);
       (p as any).effectiveCashCents = r.priceCents;
       (p as any).effectivePointsPrice = r.pointsPrice;
       (p as any).isPpzPriceActive = r.isPpzPrice;
+
+      let redeemCashCents = r.priceCents;
+      let redeemPoints = 0;
+      if (isPpzMember && r.pointsPrice && ppd > 0) {
+        const pointsValueCents = Math.round((r.pointsPrice * 100) / ppd);
+        const discountCents = Math.min(pointsValueCents, r.priceCents);
+        redeemCashCents = r.priceCents - discountCents;
+        redeemPoints = Math.round((discountCents * ppd) / 100);
+      }
+      (p as any).effectiveRedeemCashCents = redeemCashCents;
+      (p as any).effectiveRedeemPoints = redeemPoints;
     }
     return products;
   }

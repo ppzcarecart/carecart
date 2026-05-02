@@ -53,7 +53,9 @@
             <span class="amount-strike">$<%= (product.priceCents/100).toFixed(2) %></span>
           <% } %>
           <% if (showPoints) { %>
-            <span class="points">or <%= ptsValue %> pts</span>
+            <span class="points">
+              or <%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
+            </span>
           <% } %>
         </div>
         <% if (product.description) { %>
@@ -90,7 +92,7 @@
                 <% if (redeemCashCents === 0) { %>
                   Redeem with <%= redeemPoints %> pts
                 <% } else { %>
-                  Redeem <%= redeemPoints %> pts + $<%= (redeemCashCents/100).toFixed(2) %>
+                  Redeem <%= redeemPoints %> pts at $<%= (redeemCashCents/100).toFixed(2) %>
                 <% } %>
               </button>
             <% } %>
