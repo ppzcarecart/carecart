@@ -8,6 +8,7 @@ import { CartController } from './cart.controller';
 import { ProductsModule } from '../products/products.module';
 import { UsersModule } from '../users/users.module';
 import { FulfilmentModule } from '../fulfilment/fulfilment.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { FulfilmentModule } from '../fulfilment/fulfilment.module';
     ProductsModule,
     UsersModule,
     FulfilmentModule,
+    SettingsModule,
   ],
   controllers: [CartController],
   providers: [CartService],

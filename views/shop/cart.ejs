@@ -23,7 +23,11 @@
                   <div class="variant"><%= l.item.variant.name %></div>
                 <% } %>
                 <div class="variant text-uppercase" style="font-size:.7rem; letter-spacing:.06em;">
-                  Pay with <%= l.item.pricingMode === 'points' ? 'points' : 'cash' %>
+                  <% if (l.item.pricingMode === 'points') { %>
+                    Redeem with points
+                  <% } else { %>
+                    Pay with cash
+                  <% } %>
                   <% if (l.deliveryFeeCents > 0) { %>
                     · delivery $<%= (l.deliveryFeeCents/100).toFixed(2) %>
                   <% } %>
@@ -34,11 +38,11 @@
                   onchange="ppz.updateCart('<%= l.item.id %>', this.value)">
               </div>
               <div class="line">
-                <% if (l.item.pricingMode === 'price') { %>
-                  $<%= (l.lineCents/100).toFixed(2) %>
-                <% } else { %>
-                  <%= l.linePoints %> pts
+                <% if (l.lineCents > 0) { %>$<%= (l.lineCents/100).toFixed(2) %><% } %>
+                <% if (l.linePoints > 0) { %>
+                  <% if (l.lineCents > 0) { %> + <% } %><%= l.linePoints %> pts
                 <% } %>
+                <% if (l.lineCents === 0 && l.linePoints === 0) { %>—<% } %>
                 <button class="cc-btn cc-btn-ghost" style="padding:4px 8px; font-size:.8rem; margin-left:8px;"
                   onclick="ppz.removeCart('<%= l.item.id %>')">Remove</button>
               </div>

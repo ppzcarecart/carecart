@@ -149,14 +149,18 @@ const canRefund =
                     <% if (it.pricingMode === 'price') { %>
                       $<%= (it.unitPriceCents/100).toFixed(2) %>
                     <% } else { %>
+                      <% if (it.unitPriceCents > 0) { %>$<%= (it.unitPriceCents/100).toFixed(2) %> + <% } %>
                       <%= Number(it.unitPoints).toLocaleString() %> pts
                     <% } %>
                   </td>
                   <td class="num" data-label="Line total">
+                    <% const lineCash = it.unitPriceCents * it.quantity; %>
+                    <% const linePoints = it.unitPoints * it.quantity; %>
                     <% if (it.pricingMode === 'price') { %>
-                      $<%= (it.unitPriceCents * it.quantity / 100).toFixed(2) %>
+                      $<%= (lineCash/100).toFixed(2) %>
                     <% } else { %>
-                      <%= Number(it.unitPoints * it.quantity).toLocaleString() %> pts
+                      <% if (lineCash > 0) { %>$<%= (lineCash/100).toFixed(2) %> + <% } %>
+                      <%= Number(linePoints).toLocaleString() %> pts
                     <% } %>
                   </td>
                 </tr>

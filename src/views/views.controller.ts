@@ -105,6 +105,7 @@ export class ViewsController {
       user: reqUser,
       isPpzMember,
       product,
+      pointsPerDollar: this.settings.pointsPerDollar(),
     };
   }
 

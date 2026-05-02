@@ -12,6 +12,7 @@ import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
 import { FulfilmentService, CollectionPoint } from '../fulfilment/fulfilment.service';
 import { FulfilmentMethod } from '../orders/entities/order.entity';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class CartService {
@@ -21,7 +22,47 @@ export class CartService {
     private products: ProductsService,
     private users: UsersService,
     private fulfilment: FulfilmentService,
+    private settings: SettingsService,
   ) {}
+
+  /**
+   * Resolve the per-unit split for one cart line. For 'price' mode the
+   * customer pays full cash and zero points. For 'points' mode the
+   * customer redeems the configured points to OFFSET the PPZ price:
+   * the points convert to cents at the global pointsPerDollar rate, the
+   * offset is capped at the product's PPZ price (no over-charging
+   * points) and the buyer covers any leftover cash.
+   *
+   *   ppzPrice $20, pointsPrice 500, ppd 50
+   *     → discount $10, customer pays $10 cash + 500 pts
+   *
+   *   ppzPrice $20, pointsPrice 1000, ppd 50
+   *     → discount $20, customer pays $0 + 1000 pts
+   *
+   *   ppzPrice $20, pointsPrice 1500, ppd 50
+   *     → discount capped at $20, customer pays $0 + 1000 pts
+   *       (admin's surplus 500 pts is not charged)
+   */
+  private splitUnit(opts: {
+    pricingMode: PricingMode;
+    baseCashCents: number;
+    pointsConfigured: number | null | undefined;
+  }): { unitCashCents: number; unitPoints: number } {
+    const { pricingMode, baseCashCents } = opts;
+    const pointsConfigured = opts.pointsConfigured ?? 0;
+    if (pricingMode !== 'points' || pointsConfigured <= 0) {
+      return { unitCashCents: baseCashCents, unitPoints: 0 };
+    }
+    const ppd = this.settings.pointsPerDollar();
+    if (ppd <= 0) {
+      return { unitCashCents: baseCashCents, unitPoints: 0 };
+    }
+    const pointsValueCents = Math.round((pointsConfigured * 100) / ppd);
+    const discountCents = Math.min(pointsValueCents, baseCashCents);
+    const unitCashCents = baseCashCents - discountCents;
+    const unitPoints = Math.round((discountCents * ppd) / 100);
+    return { unitCashCents, unitPoints };
+  }
 
   private async isPpzMember(userId: string) {
     const u = await this.users.findById(userId);
@@ -122,17 +163,21 @@ export class CartService {
     let pointsTotal = 0;
     let deliveryFeeCents = 0;
 
-    // Resolve pricing first (sync), then fulfilment (async).
+    // Resolve pricing first (sync), then fulfilment (async). For
+    // points-mode lines the split is hybrid: configured points convert
+    // to a cents discount via pointsPerDollar, capped at product value;
+    // the buyer covers the leftover in cash. See splitUnit() above.
     const baseLines = cart.items.map((item) => {
       const variant = item.variant;
       const product = item.product;
       const pricing = this.products.resolvePricing(product, variant, isMember);
-      const lineCents =
-        item.pricingMode === 'price' ? pricing.priceCents * item.quantity : 0;
-      const linePoints =
-        item.pricingMode === 'points' && pricing.pointsPrice != null
-          ? pricing.pointsPrice * item.quantity
-          : 0;
+      const { unitCashCents, unitPoints } = this.splitUnit({
+        pricingMode: item.pricingMode,
+        baseCashCents: pricing.priceCents,
+        pointsConfigured: pricing.pointsPrice,
+      });
+      const lineCents = unitCashCents * item.quantity;
+      const linePoints = unitPoints * item.quantity;
       subtotalCents += lineCents;
       pointsTotal += linePoints;
       return {
@@ -142,6 +187,8 @@ export class CartService {
         pointsPrice: pricing.pointsPrice,
         normalPriceCents: pricing.normalPriceCents,
         isPpzPrice: pricing.isPpzPrice,
+        unitCashCents,
+        unitPoints,
         lineCents,
         linePoints,
       };

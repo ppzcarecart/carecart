@@ -85,14 +85,18 @@ export class OrdersService {
         });
       }
 
+      // unitCashCents + unitPoints are the actual amounts billed for
+      // this line. For 'points' mode they reflect the hybrid offset
+      // (e.g. $10 + 500 pts when 500 pts redeems half of a $20
+      // product); for 'price' mode unitPoints is 0.
       const item = this.orderItems.create({
         productId: product.id,
         variantId: variant?.id,
         vendorId: product.vendorId,
         productName: variant ? `${product.name} - ${variant.name}` : product.name,
         quantity: line.item.quantity,
-        unitPriceCents: line.item.pricingMode === 'price' ? line.priceCents : 0,
-        unitPoints: line.item.pricingMode === 'points' && line.pointsPrice != null ? line.pointsPrice : 0,
+        unitPriceCents: line.unitCashCents,
+        unitPoints: line.unitPoints,
         pricingMode: line.item.pricingMode,
       });
       order.items.push(item);

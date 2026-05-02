@@ -26,6 +26,19 @@
         const showStrike = showPpzPrice && product.ppzPriceCents < product.priceCents;
         const ptsValue = (product.effectivePointsPrice != null) ? product.effectivePointsPrice : (ppzMember ? product.pointsPrice : null);
         const showPoints = ppzMember && ptsValue;
+        // Hybrid offset preview: points convert to a discount via
+        // pointsPerDollar, capped at the buyer-applicable cash price.
+        // The remainder is paid in cash. Mirrors splitUnit() in the
+        // cart service so the preview matches what they'll actually be
+        // billed.
+        let redeemCashCents = cashCents;
+        let redeemPoints = 0;
+        if (showPoints && pointsPerDollar > 0) {
+          const pointsValueCents = Math.round(ptsValue * 100 / pointsPerDollar);
+          const discountCents = Math.min(pointsValueCents, cashCents);
+          redeemCashCents = cashCents - discountCents;
+          redeemPoints = Math.round(discountCents * pointsPerDollar / 100);
+        }
         %>
         <div class="cc-info-badges">
           <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
@@ -74,7 +87,11 @@
             </button>
             <% if (showPoints) { %>
               <button class="cc-btn cc-btn-outline" onclick="ppz.addToCart('<%= product.id %>', 'points')">
-                Redeem with <%= ptsValue %> pts
+                <% if (redeemCashCents === 0) { %>
+                  Redeem with <%= redeemPoints %> pts
+                <% } else { %>
+                  Redeem <%= redeemPoints %> pts + $<%= (redeemCashCents/100).toFixed(2) %>
+                <% } %>
               </button>
             <% } %>
           <% } else { %>
