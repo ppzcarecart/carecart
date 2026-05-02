@@ -64,6 +64,28 @@ export class StripeProvider implements PaymentProvider {
     };
   }
 
+  /**
+   * Cancel an in-flight PaymentIntent. Stripe will refund any
+   * reservation; for PayNow QR the QR is invalidated. Returns false
+   * if the intent is in a terminal state (already succeeded / already
+   * cancelled) — the caller treats that as a non-error.
+   */
+  async cancelIntent(reference: string): Promise<boolean> {
+    if (!this.stripe) return false;
+    if (!reference || reference === 'points-only') return false;
+    try {
+      const cancelled = await this.stripe.paymentIntents.cancel(reference);
+      this.logger.log(`Cancelled Stripe PaymentIntent ${reference} (${cancelled.status})`);
+      return cancelled.status === 'canceled';
+    } catch (e: any) {
+      // "intent already cancelled" / "intent already succeeded" come
+      // back as InvalidRequestError. Don't fail the cancel flow over
+      // them — the order's terminal state is what matters.
+      this.logger.warn(`cancelIntent ${reference} failed: ${e.message}`);
+      return false;
+    }
+  }
+
   async parseWebhook(
     rawBody: Buffer | string,
     headers: Record<string, any>,

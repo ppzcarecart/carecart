@@ -85,4 +85,25 @@ export class OrdersController {
       body?.reason ?? '',
     );
   }
+
+  /**
+   * Cancel an order that's still awaiting payment. Reverses any
+   * pre-redeemed points, cancels the Stripe intent, restores stock,
+   * and locks the order to status 'cancelled'. Admin/manager can
+   * cancel any pending order; vendors can only cancel orders that
+   * include their items.
+   */
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/cancel')
+  cancel(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.orders.cancel(
+      id,
+      { id: user.id, role: user.role },
+      body?.reason ?? '',
+    );
+  }
 }

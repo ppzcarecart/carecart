@@ -1556,6 +1556,28 @@ window.ppz = (function () {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm refund'; }
       }
     },
+    async submitCancel(form, id) {
+      const fd = new FormData(form);
+      const reason = (fd.get('reason') || '').toString().trim();
+      const errEl = document.getElementById('cancelError');
+      if (errEl) errEl.textContent = '';
+      if (!reason) {
+        if (errEl) errEl.textContent = 'Please enter a cancellation reason.';
+        return;
+      }
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Cancelling…'; }
+      try {
+        await api('/api/orders/' + id + '/cancel', {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        });
+        location.reload();
+      } catch (e) {
+        if (errEl) errEl.textContent = e.message || 'Cancel failed';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Confirm cancel'; }
+      }
+    },
     async setFeatured(id, featured, checkbox) {
       try {
         await api('/api/products/' + id + '/featured', {

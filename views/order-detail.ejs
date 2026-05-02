@@ -2,11 +2,20 @@
 <%- include('partials/nav') %>
 <%
 const isCustomer = user.role === 'customer';
-const canRefund =
-  !isCustomer &&
-  order.status !== 'refunded' &&
-  (user.role === 'admin' || user.role === 'manager' ||
-    (user.role === 'vendor' && (order.items || []).some(i => i.vendorId === user.id)));
+const isOwnerVendor = user.role === 'vendor' &&
+  (order.items || []).some(i => i.vendorId === user.id);
+const canAct = !isCustomer &&
+  (user.role === 'admin' || user.role === 'manager' || isOwnerVendor);
+// Cancel vs refund picks based on payment state. Awaiting payment →
+// nothing collected yet, so cancel reverses points + cancels the
+// Stripe intent. Paid / fulfilled / collected → refund the points
+// (cash refunds are still issued separately via Stripe dashboard).
+const isAwaitingPayment =
+  order.status === 'pending' || order.status === 'awaiting_payment';
+const isTerminal =
+  order.status === 'refunded' || order.status === 'cancelled';
+const canCancel = canAct && isAwaitingPayment;
+const canRefund = canAct && !isTerminal && !isAwaitingPayment;
 %>
 <div class="container admin-shell">
   <div class="<%= isCustomer ? '' : 'admin-layout' %>">
@@ -24,7 +33,12 @@ const canRefund =
         </div>
         <div class="d-flex align-items-center gap-2">
           <span class="badge-status <%= order.status %>" style="font-size:.85rem; padding:6px 14px;"><%= order.status %></span>
-          <% if (canRefund) { %>
+          <% if (canCancel) { %>
+            <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem; color:#b91c1c; border-color:#fca5a5;"
+              data-bs-toggle="modal" data-bs-target="#cancelModal">
+              Cancel order
+            </button>
+          <% } else if (canRefund) { %>
             <button class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem; color:#b91c1c; border-color:#fca5a5;"
               data-bs-toggle="modal" data-bs-target="#refundModal">
               Issue refund
@@ -170,11 +184,11 @@ const canRefund =
         </div>
       </div>
 
-      <% if (order.status === 'refunded' && order.refundReason) { %>
+      <% if ((order.status === 'refunded' || order.status === 'cancelled') && order.refundReason) { %>
         <div class="admin-panel">
           <div class="panel-head">
             <h3>Remarks</h3>
-            <span class="muted">Refund reason</span>
+            <span class="muted"><%= order.status === 'cancelled' ? 'Cancellation reason' : 'Refund reason' %></span>
           </div>
           <div class="panel-body padded">
             <p style="margin:0; white-space:pre-wrap;"><%= order.refundReason %></p>
@@ -245,6 +259,47 @@ const canRefund =
     </main>
   </div>
 </div>
+
+<% if (canCancel) { %>
+  <div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="cancelForm" onsubmit="event.preventDefault(); ppz.submitCancel(this, '<%= order.id %>')">
+          <div class="modal-header">
+            <h5>Cancel order · <%= order.number %></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted" style="font-size:.9rem;">
+              The order is still awaiting payment. Cancelling will:
+            </p>
+            <ul class="text-muted" style="font-size:.9rem;">
+              <% if (order.pointsTotal > 0) { %>
+                <li>Reverse <%= Number(order.pointsTotal).toLocaleString() %> PPZ points back to the customer.</li>
+              <% } %>
+              <li>Void the Stripe payment QR so it can no longer be paid.</li>
+              <li>Restore stock for every item line.</li>
+              <li>Lock the order's status to <strong>cancelled</strong>.</li>
+            </ul>
+            <div class="mb-2">
+              <label>Reason <span class="text-danger">*</span></label>
+              <textarea class="form-control" name="reason" rows="3" maxlength="500" required
+                placeholder="e.g. Customer changed their mind / item out of stock at vendor"></textarea>
+              <small class="text-muted">Visible to admin/manager/vendor under <em>Remarks</em>.</small>
+            </div>
+            <div id="cancelError" class="text-danger small" style="min-height:1.2em;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="cc-btn cc-btn-ghost" data-bs-dismiss="modal">Keep order</button>
+            <button type="submit" class="cc-btn cc-btn-primary" style="background:#b91c1c; border-color:#b91c1c;">
+              Confirm cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>
 
 <% if (canRefund) { %>
   <div class="modal fade" id="refundModal" tabindex="-1" aria-hidden="true">

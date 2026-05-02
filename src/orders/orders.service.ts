@@ -13,6 +13,7 @@ import { ProductsService } from '../products/products.service';
 import { CartService } from '../cart/cart.service';
 import { PointsService } from '../points/points.service';
 import { Role } from '../common/enums/role.enum';
+import { StripeProvider } from '../payments/providers/stripe.provider';
 
 @Injectable()
 export class OrdersService {
@@ -22,6 +23,7 @@ export class OrdersService {
     private products: ProductsService,
     private cart: CartService,
     private points: PointsService,
+    private stripe: StripeProvider,
   ) {}
 
   private generateNumber() {
@@ -208,6 +210,117 @@ export class OrdersService {
     }
 
     order.status = 'refunded';
+    order.refundReason = trimmed;
+    return this.orders.save(order);
+  }
+
+  /**
+   * Cancel an order that's still awaiting payment. Admin/manager can
+   * cancel any awaiting_payment order; vendors can only cancel orders
+   * that contain at least one of their items. The flow:
+   *
+   *   1. Reverse any pre-redeemed PPZ points (payments.start() debits
+   *      the customer's points before opening the Stripe intent — if
+   *      we don't reverse, the customer ends up out-of-pocket on a
+   *      cancellation they didn't initiate).
+   *   2. Best-effort cancel the Stripe PaymentIntent so the QR can't
+   *      be paid after the fact. Already-cancelled / already-paid
+   *      intents are ignored.
+   *   3. Restore stock for every line that was decremented at order
+   *      creation.
+   *   4. Stamp status = 'cancelled' and persist the reason in
+   *      refundReason (the column does dual duty for refund and
+   *      cancel remarks).
+   *
+   * Refund is for orders that have already been paid; this is the
+   * unpaid counterpart.
+   */
+  async cancel(
+    id: string,
+    actor: { id: string; role: Role },
+    reason: string,
+  ): Promise<Order> {
+    const trimmed = (reason || '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('A cancellation reason is required');
+    }
+    if (trimmed.length > 500) {
+      throw new BadRequestException('Cancellation reason is too long (max 500)');
+    }
+
+    const order = await this.findById(id);
+    if (!order) throw new NotFoundException('Order not found');
+
+    if (order.status !== 'awaiting_payment' && order.status !== 'pending') {
+      throw new BadRequestException(
+        `Order ${order.number} is "${order.status}" — only pending / awaiting_payment orders can be cancelled. Use Issue refund for paid orders.`,
+      );
+    }
+
+    if (
+      actor.role === Role.VENDOR &&
+      !order.items.some((i) => i.vendorId === actor.id)
+    ) {
+      throw new ForbiddenException(
+        'You can only cancel orders that contain your items',
+      );
+    }
+    if (
+      actor.role !== Role.ADMIN &&
+      actor.role !== Role.MANAGER &&
+      actor.role !== Role.VENDOR
+    ) {
+      throw new ForbiddenException();
+    }
+
+    // 1. Reverse points if any were pre-redeemed.
+    if (order.pointsTotal > 0 && order.customerId) {
+      await this.points.reverse(
+        order.customerId,
+        order.pointsTotal,
+        order.id,
+        order.number,
+      );
+    }
+
+    // 2. Cancel the Stripe intent if one was opened. Errors here are
+    // logged inside the provider and don't block the order's terminal
+    // state — a dangling intent is harmless because awaiting_payment
+    // intents auto-expire and the order itself is now 'cancelled'.
+    if (order.paymentIntentId && order.paymentProvider === 'stripe') {
+      await this.stripe.cancelIntent(order.paymentIntentId);
+    }
+
+    // 3. Restore stock per line. Use Role.ADMIN as the actor so the
+    // updateStock call doesn't reject on vendor ownership when the
+    // canceller is admin/manager (or a vendor canceling a multi-vendor
+    // order). The stock numbers are authoritative on the product/variant
+    // entities, not on the order item.
+    for (const item of order.items) {
+      if (!item.productId) continue;
+      const product = await this.products.findById(item.productId);
+      if (!product) continue;
+      if (item.variantId) {
+        const variant = product.variants?.find((v) => v.id === item.variantId);
+        if (!variant) continue;
+        await this.products.updateStock(
+          product.id,
+          variant.id,
+          variant.stock + item.quantity,
+          { id: product.vendorId, role: Role.ADMIN },
+        );
+      } else {
+        await this.products.updateStock(
+          product.id,
+          undefined,
+          product.stock + item.quantity,
+          { id: product.vendorId, role: Role.ADMIN },
+        );
+      }
+    }
+
+    // 4. Lock terminal state + capture reason.
+    order.status = 'cancelled';
     order.refundReason = trimmed;
     return this.orders.save(order);
   }

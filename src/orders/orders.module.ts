@@ -8,6 +8,7 @@ import { OrdersController } from './orders.controller';
 import { ProductsModule } from '../products/products.module';
 import { CartModule } from '../cart/cart.module';
 import { PointsModule } from '../points/points.module';
+import { PaymentProvidersModule } from '../payments/providers/payment-providers.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PointsModule } from '../points/points.module';
     ProductsModule,
     CartModule,
     PointsModule,
+    PaymentProvidersModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

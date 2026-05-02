@@ -32,4 +32,13 @@ export interface PaymentProvider {
   readonly name: string;
   init(input: PaymentInitInput): Promise<PaymentInitResult>;
   parseWebhook(rawBody: Buffer | string, headers: Record<string, any>): Promise<PaymentWebhookEvent>;
+  /**
+   * Best-effort cancel for an in-flight intent (used by the Cancel
+   * Order flow on `awaiting_payment` orders). Returns true if the
+   * provider acknowledged the cancel, false if it was already
+   * settled / not cancellable. Implementations should swallow
+   * "already cancelled / already succeeded" errors and return false
+   * — the caller treats those as benign.
+   */
+  cancelIntent?(reference: string): Promise<boolean>;
 }
