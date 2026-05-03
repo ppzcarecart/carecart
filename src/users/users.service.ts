@@ -205,25 +205,28 @@ export class UsersService {
       await this.syncAllManagersStoreName();
     }
 
+    // Diagnostic line for every PATCH that lands here. Logs the role
+    // *as persisted* so a "no cascade fired" investigation can tell
+    // at a glance whether the target was actually a vendor — the
+    // common cause of a "cascade silently skipped" symptom turns out
+    // to be the role having been changed away from 'vendor' earlier
+    // (e.g. via the role dropdown on /admin/users) which makes the
+    // cascade-on-disable correctly no-op.
+    this.logger.log(
+      `users.update id=${saved.id} email=${saved.email} role=${saved.role} active=${wasActive}→${saved.active} patchKeys=[${Object.keys(patch).join(',')}]`,
+    );
+
     // Cascade vendor enable/disable to their products.
     //   disable vendor → products: active=false, disabled=true
     //   enable vendor  → products: active=true,  disabled=false
-    // wasActive !== saved.active proves the flag changed regardless of
-    // how the update arrived (ValidationPipe stripping, direct
-    // Object.assign, etc.).
-    if (saved.role === Role.VENDOR) {
-      this.logger.log(
-        `users.update vendor=${saved.id} email=${saved.email} active=${wasActive}→${saved.active} patchKeys=[${Object.keys(patch).join(',')}]`,
+    if (saved.role === Role.VENDOR && wasActive !== saved.active) {
+      const res = await this.productsRepo.update(
+        { vendorId: saved.id },
+        { active: saved.active, disabled: !saved.active },
       );
-      if (wasActive !== saved.active) {
-        const res = await this.productsRepo.update(
-          { vendorId: saved.id },
-          { active: saved.active, disabled: !saved.active },
-        );
-        this.logger.log(
-          `Cascade for vendor ${saved.id} touched ${res.affected ?? 0} product row(s)`,
-        );
-      }
+      this.logger.log(
+        `Cascade for vendor ${saved.id} touched ${res.affected ?? 0} product row(s)`,
+      );
     }
 
     return saved;
