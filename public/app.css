@@ -507,6 +507,21 @@ a:hover { color: var(--brand-dark); }
 .ctype-tag.ctype-cc  { background: #dbeafe; color: #1e40af; }
 .ctype-tag.ctype-na  { background: #f1f5f9; color: var(--ink-soft); }
 
+/* Fulfilment-method pill in order tables. D = Delivery, C = Self-
+   collection. Same shape as ctype-tag, distinct colour set so the
+   two pills don't blend visually when sat next to each other. */
+.ftype-tag {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.ftype-tag.ftype-d { background: #fef3c7; color: #92400e; }
+.ftype-tag.ftype-c { background: #d1fae5; color: #065f46; }
+
 /* ---------- Vendor avatar/thumb in table ---------- */
 .row-thumb {
   display: inline-flex; align-items: center; gap: 12px;

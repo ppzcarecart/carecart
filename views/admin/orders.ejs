@@ -23,6 +23,7 @@
                   <th>Number</th>
                   <th>Customer</th>
                   <th>CType</th>
+                  <th>D/C</th>
                   <th>Status</th>
                   <th class="num">Total</th>
                   <th class="num">Points</th>
@@ -43,6 +44,13 @@
                     <% } else { %>
                       <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
                     <% } %>
+                  </td>
+                  <td data-label="D/C">
+                    <% const isCollection = o.fulfilmentMethod === 'collection'; %>
+                    <span class="ftype-tag ftype-<%= isCollection ? 'c' : 'd' %>"
+                      title="<%= isCollection ? 'Self-collection' : 'Delivery' %>">
+                      <%= isCollection ? 'C' : 'D' %>
+                    </span>
                   </td>
                   <td data-label="Status">
                     <select <%= o.status === 'refunded' ? 'disabled' : '' %>

@@ -86,7 +86,7 @@
           <% } else { %>
             <table class="admin-table" data-mobile="cards">
               <thead>
-                <tr><th>Number</th><th>Customer</th><th>CType</th><th>Status</th><th class="num">Total</th><th>Created</th></tr>
+                <tr><th>Number</th><th>Customer</th><th>CType</th><th>D/C</th><th>Status</th><th class="num">Total</th><th>Created</th></tr>
               </thead>
               <tbody>
                 <% orders.forEach(o => { %>
@@ -100,6 +100,13 @@
                       <% } else { %>
                         <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
                       <% } %>
+                    </td>
+                    <td data-label="D/C">
+                      <% const isCollection = o.fulfilmentMethod === 'collection'; %>
+                      <span class="ftype-tag ftype-<%= isCollection ? 'c' : 'd' %>"
+                        title="<%= isCollection ? 'Self-collection' : 'Delivery' %>">
+                        <%= isCollection ? 'C' : 'D' %>
+                      </span>
                     </td>
                     <td data-label="Status"><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
                     <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
