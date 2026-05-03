@@ -82,6 +82,7 @@
                   <th>Name</th>
                   <th>Email / Contact</th>
                   <th>Role</th>
+                  <th>PPZ Role</th>
                   <th>PPZ ID</th>
                   <th class="num">Points</th>
                   <th class="num">Lifetime</th>
@@ -117,6 +118,13 @@
                           <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
                         <% }); %>
                       </select>
+                    </td>
+                    <td data-label="PPZ Role">
+                      <% if (u.ppzId) { %>
+                        <%= u.ppzRole && ppzRoleLabels[u.ppzRole] ? ppzRoleLabels[u.ppzRole] : 'New Member' %>
+                      <% } else { %>
+                        <span class="text-muted">–</span>
+                      <% } %>
                     </td>
                     <td data-label="PPZ ID"><%= u.ppzId || '–' %></td>
                     <td class="num" data-label="Points"><%= u.ppzId ? (u.ppzCurrency ?? 0).toLocaleString() : '–' %></td>
