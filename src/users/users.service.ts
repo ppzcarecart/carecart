@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -45,6 +46,8 @@ export interface CreateUserInput {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User) private repo: Repository<User>,
     @InjectRepository(Address) private addressRepo: Repository<Address>,
@@ -208,16 +211,17 @@ export class UsersService {
     //   enable vendor  → products: active=true,  disabled=false
     //                    (back on shelves; vendor can toggle individual
     //                     items inactive again from the Products page)
-    // Flipping both flags in one UPDATE keeps the two states in sync —
-    // disabled products were always also intended to be off-sale.
-    if (
-      saved.role === Role.VENDOR &&
-      patch.active !== undefined &&
-      wasActive !== saved.active
-    ) {
-      await this.productsRepo.update(
+    // Drop the patch.active undefined guard — wasActive !== saved.active
+    // already proves the flag changed, regardless of how the update
+    // actually arrived at this method (e.g. ValidationPipe stripping,
+    // direct Object.assign, etc.).
+    if (saved.role === Role.VENDOR && wasActive !== saved.active) {
+      const res = await this.productsRepo.update(
         { vendorId: saved.id },
         { active: saved.active, disabled: !saved.active },
+      );
+      this.logger.log(
+        `Vendor ${saved.id} (${saved.email}) active flip ${wasActive}→${saved.active}; cascade touched ${res.affected ?? 0} product row(s)`,
       );
     }
 
