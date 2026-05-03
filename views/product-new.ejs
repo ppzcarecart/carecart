@@ -104,6 +104,33 @@
                 </div>
               </div>
             </div>
+            <hr class="my-3">
+            <p class="text-muted" style="font-size:.85rem; margin-bottom:14px;">
+              Fulfilment options. Collection only forces customers into
+              self-collection (Delivery is disabled at checkout for any
+              cart with this item). The collection source picks the
+              pickup location for this product specifically; the vendor
+              default uses the vendor's own setting under
+              <strong>Vendor settings</strong>.
+            </p>
+            <div class="row">
+              <div class="col-md-5 mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="collectionOnly" name="collectionOnly">
+                  <label class="form-check-label" for="collectionOnly">
+                    Collection only (no delivery)
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-7 mb-3">
+                <label>Collection location</label>
+                <select class="form-select" name="collectionSource">
+                  <option value="" selected>Use vendor default</option>
+                  <option value="admin">Admin (PPZ Collection Point)</option>
+                  <option value="vendor">Vendor's own location</option>
+                </select>
+              </div>
+            </div>
           </form>
         </div>
       </div>

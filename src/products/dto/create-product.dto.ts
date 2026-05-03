@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -43,6 +44,14 @@ export class CreateProductDto {
   // Per-item delivery fee override (cents). Null/undefined means "use the
   // vendor's default or the global default from settings".
   @IsOptional() @IsInt() @Min(0) deliveryFeeCentsOverride?: number;
+
+  // Disables Delivery at checkout when this product is in the cart —
+  // the customer can only self-collect.
+  @IsOptional() @IsBoolean() collectionOnly?: boolean;
+
+  // Per-product override of where collection happens. Null = fall back
+  // to the vendor's own setting; 'admin' / 'vendor' force the source.
+  @IsOptional() @IsIn(['admin', 'vendor']) collectionSource?: 'admin' | 'vendor';
 
   @IsOptional() @IsInt() @Min(0) stock?: number;
 

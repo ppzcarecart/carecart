@@ -44,6 +44,11 @@ export class OrdersService {
     if (fulfilmentMethod === 'delivery' && !summary.deliveryEnabled) {
       throw new BadRequestException('Delivery is currently disabled');
     }
+    if (fulfilmentMethod === 'delivery' && summary.collectionOnlyForced) {
+      throw new BadRequestException(
+        'Your cart contains collection-only items — please switch to self-collection to checkout',
+      );
+    }
 
     const order = this.orders.create({
       number: this.generateNumber(),

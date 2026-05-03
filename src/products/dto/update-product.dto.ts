@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -17,6 +18,8 @@ export class UpdateProductDto {
   @IsOptional() @IsInt() @Min(0) pointsPrice?: number | null;
   @IsOptional() @IsBoolean() allowPointsRedemption?: boolean;
   @IsOptional() @IsInt() @Min(0) deliveryFeeCentsOverride?: number | null;
+  @IsOptional() @IsBoolean() collectionOnly?: boolean;
+  @IsOptional() @IsIn(['admin', 'vendor', null]) collectionSource?: 'admin' | 'vendor' | null;
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsString() categoryId?: string | null;

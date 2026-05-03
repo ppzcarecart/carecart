@@ -246,6 +246,8 @@ window.ppz = (function () {
     const form = document.getElementById('productForm');
     const fd = new FormData(form);
     const allowPts = !!form.querySelector('input[name="allowPointsRedemption"]')?.checked;
+    const collectionOnly = !!form.querySelector('input[name="collectionOnly"]')?.checked;
+    const collectionSourceRaw = (fd.get('collectionSource') || '').toString();
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
@@ -256,6 +258,10 @@ window.ppz = (function () {
       pointsPrice: allowPts ? null : intOrUndef(fd.get('pointsPrice')),
       allowPointsRedemption: allowPts,
       deliveryFeeCentsOverride: dollarsToCents(fd.get('deliveryFee')) ?? null,
+      collectionOnly,
+      // empty string in the dropdown == "Use vendor default" → null
+      // clears any per-product override on the server.
+      collectionSource: collectionSourceRaw === '' ? null : collectionSourceRaw,
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
@@ -305,6 +311,8 @@ window.ppz = (function () {
       .filter((v) => v.name);
 
     const allowPts = !!form.querySelector('input[name="allowPointsRedemption"]')?.checked;
+    const collectionOnly = !!form.querySelector('input[name="collectionOnly"]')?.checked;
+    const collectionSourceRaw = (fd.get('collectionSource') || '').toString();
     const body = {
       name: fd.get('name'),
       description: fd.get('description') || undefined,
@@ -313,6 +321,8 @@ window.ppz = (function () {
       pointsPrice: allowPts ? undefined : intOrUndef(fd.get('pointsPrice')),
       allowPointsRedemption: allowPts,
       deliveryFeeCentsOverride: dollarsToCents(fd.get('deliveryFee')),
+      collectionOnly,
+      collectionSource: collectionSourceRaw === '' ? undefined : collectionSourceRaw,
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',

@@ -58,10 +58,16 @@
             <div class="d-flex flex-wrap gap-2 mb-3">
               <button type="button"
                 class="cc-btn <%= summary.fulfilmentMethod === 'delivery' ? 'cc-btn-primary' : 'cc-btn-outline' %>"
-                <%= summary.deliveryEnabled ? '' : 'disabled' %>
+                <%= summary.deliveryAvailable ? '' : 'disabled' %>
                 onclick="ppz.pickFulfilment('delivery')">
                 Delivery
-                <% if (summary.deliveryEnabled) { %>· $<%= (summary.deliveryFeeCents/100).toFixed(2) %><% } else { %>(disabled)<% } %>
+                <% if (summary.deliveryAvailable) { %>
+                  · $<%= (summary.deliveryFeeCents/100).toFixed(2) %>
+                <% } else if (summary.collectionOnlyForced) { %>
+                  (collection-only items)
+                <% } else { %>
+                  (disabled)
+                <% } %>
               </button>
               <button type="button"
                 class="cc-btn <%= summary.fulfilmentMethod === 'collection' ? 'cc-btn-primary' : 'cc-btn-outline' %>"
@@ -69,6 +75,12 @@
                 Self-collection
               </button>
             </div>
+            <% if (summary.collectionOnlyForced) { %>
+              <p class="text-muted" style="font-size:.85rem; margin:0 0 10px;">
+                Your cart contains a collection-only item, so delivery
+                isn't available for this order.
+              </p>
+            <% } %>
 
             <% if (summary.fulfilmentMethod === 'delivery') { %>
               <form id="shippingForm" onsubmit="event.preventDefault();">

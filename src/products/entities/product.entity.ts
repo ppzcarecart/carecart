@@ -59,6 +59,22 @@ export class Product {
   @Column({ type: 'integer', nullable: true })
   deliveryFeeCentsOverride?: number;
 
+  // When true, this product can only be picked up — Delivery is
+  // disabled at checkout for any cart that contains this product. The
+  // customer is forced into self-collection.
+  @Column({ default: false })
+  collectionOnly: boolean;
+
+  // Per-product override for which location is used at collection.
+  //   'admin'  → always use the admin's global PPZ collection point
+  //   'vendor' → always use the product's vendor collection address
+  //   null     → fall back to the vendor-level useOwnCollectionLocation
+  //              flag (the existing behaviour)
+  // Decoupling this from the vendor-level toggle lets vendors split:
+  // e.g. some products picked up at the storefront, others at PPZ.
+  @Column({ type: 'varchar', nullable: true })
+  collectionSource?: 'admin' | 'vendor' | null;
+
   @Column({ default: 0 })
   stock: number;
 

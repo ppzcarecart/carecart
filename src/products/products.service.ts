@@ -155,6 +155,8 @@ export class ProductsService {
       pointsPrice: dto.pointsPrice ?? null,
       allowPointsRedemption: dto.allowPointsRedemption ?? false,
       deliveryFeeCentsOverride: dto.deliveryFeeCentsOverride ?? null,
+      collectionOnly: dto.collectionOnly ?? false,
+      collectionSource: dto.collectionSource ?? null,
       stock: dto.stock ?? 0,
       active: dto.active ?? true,
       vendorId,
@@ -202,6 +204,14 @@ export class ProductsService {
     }
     if (dto.deliveryFeeCentsOverride !== undefined) {
       product.deliveryFeeCentsOverride = dto.deliveryFeeCentsOverride as any;
+    }
+    if (dto.collectionOnly !== undefined) {
+      product.collectionOnly = !!dto.collectionOnly;
+    }
+    if (dto.collectionSource !== undefined) {
+      // explicit null clears the per-product override and falls back
+      // to the vendor-level useOwnCollectionLocation toggle.
+      product.collectionSource = dto.collectionSource ?? null;
     }
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;

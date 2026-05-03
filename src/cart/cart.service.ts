@@ -194,9 +194,24 @@ export class CartService {
       };
     });
 
+    // Any line that's flagged collectionOnly forces the cart into
+    // self-collection — Delivery becomes unavailable regardless of the
+    // global delivery setting. The forced flag flows to the UI so it
+    // can explain *why* delivery is disabled.
+    const collectionOnlyForced = baseLines.some(
+      (l) => l.product?.collectionOnly,
+    );
+    const deliveryEnabled = this.fulfilment.isDeliveryEnabled();
+    const deliveryAvailable = deliveryEnabled && !collectionOnlyForced;
+    const isDelivery =
+      fulfilmentMethod === 'delivery' && deliveryAvailable;
+
     const lines: any[] = [];
-    const collectionByVendor = new Map<string, CollectionPoint>();
-    const isDelivery = fulfilmentMethod === 'delivery';
+    // Group collection points by resolved identity, not by vendor —
+    // per-product collectionSource means two products from the same
+    // vendor can land at different pickup locations (e.g. one at PPZ,
+    // one at the vendor storefront).
+    const collectionByKey = new Map<string, CollectionPoint>();
 
     for (const l of baseLines) {
       let lineDelivery = 0;
@@ -209,17 +224,16 @@ export class CartService {
       lines.push({ ...l, deliveryFeeCents: lineDelivery });
 
       if (!isDelivery) {
-        const vendorId = l.product.vendorId;
-        if (vendorId && !collectionByVendor.has(vendorId)) {
-          collectionByVendor.set(
-            vendorId,
-            await this.fulfilment.resolveCollectionPoint(vendorId),
-          );
-        }
+        const cp = await this.fulfilment.resolveCollectionPoint(
+          l.product.vendorId,
+          l.product,
+        );
+        const key = cp.source === 'admin' ? 'admin' : `vendor:${cp.vendorId}`;
+        if (!collectionByKey.has(key)) collectionByKey.set(key, cp);
       }
     }
 
-    const collectionPoints = Array.from(collectionByVendor.values());
+    const collectionPoints = Array.from(collectionByKey.values());
     const totalCents = subtotalCents + deliveryFeeCents;
 
     return {
@@ -230,8 +244,10 @@ export class CartService {
       totalCents,
       pointsTotal,
       isPpzMember: isMember,
-      fulfilmentMethod,
-      deliveryEnabled: this.fulfilment.isDeliveryEnabled(),
+      fulfilmentMethod: isDelivery ? 'delivery' : 'collection',
+      deliveryEnabled,
+      deliveryAvailable,
+      collectionOnlyForced,
       collectionPoints,
     };
   }
