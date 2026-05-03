@@ -1638,8 +1638,18 @@ window.ppz = (function () {
       }
     },
     async toggleUser(id, active) {
-      await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify({ active }) });
-      location.reload();
+      try {
+        await api('/api/users/' + id, {
+          method: 'PATCH',
+          body: JSON.stringify({ active }),
+        });
+        location.reload();
+      } catch (e) {
+        // Don't let a silent 401/403/500 leave the page in a stale
+        // state — surface the error so admin sees something went
+        // wrong instead of assuming the toggle worked.
+        alert('Failed to ' + (active ? 'enable' : 'disable') + ' user: ' + (e.message || e));
+      }
     },
     async updateStock(productId, variantId, stock) {
       await api('/api/products/' + productId + '/stock', {

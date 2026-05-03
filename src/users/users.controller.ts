@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -23,6 +24,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('api/users')
 export class UsersController {
+  private readonly logger = new Logger(UsersController.name);
+
   constructor(private users: UsersService) {}
 
   @Roles(Role.ADMIN, Role.MANAGER)
@@ -60,6 +63,13 @@ export class UsersController {
     @CurrentUser() actor: any,
     @Body() dto: UpdateUserDto,
   ) {
+    // Diagnostic: confirms the PATCH actually reaches the controller
+    // after the auth + role guards. Logs the actor + target + the
+    // dto keys (so we can tell if ValidationPipe is keeping `active`
+    // on the way through).
+    this.logger.log(
+      `PATCH /api/users/${id} actor=${actor.email} (${actor.role}) body=${JSON.stringify(dto)}`,
+    );
     if (actor.role === Role.MANAGER) {
       const target = await this.users.findById(id);
       if (target?.role === Role.ADMIN) {
