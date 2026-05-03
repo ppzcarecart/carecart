@@ -15,6 +15,37 @@
         </div>
       </div>
 
+      <!-- Status filter pills. Mirrors the dashboard's "Pending" stat
+           and any other deep-link in. Empty string = All. -->
+      <div class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-body padded">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Status</span>
+            <%
+            const statuses = [
+              { k: '',                 label: 'All' },
+              { k: 'awaiting_payment', label: 'Awaiting payment' },
+              { k: 'paid',             label: 'Paid' },
+              { k: 'fulfilled',        label: 'Fulfilled' },
+              { k: 'collected',        label: 'Collected' },
+              { k: 'cancelled',        label: 'Cancelled' },
+              { k: 'refunded',         label: 'Refunded' },
+            ];
+            %>
+            <% statuses.forEach(function(s) { %>
+              <a href="/admin/orders<%= s.k ? '?status=' + s.k : '' %>"
+                class="cc-btn <%= activeStatus === s.k ? 'cc-btn-primary' : 'cc-btn-outline' %>"
+                style="padding:6px 14px; font-size:.85rem;">
+                <%= s.label %>
+              </a>
+            <% }); %>
+            <% if (activeStatus) { %>
+              <span class="text-muted" style="font-size:.85rem;"> · <%= orders.length %> match<%= orders.length === 1 ? '' : 'es' %></span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
       <div class="admin-panel">
         <div class="panel-body">
           <% if (!orders.length) { %>

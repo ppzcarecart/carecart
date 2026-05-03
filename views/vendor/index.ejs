@@ -14,41 +14,41 @@
       </div>
 
       <div class="admin-stats">
-        <div class="admin-stat">
+        <a class="admin-stat" href="/vendor/sales">
           <div class="stat-icon tone-brand">$</div>
           <div>
             <div class="stat-label">Revenue</div>
             <div class="stat-value">$<%= (stats.totalRevenueCents/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/vendor/sales">
           <div class="stat-icon tone-blue">⌘</div>
           <div>
             <div class="stat-label">Orders</div>
             <div class="stat-value"><%= stats.orderCount %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/vendor/sales">
           <div class="stat-icon tone-violet">▣</div>
           <div>
             <div class="stat-label">Units sold</div>
             <div class="stat-value"><%= stats.totalUnits %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/vendor/products">
           <div class="stat-icon tone-rose">▣</div>
           <div>
             <div class="stat-label">Active products</div>
             <div class="stat-value"><%= stats.productCount %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/vendor/products?lowStock=true">
           <div class="stat-icon tone-amber">⚠</div>
           <div>
             <div class="stat-label">Low stock</div>
             <div class="stat-value"><%= stats.lowStockCount %></div>
           </div>
-        </div>
+        </a>
       </div>
 
       <div class="admin-panel">

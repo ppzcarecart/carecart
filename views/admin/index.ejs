@@ -17,62 +17,62 @@
       </div>
 
       <div class="admin-stats">
-        <div class="admin-stat">
+        <a class="admin-stat" href="/admin/sales">
           <div class="stat-icon tone-brand">$</div>
           <div>
             <div class="stat-label">Revenue</div>
             <div class="stat-value">$<%= (counts.revenueCents/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/orders">
           <div class="stat-icon tone-blue">⌘</div>
           <div>
             <div class="stat-label">Orders</div>
             <div class="stat-value"><%= counts.orders %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/orders?status=awaiting_payment">
           <div class="stat-icon tone-amber">⏱</div>
           <div>
             <div class="stat-label">Pending</div>
             <div class="stat-value"><%= counts.pending %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/products">
           <div class="stat-icon tone-violet">▣</div>
           <div>
             <div class="stat-label">Products</div>
             <div class="stat-value"><%= counts.products %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/products?featured=true">
           <div class="stat-icon tone-rose">★</div>
           <div>
             <div class="stat-label">Featured</div>
             <div class="stat-value"><%= counts.featured %> / 8</div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/users?role=vendor">
           <div class="stat-icon tone-blue">◉</div>
           <div>
             <div class="stat-label">Vendors</div>
             <div class="stat-value"><%= counts.vendors %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/users?role=customer">
           <div class="stat-icon tone-brand">◉</div>
           <div>
             <div class="stat-label">Customers</div>
             <div class="stat-value"><%= counts.customers %></div>
           </div>
-        </div>
-        <div class="admin-stat">
+        </a>
+        <a class="admin-stat" href="/admin/categories">
           <div class="stat-icon tone-violet">◇</div>
           <div>
             <div class="stat-label">Categories</div>
             <div class="stat-value"><%= counts.categories %></div>
           </div>
-        </div>
+        </a>
       </div>
 
       <div class="admin-panel">

@@ -7,8 +7,14 @@
 
       <div class="admin-page-header">
         <div>
-          <h1>Products</h1>
-          <p class="lede">Toggle <strong>Featured</strong> to highlight a product on the storefront — up to 8 at a time.</p>
+          <h1>Products<% if (typeof featuredOnly !== 'undefined' && featuredOnly) { %> <span class="text-muted" style="font-size:.6em;">· Featured only</span><% } %></h1>
+          <p class="lede">
+            <% if (typeof featuredOnly !== 'undefined' && featuredOnly) { %>
+              Showing only featured products. <a href="/admin/products">Show all</a>.
+            <% } else { %>
+              Toggle <strong>Featured</strong> to highlight a product on the storefront — up to 8 at a time.
+            <% } %>
+          </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
           <a href="/admin/products/disabled"

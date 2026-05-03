@@ -402,9 +402,23 @@ a:hover { color: var(--brand-dark); }
   border-radius: var(--radius);
   padding: 18px;
   display: flex; align-items: center; gap: 14px;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  /* When the stat is rendered as an <a>, kill default link chrome
+     so it reads identically to the old <div> version. */
+  text-decoration: none;
+  color: inherit;
 }
-.admin-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.admin-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+/* Anchor stats (clickable cards) get a brand-tinted hover border so
+   the affordance is obvious — the value/label still inherits the
+   normal ink colours so the card doesn't look like a hyperlink. */
+a.admin-stat:hover {
+  border-color: var(--brand);
+  color: inherit;
+}
 .admin-stat .stat-icon {
   width: 44px; height: 44px;
   display: inline-flex; align-items: center; justify-content: center;

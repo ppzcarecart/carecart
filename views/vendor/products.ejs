@@ -7,8 +7,14 @@
 
       <div class="admin-page-header">
         <div>
-          <h1>My products</h1>
-          <p class="lede">Manage stock, variants, and add new items. Only you can edit products that you own.</p>
+          <h1>My products<% if (typeof lowStockOnly !== 'undefined' && lowStockOnly) { %> <span class="text-muted" style="font-size:.6em;">· Low stock</span><% } %></h1>
+          <p class="lede">
+            <% if (typeof lowStockOnly !== 'undefined' && lowStockOnly) { %>
+              Showing items with ≤ 5 stock on hand. <a href="/vendor/products">Show all</a>.
+            <% } else { %>
+              Manage stock, variants, and add new items. Only you can edit products that you own.
+            <% } %>
+          </p>
         </div>
         <a href="/vendor/products/new" class="cc-btn cc-btn-primary">+ Add product</a>
       </div>

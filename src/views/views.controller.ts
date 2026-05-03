@@ -377,8 +377,14 @@ export class ViewsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/products')
   @Render('admin/products')
-  async adminProducts(@CurrentUser() user: any) {
-    const products = await this.products.list({});
+  async adminProducts(
+    @CurrentUser() user: any,
+    @Query('featured') featured?: string,
+  ) {
+    const featuredOnly = featured === 'true';
+    const products = await this.products.list({
+      featuredOnly: featuredOnly || undefined,
+    });
     const categories = await this.categories.list();
     const vendors = await this.users.list({ role: Role.VENDOR });
     const disabledCount = (
@@ -391,6 +397,7 @@ export class ViewsController {
       categories,
       vendors,
       disabledCount,
+      featuredOnly,
       activePath: '/admin/products',
     };
   }
@@ -422,9 +429,25 @@ export class ViewsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/orders')
   @Render('admin/orders')
-  async adminOrders(@CurrentUser() user: any) {
-    const orders = await this.orders.listAll();
-    return { title: 'Orders', user, orders, activePath: '/admin/orders' };
+  async adminOrders(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+  ) {
+    const allowed = new Set([
+      'pending', 'awaiting_payment', 'paid', 'fulfilled',
+      'collected', 'cancelled', 'refunded',
+    ]);
+    const safeStatus = status && allowed.has(status) ? status : undefined;
+    const orders = await this.orders.listAll({
+      status: safeStatus as any,
+    });
+    return {
+      title: 'Orders',
+      user,
+      orders,
+      activeStatus: safeStatus || '',
+      activePath: '/admin/orders',
+    };
   }
 
   // Marketplace-wide sales report. Vendors get their own scoped
@@ -769,14 +792,29 @@ export class ViewsController {
   @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
   @Get('vendor/products')
   @Render('vendor/products')
-  async vendorProducts(@CurrentUser() user: any) {
-    const products = await this.products.list({ vendorId: user.id });
+  async vendorProducts(
+    @CurrentUser() user: any,
+    @Query('lowStock') lowStock?: string,
+  ) {
+    const all = await this.products.list({ vendorId: user.id });
+    // Same low-stock rule the dashboard uses for the stat card —
+    // any item or variant ≤ 5. Filtered server-side so the link
+    // from the Low stock card lands on the relevant subset.
+    const filterLowStock = lowStock === 'true';
+    const products = filterLowStock
+      ? all.filter((p) =>
+          p.variants && p.variants.length
+            ? p.variants.some((v) => v.stock <= 5)
+            : p.stock <= 5,
+        )
+      : all;
     const categories = await this.categories.list();
     return {
       title: 'My products',
       user,
       products,
       categories,
+      lowStockOnly: filterLowStock,
       activePath: '/vendor/products',
     };
   }
