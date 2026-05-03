@@ -207,22 +207,23 @@ export class UsersService {
 
     // Cascade vendor enable/disable to their products.
     //   disable vendor → products: active=false, disabled=true
-    //                    (off-shelf everywhere; appears in /admin/products/disabled)
     //   enable vendor  → products: active=true,  disabled=false
-    //                    (back on shelves; vendor can toggle individual
-    //                     items inactive again from the Products page)
-    // Drop the patch.active undefined guard — wasActive !== saved.active
-    // already proves the flag changed, regardless of how the update
-    // actually arrived at this method (e.g. ValidationPipe stripping,
-    // direct Object.assign, etc.).
-    if (saved.role === Role.VENDOR && wasActive !== saved.active) {
-      const res = await this.productsRepo.update(
-        { vendorId: saved.id },
-        { active: saved.active, disabled: !saved.active },
-      );
+    // wasActive !== saved.active proves the flag changed regardless of
+    // how the update arrived (ValidationPipe stripping, direct
+    // Object.assign, etc.).
+    if (saved.role === Role.VENDOR) {
       this.logger.log(
-        `Vendor ${saved.id} (${saved.email}) active flip ${wasActive}→${saved.active}; cascade touched ${res.affected ?? 0} product row(s)`,
+        `users.update vendor=${saved.id} email=${saved.email} active=${wasActive}→${saved.active} patchKeys=[${Object.keys(patch).join(',')}]`,
       );
+      if (wasActive !== saved.active) {
+        const res = await this.productsRepo.update(
+          { vendorId: saved.id },
+          { active: saved.active, disabled: !saved.active },
+        );
+        this.logger.log(
+          `Cascade for vendor ${saved.id} touched ${res.affected ?? 0} product row(s)`,
+        );
+      }
     }
 
     return saved;
