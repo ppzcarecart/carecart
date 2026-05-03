@@ -222,14 +222,15 @@ export class CartService {
     let deliveryFeePreviewCents = 0;
 
     for (const l of baseLines) {
-      let lineDelivery = 0;
-      // Cash-paid lines incur delivery fees; points-only lines don't
-      // (the shop owner can change that policy later).
-      if (l.item.pricingMode === 'price') {
-        lineDelivery = await this.fulfilment.resolveDeliveryFee(l.product);
-        deliveryFeePreviewCents += lineDelivery;
-        if (isDelivery) deliveryFeeCents += lineDelivery;
-      }
+      // Delivery fee applies to every line that's being delivered,
+      // regardless of how the item itself was paid for. Points-mode
+      // is now a hybrid (points discount the PPZ price, customer
+      // covers any leftover cash) — but the courier still has to
+      // move a real product, so a points-only checkout with a $0
+      // item subtotal still owes the delivery charge.
+      let lineDelivery = await this.fulfilment.resolveDeliveryFee(l.product);
+      deliveryFeePreviewCents += lineDelivery;
+      if (isDelivery) deliveryFeeCents += lineDelivery;
       lines.push({ ...l, deliveryFeeCents: isDelivery ? lineDelivery : 0 });
 
       if (!isDelivery) {
