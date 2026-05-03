@@ -4,13 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { parse } from 'csv-parse/sync';
 
 import { User } from './entities/user.entity';
 import { Address } from './entities/address.entity';
 import { Role } from '../common/enums/role.enum';
+import { Product } from '../products/entities/product.entity';
+import { PpzRole } from './ppz-role';
 
 export interface CreateUserInput {
   email: string;
@@ -39,6 +41,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private repo: Repository<User>,
     @InjectRepository(Address) private addressRepo: Repository<Address>,
+    @InjectRepository(Product) private productsRepo: Repository<Product>,
   ) {}
 
   findById(id: string) {
@@ -53,9 +56,39 @@ export class UsersService {
     return this.repo.findOne({ where: { ppzId } });
   }
 
-  list(filter?: { role?: Role; active?: boolean }) {
+  /**
+   * Search + filter the users table for the admin/users page.
+   *   - role / ppzRole / active are exact-match column filters.
+   *   - q is a fuzzy ILIKE across name, email, contact, and ppzId so
+   *     the same search bar works for each of those identifiers.
+   * Empty filter returns every user (existing call-sites unchanged).
+   */
+  list(filter?: {
+    role?: Role;
+    active?: boolean;
+    ppzRole?: PpzRole | string;
+    q?: string;
+  }) {
+    const exact: Record<string, unknown> = {};
+    if (filter?.role) exact.role = filter.role;
+    if (filter?.active !== undefined) exact.active = filter.active;
+    if (filter?.ppzRole) exact.ppzRole = filter.ppzRole;
+    const q = (filter?.q || '').trim();
+    if (!q) {
+      return this.repo.find({
+        where: exact,
+        order: { createdAt: 'DESC' },
+      });
+    }
+    // OR across the four searchable columns. Each branch carries the
+    // same exact-match constraints so role / ppzRole still narrow the
+    // results when the user is also searching.
+    const like = ILike(`%${q}%`);
+    const where = (
+      ['name', 'email', 'contact', 'ppzId'] as const
+    ).map((col) => ({ ...exact, [col]: like }));
     return this.repo.find({
-      where: filter ?? {},
+      where,
       order: { createdAt: 'DESC' },
     });
   }
@@ -103,8 +136,27 @@ export class UsersService {
       user.passwordHash = await bcrypt.hash(patch.password, 10);
       delete (patch as any).password;
     }
+    const wasActive = user.active;
     Object.assign(user, patch);
-    return this.repo.save(user);
+    const saved = await this.repo.save(user);
+
+    // Cascade vendor enable/disable to their products. Distinct from
+    // each product's own `active` flag — `disabled=true` is a forced
+    // off-shelf state set by admin/manager when the vendor account is
+    // deactivated. Re-enabling the vendor flips them all back so the
+    // vendor doesn't have to manually un-disable each one.
+    if (
+      saved.role === Role.VENDOR &&
+      patch.active !== undefined &&
+      wasActive !== saved.active
+    ) {
+      await this.productsRepo.update(
+        { vendorId: saved.id },
+        { disabled: !saved.active },
+      );
+    }
+
+    return saved;
   }
 
   async remove(id: string) {

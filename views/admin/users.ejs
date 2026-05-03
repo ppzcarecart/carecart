@@ -19,10 +19,62 @@
         </div>
       </div>
 
+      <!-- Search + filter. GET form so the URL reflects the active
+           filter (shareable, refresh-friendly). Empty fields are
+           dropped server-side. -->
+      <form method="GET" action="/admin/users" class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-body padded">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="text-muted" style="font-size:.78rem;">Search</label>
+              <input class="form-control" type="search" name="q"
+                value="<%= filters.q %>"
+                placeholder="Name, email, contact, or PPZ ID"
+                autocomplete="off">
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted" style="font-size:.78rem;">Role</label>
+              <select class="form-select" name="role">
+                <option value="" <%= filters.role === '' ? 'selected' : '' %>>Any role</option>
+                <% ['admin','manager','vendor','customer'].forEach(function(r) { %>
+                  <% if (!(user.role === 'manager' && r === 'admin')) { %>
+                    <option value="<%= r %>" <%= filters.role === r ? 'selected' : '' %>><%= r %></option>
+                  <% } %>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted" style="font-size:.78rem;">PPZ role</label>
+              <select class="form-select" name="ppzRole">
+                <option value="" <%= filters.ppzRole === '' ? 'selected' : '' %>>Any PPZ role</option>
+                <% ppzRoles.forEach(function(r) { %>
+                  <option value="<%= r %>" <%= filters.ppzRole === r ? 'selected' : '' %>><%= ppzRoleLabels[r] %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-1 d-grid">
+              <button class="cc-btn cc-btn-primary" type="submit" style="padding:8px 14px;">Filter</button>
+            </div>
+          </div>
+          <% if (filters.q || filters.role || filters.ppzRole) { %>
+            <div class="mt-2">
+              <a href="/admin/users" class="text-muted" style="font-size:.85rem;">Clear filters</a>
+              <span class="text-muted" style="font-size:.85rem;">· <%= users.length %> match<%= users.length === 1 ? '' : 'es' %></span>
+            </div>
+          <% } %>
+        </div>
+      </form>
+
       <div class="admin-panel">
         <div class="panel-body">
           <% if (!users.length) { %>
-            <div class="cc-empty" style="margin: 0; border: none; border-radius: 0;">No users yet.</div>
+            <div class="cc-empty" style="margin: 0; border: none; border-radius: 0;">
+              <% if (filters.q || filters.role || filters.ppzRole) { %>
+                No users match the current filters. <a href="/admin/users">Clear filters</a>.
+              <% } else { %>
+                No users yet.
+              <% } %>
+            </div>
           <% } else { %>
             <table class="admin-table" data-mobile="cards">
               <thead>

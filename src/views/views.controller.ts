@@ -262,8 +262,20 @@ export class ViewsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/users')
   @Render('admin/users')
-  async adminUsers(@CurrentUser() user: any) {
-    const all = await this.users.list();
+  async adminUsers(
+    @CurrentUser() user: any,
+    @Query('q') q?: string,
+    @Query('role') role?: string,
+    @Query('ppzRole') ppzRole?: string,
+  ) {
+    // Map empty strings to undefined so the service treats blank
+    // dropdowns as "any" rather than filtering on ''.
+    const filter: Parameters<typeof this.users.list>[0] = {};
+    if (q && q.trim()) filter.q = q.trim();
+    if (role) filter.role = role as Role;
+    if (ppzRole) filter.ppzRole = ppzRole;
+
+    const all = await this.users.list(filter);
     // Managers don't see admin accounts.
     const visible =
       user.role === Role.MANAGER
@@ -274,6 +286,9 @@ export class ViewsController {
       user,
       users: visible,
       activePath: '/admin/users',
+      filters: { q: q || '', role: role || '', ppzRole: ppzRole || '' },
+      ppzRoles: PPZ_ROLES,
+      ppzRoleLabels: PPZ_ROLE_LABELS,
     };
   }
 
@@ -308,12 +323,32 @@ export class ViewsController {
     const products = await this.products.list({});
     const categories = await this.categories.list();
     const vendors = await this.users.list({ role: Role.VENDOR });
+    const disabledCount = (
+      await this.products.list({ disabledOnly: true })
+    ).length;
     return {
       title: 'Products',
       user,
       products,
       categories,
       vendors,
+      disabledCount,
+      activePath: '/admin/products',
+    };
+  }
+
+  // Products that are off-shelf because their vendor was disabled.
+  // They reappear in /admin/products automatically when the vendor is
+  // re-enabled (cascade in UsersService.update).
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/products/disabled')
+  @Render('admin/products-disabled')
+  async adminDisabledProducts(@CurrentUser() user: any) {
+    const products = await this.products.list({ disabledOnly: true });
+    return {
+      title: 'Disabled products',
+      user,
+      products,
       activePath: '/admin/products',
     };
   }

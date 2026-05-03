@@ -81,6 +81,14 @@ export class Product {
   @Column({ default: true })
   active: boolean;
 
+  // Force-off cascaded from a vendor being disabled by admin/manager.
+  // Distinct from `active` (which the vendor controls themselves);
+  // disabled products are hidden everywhere except the dedicated
+  // /admin/products/disabled view, and flip back automatically when
+  // the vendor is re-enabled.
+  @Column({ default: false })
+  disabled: boolean;
+
   @Column({ default: false })
   featured: boolean;
 

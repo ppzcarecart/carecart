@@ -1,0 +1,91 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include('../partials/admin-sidebar', { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Disabled products</h1>
+          <p class="lede">
+            <a href="/admin/products">← All products</a> · auto-disabled
+            because their vendor account was deactivated. Re-enabling
+            the vendor flips them all back automatically.
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!products.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+              No disabled products. Products land here when an admin or
+              manager disables their owning vendor on
+              <a href="/admin/users">/admin/users</a>.
+            </div>
+          <% } else { %>
+            <table class="admin-table" data-mobile="cards">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Owner (vendor)</th>
+                  <th class="num">Price</th>
+                  <th class="num">Stock</th>
+                  <th>Vendor active</th>
+                  <th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+              <% products.forEach(p => { %>
+                <tr>
+                  <td>
+                    <div class="row-thumb">
+                      <div class="thumb">
+                        <%- include('../partials/product-thumb', { product: p }) %>
+                      </div>
+                      <div class="meta">
+                        <strong><%= p.name %></strong>
+                        <% if (p.category) { %><div class="sub"><%= p.category.name %></div><% } %>
+                      </div>
+                    </div>
+                  </td>
+                  <td data-label="Owner">
+                    <% if (p.vendor) { %>
+                      <a href="/admin/users/<%= p.vendor.id %>" class="text-reset">
+                        <strong><%= p.vendor.vendorStoreName || p.vendor.name %></strong>
+                      </a>
+                      <div class="text-muted" style="font-size:.82rem;"><%= p.vendor.email %></div>
+                    <% } else { %>
+                      —
+                    <% } %>
+                  </td>
+                  <td class="num" data-label="Price">$<%= (p.priceCents/100).toFixed(2) %></td>
+                  <td class="num" data-label="Stock"><%= p.stock %></td>
+                  <td data-label="Vendor active">
+                    <% if (p.vendor) { %>
+                      <span class="tag <%= p.vendor.active ? 'tag-active' : 'tag-inactive' %>">
+                        <%= p.vendor.active ? 'active' : 'disabled' %>
+                      </span>
+                    <% } else { %>
+                      —
+                    <% } %>
+                  </td>
+                  <td class="actions">
+                    <% if (p.vendor) { %>
+                      <a href="/admin/users/<%= p.vendor.id %>" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;">Open vendor</a>
+                    <% } %>
+                    <a href="/admin/products/<%= p.id %>/edit" class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;">View</a>
+                  </td>
+                </tr>
+              <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>

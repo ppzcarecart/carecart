@@ -80,6 +80,8 @@ export class ProductsService {
     excludeFeatured?: boolean;
     newSince?: Date;
     limit?: number;
+    /** When true, return ONLY disabled products (admin's Disabled view). */
+    disabledOnly?: boolean;
   }) {
     const where: any = {};
     if (opts.activeOnly) where.active = true;
@@ -89,6 +91,14 @@ export class ProductsService {
     if (opts.vendorId) where.vendorId = opts.vendorId;
     if (opts.q) where.name = ILike(`%${opts.q}%`);
     if (opts.newSince) where.createdAt = MoreThanOrEqual(opts.newSince);
+    // Disabled products (vendor was deactivated) are taken off-shelf
+    // everywhere by default and only surface in the dedicated
+    // /admin/products/disabled view via disabledOnly=true.
+    if (opts.disabledOnly) {
+      where.disabled = true;
+    } else {
+      where.disabled = false;
+    }
     return this.products.find({
       where,
       order: { createdAt: 'DESC' },
@@ -113,11 +123,16 @@ export class ProductsService {
   }
 
   findById(id: string) {
+    // Admin/edit paths use this — keep disabled products visible so
+    // staff can still review or delete them after a vendor was
+    // deactivated.
     return this.products.findOne({ where: { id } });
   }
 
   findBySlug(slug: string) {
-    return this.products.findOne({ where: { slug } });
+    // Storefront product detail. Hide disabled products (vendor was
+    // deactivated) — show as 404 to the customer.
+    return this.products.findOne({ where: { slug, disabled: false } });
   }
 
   private assertCanEdit(product: Product, actor: ActorContext) {

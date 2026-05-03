@@ -10,7 +10,14 @@
           <h1>Products</h1>
           <p class="lede">Toggle <strong>Featured</strong> to highlight a product on the storefront — up to 8 at a time.</p>
         </div>
-        <a href="/admin/products/new" class="cc-btn cc-btn-primary">+ New product</a>
+        <div class="d-flex gap-2 flex-wrap">
+          <% if (typeof disabledCount !== 'undefined' && disabledCount > 0) { %>
+            <a href="/admin/products/disabled" class="cc-btn cc-btn-outline" style="color:#b91c1c; border-color:#fca5a5;">
+              Disabled (<%= disabledCount %>)
+            </a>
+          <% } %>
+          <a href="/admin/products/new" class="cc-btn cc-btn-primary">+ New product</a>
+        </div>
       </div>
 
       <div class="admin-panel">
