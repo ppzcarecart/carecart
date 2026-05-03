@@ -183,7 +183,20 @@ export class UsersService {
     const wasFulfilmentVendor =
       user.email === PPZ_FULFILMENT_EMAIL && user.role === Role.VENDOR;
     const previousStoreName = user.vendorStoreName;
-    Object.assign(user, patch);
+    // IMPORTANT: skip undefined values when copying the patch onto the
+    // user. With TypeScript target ES2022 + class-validator, every
+    // declared optional field on UpdateUserDto becomes an own
+    // `undefined` property on the dto instance — even fields the
+    // request didn't include. A naive Object.assign(user, dto) would
+    // overwrite user.role / user.name / etc. with undefined for every
+    // request that only sends a subset of fields, breaking downstream
+    // checks that rely on the saved entity (e.g. the vendor-cascade
+    // role check below). TypeORM's UPDATE happens to ignore undefined
+    // fields so the DB stays correct, but the in-memory entity ends up
+    // half-wiped and silently drives bugs.
+    for (const [k, v] of Object.entries(patch)) {
+      if (v !== undefined) (user as any)[k] = v;
+    }
 
     // Lock manager rows to the PPZ Fulfilment store name. Catches both
     // a customer/vendor being promoted to manager AND an existing
