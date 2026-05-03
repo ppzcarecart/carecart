@@ -62,7 +62,7 @@
                 onclick="ppz.pickFulfilment('delivery')">
                 Delivery
                 <% if (summary.deliveryAvailable) { %>
-                  · $<%= (summary.deliveryFeeCents/100).toFixed(2) %>
+                  · $<%= (summary.deliveryFeePreviewCents/100).toFixed(2) %>
                 <% } else if (summary.collectionOnlyForced) { %>
                   (collection-only items)
                 <% } else { %>

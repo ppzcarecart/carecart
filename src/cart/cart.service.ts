@@ -213,15 +213,24 @@ export class CartService {
     // one at the vendor storefront).
     const collectionByKey = new Map<string, CollectionPoint>();
 
+    // The Delivery switcher button labels the *preview* fee — what the
+    // customer would pay if they switched modes — even when they're
+    // currently in collection. So we always compute the per-line fee
+    // and aggregate into deliveryFeePreviewCents; deliveryFeeCents (the
+    // actual charge factored into totalCents) is only filled when the
+    // chosen method is delivery.
+    let deliveryFeePreviewCents = 0;
+
     for (const l of baseLines) {
       let lineDelivery = 0;
-      // Cash-paid lines incur delivery fees; points-only lines don't (the
-      // shop owner can change this later if they want a different policy).
-      if (isDelivery && l.item.pricingMode === 'price') {
+      // Cash-paid lines incur delivery fees; points-only lines don't
+      // (the shop owner can change that policy later).
+      if (l.item.pricingMode === 'price') {
         lineDelivery = await this.fulfilment.resolveDeliveryFee(l.product);
-        deliveryFeeCents += lineDelivery;
+        deliveryFeePreviewCents += lineDelivery;
+        if (isDelivery) deliveryFeeCents += lineDelivery;
       }
-      lines.push({ ...l, deliveryFeeCents: lineDelivery });
+      lines.push({ ...l, deliveryFeeCents: isDelivery ? lineDelivery : 0 });
 
       if (!isDelivery) {
         const cp = await this.fulfilment.resolveCollectionPoint(
@@ -241,6 +250,7 @@ export class CartService {
       lines,
       subtotalCents,
       deliveryFeeCents,
+      deliveryFeePreviewCents,
       totalCents,
       pointsTotal,
       isPpzMember: isMember,
