@@ -122,6 +122,82 @@ const ranges = [
         </div>
       </div>
 
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>Order details</h3>
+          <span class="muted">Per-order line · most recent first · <%= rangeLabel %></span>
+        </div>
+        <div class="panel-body">
+          <% if (!lines.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+              No order details to show for this range.
+            </div>
+          <% } else { %>
+            <table class="admin-table" data-mobile="cards">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>CType</th>
+                  <th>PPZ ID</th>
+                  <th>Product</th>
+                  <% if (isAdmin) { %><th>Vendor</th><% } %>
+                  <th class="num">Qty</th>
+                  <th class="num">Revenue</th>
+                  <th class="num">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% lines.forEach(l => { %>
+                  <%
+                  const ctype = l.customerName || l.customerEmail
+                    ? (l.customerPpzId ? 'PPZ' : 'CC')
+                    : 'NA';
+                  const orderHref = isAdmin
+                    ? '/admin/orders/' + l.orderId
+                    : '/vendor/orders/' + l.orderId;
+                  %>
+                  <tr>
+                    <td>
+                      <strong><a href="<%= orderHref %>" class="text-reset"><%= l.orderNumber %></a></strong>
+                    </td>
+                    <td data-label="Date" class="text-muted"><%= new Date(l.createdAt).toLocaleString() %></td>
+                    <td data-label="Customer">
+                      <% if (l.customerName) { %>
+                        <strong><%= l.customerName %></strong>
+                        <% if (l.customerEmail) { %><div class="text-muted" style="font-size:.82rem;"><%= l.customerEmail %></div><% } %>
+                      <% } else if (l.customerEmail) { %>
+                        <%= l.customerEmail %>
+                      <% } else { %>
+                        <span class="text-muted">—</span>
+                      <% } %>
+                    </td>
+                    <td data-label="CType">
+                      <% if (ctype === 'NA') { %>
+                        <span class="text-muted">—</span>
+                      <% } else { %>
+                        <span class="ctype-tag ctype-<%= ctype.toLowerCase() %>"><%= ctype %></span>
+                      <% } %>
+                    </td>
+                    <td data-label="PPZ ID"><%= l.customerPpzId || '–' %></td>
+                    <td data-label="Product"><%= l.productName %></td>
+                    <% if (isAdmin) { %>
+                      <td data-label="Vendor">
+                        <%= l.vendorId && vendorById[l.vendorId] ? vendorById[l.vendorId] : '—' %>
+                      </td>
+                    <% } %>
+                    <td class="num" data-label="Qty"><%= l.quantity %></td>
+                    <td class="num" data-label="Revenue">$<%= (l.lineRevenueCents/100).toFixed(2) %></td>
+                    <td class="num" data-label="Points"><%= l.linePoints ? Number(l.linePoints).toLocaleString() : '–' %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>

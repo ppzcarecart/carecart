@@ -437,14 +437,19 @@ export class ViewsController {
     @Query('range') range?: string,
   ) {
     const r = resolveSalesRange(range);
-    const sales = await this.orders.salesSummary({
-      since: r.since,
-      until: r.until,
-    });
-    // Resolve vendor display names for every distinct vendorId in the
-    // result set so the template can show a friendly label.
+    const [sales, lines] = await Promise.all([
+      this.orders.salesSummary({ since: r.since, until: r.until }),
+      this.orders.salesLines({ since: r.since, until: r.until }),
+    ]);
+    // Resolve vendor display names for every distinct vendorId in
+    // either result set so the template can show a friendly label.
     const vendorIds = Array.from(
-      new Set(sales.map((s) => s.vendorId).filter((v): v is string => !!v)),
+      new Set(
+        [
+          ...sales.map((s) => s.vendorId),
+          ...lines.map((l) => l.vendorId),
+        ].filter((v): v is string => !!v),
+      ),
     );
     const vendorById = new Map<string, string>();
     for (const id of vendorIds) {
@@ -456,6 +461,7 @@ export class ViewsController {
       title: 'Sales report',
       user,
       sales,
+      lines,
       vendorById: Object.fromEntries(vendorById),
       totals,
       range: r.key,
@@ -476,16 +482,16 @@ export class ViewsController {
     // Vendors see only their own products; admin/manager who land
     // here (e.g. impersonating a vendor view) get the same scope.
     const vendorId = user.role === Role.VENDOR ? user.id : user.id;
-    const sales = await this.orders.salesSummary({
-      vendorId,
-      since: r.since,
-      until: r.until,
-    });
+    const [sales, lines] = await Promise.all([
+      this.orders.salesSummary({ vendorId, since: r.since, until: r.until }),
+      this.orders.salesLines({ vendorId, since: r.since, until: r.until }),
+    ]);
     const totals = aggregateSalesTotals(sales);
     return {
       title: 'Sales report',
       user,
       sales,
+      lines,
       vendorById: {},
       totals,
       range: r.key,

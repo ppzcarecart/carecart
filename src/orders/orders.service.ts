@@ -402,6 +402,76 @@ export class OrdersService {
     return this.salesSummary({ vendorId });
   }
 
+  /**
+   * Per-order-line view of realised sales, used alongside salesSummary
+   * on the Sales report. Joins the order + customer so the report can
+   * show who bought what (name, customer type, PPZ ID).
+   *
+   * Same status / vendorId / date filters as salesSummary so totals at
+   * the top of the page line up with the line items below.
+   */
+  async salesLines(opts: {
+    vendorId?: string;
+    since?: Date;
+    until?: Date;
+  }) {
+    const qb = this.orderItems
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'order')
+      .leftJoin('order.customer', 'customer')
+      .where("order.status IN ('paid', 'fulfilled', 'collected')");
+
+    if (opts.vendorId) {
+      qb.andWhere('item.vendorId = :vendorId', { vendorId: opts.vendorId });
+    }
+    if (opts.since) {
+      qb.andWhere('order.createdAt >= :since', { since: opts.since });
+    }
+    if (opts.until) {
+      qb.andWhere('order.createdAt < :until', { until: opts.until });
+    }
+
+    const rows = await qb
+      .select('item.id', 'itemid')
+      .addSelect('item.productName', 'productname')
+      .addSelect('item.quantity', 'quantity')
+      .addSelect('item.unitPriceCents', 'unitpricecents')
+      .addSelect('item.unitPoints', 'unitpoints')
+      .addSelect('item.vendorId', 'vendorid')
+      .addSelect('order.id', 'orderid')
+      .addSelect('order.number', 'ordernumber')
+      .addSelect('order.status', 'orderstatus')
+      .addSelect('order.createdAt', 'createdat')
+      .addSelect('customer.name', 'customername')
+      .addSelect('customer.email', 'customeremail')
+      .addSelect('customer.ppzId', 'customerppzid')
+      .orderBy('order.createdAt', 'DESC')
+      .getRawMany();
+
+    return rows.map((r) => {
+      const qty = parseInt(r.quantity, 10) || 0;
+      const unitPriceCents = parseInt(r.unitpricecents, 10) || 0;
+      const unitPoints = parseInt(r.unitpoints, 10) || 0;
+      return {
+        itemId: r.itemid as string,
+        productName: r.productname as string,
+        quantity: qty,
+        unitPriceCents,
+        unitPoints,
+        lineRevenueCents: qty * unitPriceCents,
+        linePoints: qty * unitPoints,
+        vendorId: r.vendorid as string | null,
+        orderId: r.orderid as string,
+        orderNumber: r.ordernumber as string,
+        orderStatus: r.orderstatus as string,
+        createdAt: r.createdat as Date,
+        customerName: (r.customername as string | null) || null,
+        customerEmail: (r.customeremail as string | null) || null,
+        customerPpzId: (r.customerppzid as string | null) || null,
+      };
+    });
+  }
+
   async vendorOrders(vendorId: string) {
     return this.orders
       .createQueryBuilder('o')
