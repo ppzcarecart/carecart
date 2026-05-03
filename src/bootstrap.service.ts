@@ -18,6 +18,14 @@ export class BootstrapService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     await this.ensureBootstrapAdmin();
     await this.ensurePpzFulfilmentVendor();
+    // Managers transact on behalf of PPZ Fulfilment, so they share its
+    // store name. Run after ensurePpzFulfilmentVendor so a brand-new
+    // deployment that just seeded the vendor immediately propagates to
+    // any pre-existing managers.
+    const r = await this.users.syncAllManagersStoreName();
+    if (r.updated > 0) {
+      this.logger.log(`Synced PPZ Fulfilment store name to ${r.updated} manager(s)`);
+    }
   }
 
   private async ensureBootstrapAdmin() {

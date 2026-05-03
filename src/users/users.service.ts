@@ -14,6 +14,13 @@ import { Role } from '../common/enums/role.enum';
 import { Product } from '../products/entities/product.entity';
 import { PpzRole } from './ppz-role';
 
+// Email of the system-owned vendor created by BootstrapService. All
+// managers carry the same vendorStoreName as this vendor — the assumption
+// is that managers transact on behalf of PPZ Fulfilment, so they share
+// its branding. Kept here (rather than imported from bootstrap.service)
+// to avoid the bootstrap → users circular import.
+const PPZ_FULFILMENT_EMAIL = 'ppz-fulfilment@carecart.local';
+
 export interface CreateUserInput {
   email: string;
   password: string;
@@ -93,15 +100,48 @@ export class UsersService {
     });
   }
 
+  /**
+   * Resolve the storeName managers + new managers should adopt. Reads
+   * the system PPZ Fulfilment vendor's vendorStoreName so the value
+   * survives admin edits to that vendor's branding. Falls back to the
+   * literal string if the vendor row hasn't been seeded yet (very
+   * early in app boot).
+   */
+  private async fulfilmentStoreName(): Promise<string> {
+    const v = await this.findByEmail(PPZ_FULFILMENT_EMAIL);
+    return v?.vendorStoreName || 'PPZ Fulfilment';
+  }
+
+  /**
+   * Force every existing manager's vendorStoreName to match the PPZ
+   * Fulfilment vendor's. Idempotent — single bulk UPDATE. Called from
+   * BootstrapService at app start and from update() when the PPZ
+   * Fulfilment vendor itself is renamed.
+   */
+  async syncAllManagersStoreName(): Promise<{ updated: number }> {
+    const target = await this.fulfilmentStoreName();
+    const res = await this.repo.update(
+      { role: Role.MANAGER },
+      { vendorStoreName: target } as any,
+    );
+    return { updated: res.affected ?? 0 };
+  }
+
   async createUser(input: CreateUserInput): Promise<User> {
     const passwordHash = await bcrypt.hash(input.password, 10);
+    // Managers always share the PPZ Fulfilment store name (per
+    // marketplace policy); ignore any storeName the caller sent in.
+    const storeName =
+      (input.role ?? Role.CUSTOMER) === Role.MANAGER
+        ? await this.fulfilmentStoreName()
+        : input.vendorStoreName;
     const user = this.repo.create({
       email: input.email.toLowerCase(),
       passwordHash,
       name: input.name,
       contact: input.contact,
       role: input.role ?? Role.CUSTOMER,
-      vendorStoreName: input.vendorStoreName,
+      vendorStoreName: storeName,
       ppzId: input.ppzId,
       ppzCurrency: input.ppzCurrency ?? 0,
       lifetimePpzCurrency: input.lifetimePpzCurrency ?? 0,
@@ -137,14 +177,39 @@ export class UsersService {
       delete (patch as any).password;
     }
     const wasActive = user.active;
+    const wasFulfilmentVendor =
+      user.email === PPZ_FULFILMENT_EMAIL && user.role === Role.VENDOR;
+    const previousStoreName = user.vendorStoreName;
     Object.assign(user, patch);
+
+    // Lock manager rows to the PPZ Fulfilment store name. Catches both
+    // a customer/vendor being promoted to manager AND an existing
+    // manager's storeName being touched manually — they share branding
+    // either way.
+    if (user.role === Role.MANAGER) {
+      user.vendorStoreName = await this.fulfilmentStoreName();
+    }
+
     const saved = await this.repo.save(user);
 
-    // Cascade vendor enable/disable to their products. Distinct from
-    // each product's own `active` flag — `disabled=true` is a forced
-    // off-shelf state set by admin/manager when the vendor account is
-    // deactivated. Re-enabling the vendor flips them all back so the
-    // vendor doesn't have to manually un-disable each one.
+    // If the PPZ Fulfilment vendor itself was just renamed, propagate
+    // the new name to every manager so they stay in sync without
+    // waiting for the next app boot.
+    if (
+      wasFulfilmentVendor &&
+      saved.vendorStoreName !== previousStoreName
+    ) {
+      await this.syncAllManagersStoreName();
+    }
+
+    // Cascade vendor enable/disable to their products.
+    //   disable vendor → products: active=false, disabled=true
+    //                    (off-shelf everywhere; appears in /admin/products/disabled)
+    //   enable vendor  → products: active=true,  disabled=false
+    //                    (back on shelves; vendor can toggle individual
+    //                     items inactive again from the Products page)
+    // Flipping both flags in one UPDATE keeps the two states in sync —
+    // disabled products were always also intended to be off-sale.
     if (
       saved.role === Role.VENDOR &&
       patch.active !== undefined &&
@@ -152,7 +217,7 @@ export class UsersService {
     ) {
       await this.productsRepo.update(
         { vendorId: saved.id },
-        { disabled: !saved.active },
+        { active: saved.active, disabled: !saved.active },
       );
     }
 
