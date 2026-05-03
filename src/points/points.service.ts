@@ -12,6 +12,7 @@ import { PointsClient, PpzUpdateResult, PpzUser } from './points.client';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
 import { Address } from '../users/entities/address.entity';
+import { autopromotePpzRole, PpzRole } from '../users/ppz-role';
 
 @Injectable()
 export class PointsService {
@@ -360,6 +361,15 @@ export class PointsService {
     user.team = remote.team;
     if (remote.fullname) user.name = remote.fullname;
     if (remote.contact) user.contact = remote.contact;
+
+    // Recompute the PPZ hierarchy role. The helper only ever moves a
+    // user along New Member ↔ Member; higher tiers (set manually by
+    // admin/manager) and existing Members survive unchanged.
+    user.ppzRole = autopromotePpzRole({
+      current: user.ppzRole as PpzRole | null | undefined,
+      lifetimePpzCurrency: user.lifetimePpzCurrency,
+      hasPpzId: !!user.ppzId,
+    }) ?? undefined;
 
     // Email: only switch if it actually differs and won't collide with
     // another local account (which would block them from logging in).

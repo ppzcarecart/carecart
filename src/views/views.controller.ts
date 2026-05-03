@@ -24,6 +24,7 @@ import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
 import { CollectionService } from '../collection/collection.service';
+import { PPZ_ROLES, PPZ_ROLE_LABELS } from '../users/ppz-role';
 import * as QRCode from 'qrcode';
 
 @Controller()
@@ -213,6 +214,7 @@ export class ViewsController {
       user,
       profile: fullUser,
       orderCount: orders.length,
+      ppzRoleLabels: PPZ_ROLE_LABELS,
     };
   }
 
@@ -292,6 +294,8 @@ export class ViewsController {
       title: target.name,
       user,
       target,
+      ppzRoles: PPZ_ROLES,
+      ppzRoleLabels: PPZ_ROLE_LABELS,
       activePath: '/admin/users',
       returnTo: '/admin/users',
     };

@@ -91,6 +91,14 @@ export class User {
   @Column({ type: 'integer', nullable: true })
   team?: number;
 
+  // PPZ hierarchy role. Only meaningful for users with a ppzId.
+  // 'new_member' on first sync (lifetime < 2000), auto-bumped to
+  // 'member' when lifetime >= 2000. Higher tiers (leader → artist)
+  // are admin-managed and the auto-job leaves them alone.
+  // See src/users/ppz-role.ts for the full enum and helper.
+  @Column({ type: 'varchar', nullable: true })
+  ppzRole?: string;
+
   @OneToMany(() => Address, (a) => a.user, { cascade: true, eager: true })
   addresses: Address[];
 

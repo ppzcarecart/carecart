@@ -102,6 +102,25 @@
                   <div class="ppz-stat-value"><%= target.team ?? '—' %></div>
                 </div>
               </div>
+
+              <hr class="my-3">
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <label for="ppzRoleSelect" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-soft); margin:0;">
+                  PPZ Role
+                </label>
+                <select id="ppzRoleSelect" class="form-select" style="max-width: 240px;"
+                  onchange="ppz.setPpzRole('<%= target.id %>', this.value)">
+                  <% ppzRoles.forEach(function(r) { %>
+                    <option value="<%= r %>" <%= target.ppzRole === r ? 'selected' : '' %>>
+                      <%= ppzRoleLabels[r] %>
+                    </option>
+                  <% }); %>
+                </select>
+                <span class="text-muted" style="font-size:.82rem;">
+                  Auto-promoted on login when lifetime ≥ 2,000. Higher tiers manual.
+                </span>
+                <span id="ppzRoleStatus" class="small ms-2"></span>
+              </div>
             </div>
           </div>
         <% } %>

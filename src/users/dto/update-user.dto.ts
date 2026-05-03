@@ -1,5 +1,6 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { Role } from '../../common/enums/role.enum';
+import { PPZ_ROLES, PpzRole } from '../ppz-role';
 
 export class UpdateUserDto {
   @IsOptional() @IsString() name?: string;
@@ -16,6 +17,10 @@ export class UpdateUserDto {
   @IsOptional() @IsInt() @Min(0) ppzCurrency?: number;
   @IsOptional() @IsInt() @Min(0) lifetimePpzCurrency?: number;
   @IsOptional() @IsInt() team?: number;
+
+  // PPZ hierarchy role — admin/manager only. Auto-promotion handles
+  // 'new_member' ↔ 'member'; higher tiers are set by hand via this DTO.
+  @IsOptional() @IsIn(PPZ_ROLES as readonly string[]) ppzRole?: PpzRole;
 
   // Vendor fulfilment overrides
   @IsOptional() @IsBoolean() useOwnCollectionLocation?: boolean;

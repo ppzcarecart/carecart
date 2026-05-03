@@ -1619,6 +1619,24 @@ window.ppz = (function () {
     async updateUser(id, patch) {
       await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify(patch) });
     },
+    // Set the PPZ hierarchy role from the admin user-detail dropdown.
+    // PATCH the user; flash the small status pill next to the select
+    // so admin sees confirmation without a page reload.
+    async setPpzRole(id, ppzRole) {
+      const status = document.getElementById('ppzRoleStatus');
+      if (status) { status.textContent = 'Saving…'; status.style.color = ''; }
+      try {
+        await api('/api/users/' + id, {
+          method: 'PATCH',
+          body: JSON.stringify({ ppzRole }),
+        });
+        if (status) { status.style.color = 'var(--brand)'; status.textContent = 'Saved ✓'; }
+      } catch (e) {
+        if (status) { status.style.color = '#b91c1c'; status.textContent = e.message || 'Save failed'; }
+        // Don't try to revert the select — without the prior value cached
+        // we'd guess wrong; admin can pick the right one manually.
+      }
+    },
     async toggleUser(id, active) {
       await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify({ active }) });
       location.reload();
