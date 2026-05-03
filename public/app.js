@@ -1602,6 +1602,20 @@ window.ppz = (function () {
         alert(e.message);
       }
     },
+    // Inline Active toggle on the products list. PATCHes the standard
+    // product update endpoint (which already accepts `active`) and
+    // reverts the switch on rejection without a full reload.
+    async setActive(id, active, checkbox) {
+      try {
+        await api('/api/products/' + id, {
+          method: 'PATCH',
+          body: JSON.stringify({ active }),
+        });
+      } catch (e) {
+        if (checkbox) checkbox.checked = !active;
+        alert(e.message);
+      }
+    },
     async updateUser(id, patch) {
       await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify(patch) });
     },

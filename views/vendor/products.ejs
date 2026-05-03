@@ -46,7 +46,13 @@
                   <td class="num" data-label="Points"><%= p.pointsPrice ?? '–' %></td>
                   <td class="num" data-label="Stock"><%= p.stock %></td>
                   <td class="num" data-label="Variants"><%= (p.variants || []).length %></td>
-                  <td data-label="Status"><span class="tag <%= p.active ? 'tag-active' : 'tag-inactive' %>"><%= p.active ? 'active' : 'inactive' %></span></td>
+                  <td data-label="Status">
+                    <label class="cc-switch">
+                      <input type="checkbox" <%= p.active ? 'checked' : '' %>
+                        onchange="ppz.setActive('<%= p.id %>', this.checked, this)">
+                      <span class="cc-switch-slider"></span>
+                    </label>
+                  </td>
                   <td class="actions">
                     <a href="/vendor/products/<%= p.id %>/edit" class="cc-btn cc-btn-outline" style="padding:6px 14px; font-size:.85rem;">Edit</a>
                     <button class="cc-btn cc-btn-ghost" style="padding:6px 10px; font-size:.85rem;" onclick="ppz.deleteProduct('<%= p.id %>')">Delete</button>
