@@ -338,28 +338,68 @@ export class OrdersService {
     return this.orders.save(order);
   }
 
-  // Vendor-facing report: aggregated sales for a vendor's items
-  async vendorSalesSummary(vendorId: string) {
-    // Postgres lowercases unquoted identifiers, so we use lowercase aliases.
-    const rows = await this.orderItems
+  /**
+   * Aggregated product sales for the Sales Report views.
+   *   vendorId — scope to one vendor (vendor's own report). Omit for
+   *              the marketplace-wide admin report.
+   *   since / until — inclusive date bounds on order.createdAt.
+   *
+   * Counts orders in any "money received" status: paid, fulfilled,
+   * or collected. Cancelled / refunded / awaiting_payment orders are
+   * excluded so the report reflects realised sales.
+   *
+   * Groups by productName + vendorId so the same product name from
+   * two different vendors stays on separate rows in the all-vendors
+   * view, and we can join the vendor for display.
+   */
+  async salesSummary(opts: {
+    vendorId?: string;
+    since?: Date;
+    until?: Date;
+  }) {
+    const qb = this.orderItems
       .createQueryBuilder('item')
       .innerJoin('item.order', 'order')
-      .where('item.vendorId = :vendorId', { vendorId })
-      .andWhere("order.status IN ('paid', 'fulfilled')")
+      .where("order.status IN ('paid', 'fulfilled', 'collected')");
+
+    if (opts.vendorId) {
+      qb.andWhere('item.vendorId = :vendorId', { vendorId: opts.vendorId });
+    }
+    if (opts.since) {
+      qb.andWhere('order.createdAt >= :since', { since: opts.since });
+    }
+    if (opts.until) {
+      qb.andWhere('order.createdAt < :until', { until: opts.until });
+    }
+
+    // Postgres lowercases unquoted identifiers, so the raw aliases use
+    // lowercase. vendorid is selected so the admin view can resolve a
+    // vendor display name for each row.
+    const rows = await qb
       .select('item.productName', 'productname')
+      .addSelect('item.vendorId', 'vendorid')
       .addSelect('SUM(item.quantity)', 'unitssold')
       .addSelect('SUM(item.quantity * item.unitPriceCents)', 'revenuecents')
       .addSelect('SUM(item.quantity * item.unitPoints)', 'pointscollected')
       .groupBy('item.productName')
+      .addGroupBy('item.vendorId')
       .orderBy('revenuecents', 'DESC')
       .getRawMany();
 
     return rows.map((r) => ({
       productName: r.productname,
+      vendorId: r.vendorid as string | null,
       unitsSold: parseInt(r.unitssold, 10) || 0,
       revenueCents: parseInt(r.revenuecents, 10) || 0,
       pointsCollected: parseInt(r.pointscollected, 10) || 0,
     }));
+  }
+
+  // Backward-compat: keeps the existing /vendor dashboard render and
+  // the /api/orders/vendor/sales endpoint working without a signature
+  // change. Just delegates to salesSummary.
+  vendorSalesSummary(vendorId: string) {
+    return this.salesSummary({ vendorId });
   }
 
   async vendorOrders(vendorId: string) {

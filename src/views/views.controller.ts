@@ -27,6 +27,64 @@ import { CollectionService } from '../collection/collection.service';
 import { PPZ_ROLES, PPZ_ROLE_LABELS } from '../users/ppz-role';
 import * as QRCode from 'qrcode';
 
+/**
+ * Map a `?range=` query string to a date window for the sales report.
+ * Defaults to "all" (no since/until). The `key` round-trips so the
+ * template can mark the active dropdown option.
+ */
+function resolveSalesRange(range: string | undefined): {
+  key: string;
+  label: string;
+  since?: Date;
+  until?: Date;
+} {
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const now = new Date();
+  switch ((range || '').toLowerCase()) {
+    case 'today': {
+      const since = startOfDay(now);
+      return { key: 'today', label: 'Today', since };
+    }
+    case '7d': {
+      const since = startOfDay(now);
+      since.setDate(since.getDate() - 6); // include today + previous 6 days
+      return { key: '7d', label: 'Past 7 days', since };
+    }
+    case '30d': {
+      const since = startOfDay(now);
+      since.setDate(since.getDate() - 29);
+      return { key: '30d', label: 'Past 30 days', since };
+    }
+    case 'month': {
+      const since = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      return { key: 'month', label: 'This month', since };
+    }
+    default:
+      return { key: 'all', label: 'All time' };
+  }
+}
+
+interface SalesRow {
+  productName: string;
+  vendorId: string | null;
+  unitsSold: number;
+  revenueCents: number;
+  pointsCollected: number;
+}
+
+function aggregateSalesTotals(rows: SalesRow[]) {
+  return rows.reduce(
+    (acc, r) => {
+      acc.unitsSold += r.unitsSold;
+      acc.revenueCents += r.revenueCents;
+      acc.pointsCollected += r.pointsCollected;
+      return acc;
+    },
+    { unitsSold: 0, revenueCents: 0, pointsCollected: 0 },
+  );
+}
+
 @Controller()
 export class ViewsController {
   constructor(
@@ -367,6 +425,74 @@ export class ViewsController {
   async adminOrders(@CurrentUser() user: any) {
     const orders = await this.orders.listAll();
     return { title: 'Orders', user, orders, activePath: '/admin/orders' };
+  }
+
+  // Marketplace-wide sales report. Vendors get their own scoped
+  // version under /vendor/sales below.
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/sales')
+  @Render('admin/sales')
+  async adminSales(
+    @CurrentUser() user: any,
+    @Query('range') range?: string,
+  ) {
+    const r = resolveSalesRange(range);
+    const sales = await this.orders.salesSummary({
+      since: r.since,
+      until: r.until,
+    });
+    // Resolve vendor display names for every distinct vendorId in the
+    // result set so the template can show a friendly label.
+    const vendorIds = Array.from(
+      new Set(sales.map((s) => s.vendorId).filter((v): v is string => !!v)),
+    );
+    const vendorById = new Map<string, string>();
+    for (const id of vendorIds) {
+      const v = await this.users.findById(id);
+      if (v) vendorById.set(id, v.vendorStoreName || v.name);
+    }
+    const totals = aggregateSalesTotals(sales);
+    return {
+      title: 'Sales report',
+      user,
+      sales,
+      vendorById: Object.fromEntries(vendorById),
+      totals,
+      range: r.key,
+      rangeLabel: r.label,
+      isAdmin: true,
+      activePath: '/admin/sales',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/sales')
+  @Render('admin/sales')
+  async vendorSales(
+    @CurrentUser() user: any,
+    @Query('range') range?: string,
+  ) {
+    const r = resolveSalesRange(range);
+    // Vendors see only their own products; admin/manager who land
+    // here (e.g. impersonating a vendor view) get the same scope.
+    const vendorId = user.role === Role.VENDOR ? user.id : user.id;
+    const sales = await this.orders.salesSummary({
+      vendorId,
+      since: r.since,
+      until: r.until,
+    });
+    const totals = aggregateSalesTotals(sales);
+    return {
+      title: 'Sales report',
+      user,
+      sales,
+      vendorById: {},
+      totals,
+      range: r.key,
+      rangeLabel: r.label,
+      isAdmin: false,
+      activePath: '/vendor/sales',
+    };
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)

@@ -1,0 +1,128 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<%
+const sidebar = user.role === 'vendor'
+  ? '../partials/vendor-sidebar'
+  : '../partials/admin-sidebar';
+const baseHref = isAdmin ? '/admin/sales' : '/vendor/sales';
+const ranges = [
+  { k: 'all',   label: 'All time' },
+  { k: 'today', label: 'Today' },
+  { k: '7d',    label: 'Past 7 days' },
+  { k: '30d',   label: 'Past 30 days' },
+  { k: 'month', label: 'This month' },
+];
+%>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include(sidebar, { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Sales report</h1>
+          <p class="lede">
+            <% if (isAdmin) { %>
+              Realised sales across every vendor — paid, fulfilled,
+              and collected orders only. Cancellations and refunds
+              are excluded.
+            <% } else { %>
+              Realised sales for your products — paid, fulfilled,
+              and collected orders only.
+            <% } %>
+          </p>
+        </div>
+      </div>
+
+      <!-- Date-range pills. GET so the URL reflects the active filter. -->
+      <div class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-body padded">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Range</span>
+            <% ranges.forEach(function(r) { %>
+              <a href="<%= baseHref %>?range=<%= r.k %>"
+                class="cc-btn <%= range === r.k ? 'cc-btn-primary' : 'cc-btn-outline' %>"
+                style="padding:6px 14px; font-size:.85rem;">
+                <%= r.label %>
+              </a>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-stats">
+        <div class="admin-stat">
+          <div class="stat-icon tone-brand">$</div>
+          <div>
+            <div class="stat-label">Revenue · <%= rangeLabel %></div>
+            <div class="stat-value">$<%= (totals.revenueCents/100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-violet">▣</div>
+          <div>
+            <div class="stat-label">Units sold</div>
+            <div class="stat-value"><%= Number(totals.unitsSold).toLocaleString() %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-amber">★</div>
+          <div>
+            <div class="stat-label">Points collected</div>
+            <div class="stat-value"><%= Number(totals.pointsCollected).toLocaleString() %></div>
+          </div>
+        </div>
+        <div class="admin-stat">
+          <div class="stat-icon tone-blue">⌘</div>
+          <div>
+            <div class="stat-label">Distinct products</div>
+            <div class="stat-value"><%= sales.length %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-head">
+          <h3>By product</h3>
+          <span class="muted">Sorted by revenue · <%= rangeLabel %></span>
+        </div>
+        <div class="panel-body">
+          <% if (!sales.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+              No sales in this range yet.
+            </div>
+          <% } else { %>
+            <table class="admin-table" data-mobile="cards">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <% if (isAdmin) { %><th>Vendor</th><% } %>
+                  <th class="num">Units sold</th>
+                  <th class="num">Revenue</th>
+                  <th class="num">Points collected</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% sales.forEach(s => { %>
+                  <tr>
+                    <td><strong><%= s.productName %></strong></td>
+                    <% if (isAdmin) { %>
+                      <td data-label="Vendor">
+                        <%= s.vendorId && vendorById[s.vendorId] ? vendorById[s.vendorId] : '—' %>
+                      </td>
+                    <% } %>
+                    <td class="num" data-label="Units sold"><%= Number(s.unitsSold).toLocaleString() %></td>
+                    <td class="num" data-label="Revenue">$<%= (s.revenueCents/100).toFixed(2) %></td>
+                    <td class="num" data-label="Points"><%= s.pointsCollected ? Number(s.pointsCollected).toLocaleString() : '–' %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>
