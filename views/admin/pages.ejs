@@ -22,8 +22,17 @@
             Edit the marketing copy and the three image tiles shown at
             the top of the home page. CTA URL can be a hash anchor on
             the same page (<code>#catalogue</code>) or a full URL.
+            Toggle the switch off to drop the hero entirely from the
+            storefront — useful if the banner carousel is enough on
+            its own.
           </p>
           <form id="heroForm" onsubmit="event.preventDefault(); ppz.saveHero(this)">
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="heroEnabled" name="home.hero.enabled" <%= hero.enabled ? 'checked' : '' %>>
+              <label class="form-check-label" for="heroEnabled">
+                Show hero section on home page
+              </label>
+            </div>
             <div class="mb-3" style="max-width: 460px;">
               <label>Eyebrow (small label above heading)</label>
               <input class="form-control" name="home.hero.eyebrow" value="<%= hero.eyebrow %>">

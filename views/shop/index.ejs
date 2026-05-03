@@ -2,21 +2,23 @@
 <%- include('../partials/nav') %>
 <div class="container">
 
-  <section class="cc-hero">
-    <div class="cc-hero-text">
-      <% if (hero.eyebrow) { %><span class="cc-hero-eyebrow"><%= hero.eyebrow %></span><% } %>
-      <% if (hero.heading) { %><h1><%= hero.heading %></h1><% } %>
-      <% if (hero.subheading) { %><p><%= hero.subheading %></p><% } %>
-      <% if (hero.ctaLabel && hero.ctaHref) { %>
-        <a href="<%= hero.ctaHref %>" class="cc-btn cc-btn-primary"><%= hero.ctaLabel %></a>
-      <% } %>
-    </div>
-    <div class="cc-hero-art" aria-hidden="true">
-      <% if (hero.tile1) { %><div class="cc-hero-tile cc-hero-tile-1" style="background-image: url('<%= hero.tile1 %>')"></div><% } %>
-      <% if (hero.tile2) { %><div class="cc-hero-tile cc-hero-tile-2" style="background-image: url('<%= hero.tile2 %>')"></div><% } %>
-      <% if (hero.tile3) { %><div class="cc-hero-tile cc-hero-tile-3" style="background-image: url('<%= hero.tile3 %>')"></div><% } %>
-    </div>
-  </section>
+  <% if (hero.enabled) { %>
+    <section class="cc-hero">
+      <div class="cc-hero-text">
+        <% if (hero.eyebrow) { %><span class="cc-hero-eyebrow"><%= hero.eyebrow %></span><% } %>
+        <% if (hero.heading) { %><h1><%= hero.heading %></h1><% } %>
+        <% if (hero.subheading) { %><p><%= hero.subheading %></p><% } %>
+        <% if (hero.ctaLabel && hero.ctaHref) { %>
+          <a href="<%= hero.ctaHref %>" class="cc-btn cc-btn-primary"><%= hero.ctaLabel %></a>
+        <% } %>
+      </div>
+      <div class="cc-hero-art" aria-hidden="true">
+        <% if (hero.tile1) { %><div class="cc-hero-tile cc-hero-tile-1" style="background-image: url('<%= hero.tile1 %>')"></div><% } %>
+        <% if (hero.tile2) { %><div class="cc-hero-tile cc-hero-tile-2" style="background-image: url('<%= hero.tile2 %>')"></div><% } %>
+        <% if (hero.tile3) { %><div class="cc-hero-tile cc-hero-tile-3" style="background-image: url('<%= hero.tile3 %>')"></div><% } %>
+      </div>
+    </section>
+  <% } %>
 
   <% if (banners && banners.length) { %>
     <!-- Promo banner carousel — admin-managed under /admin/settings.

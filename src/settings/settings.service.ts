@@ -24,6 +24,10 @@ const DEFAULTS: Record<string, string> = {
   // history.back().
   'partner.closeUrl': 'papazao://close',
   // Home page hero — admin/manager-editable copy + image tiles.
+  // Default-on so day-one storefronts look the same as before; an
+  // admin can toggle it off to drop the hero entirely (e.g. when the
+  // banner carousel is enough on its own).
+  'home.hero.enabled': 'true',
   'home.hero.eyebrow': 'Multi-vendor marketplace',
   'home.hero.heading': 'Thoughtful goods, by trusted vendors.',
   'home.hero.subheading':
@@ -114,6 +118,7 @@ export class SettingsService implements OnModuleInit {
   /** Shape the hero settings into the structure consumed by the views. */
   homeHero() {
     return {
+      enabled: this.homeHeroEnabled(),
       eyebrow: this.get('home.hero.eyebrow') || '',
       heading: this.get('home.hero.heading') || '',
       subheading: this.get('home.hero.subheading') || '',
@@ -123,6 +128,13 @@ export class SettingsService implements OnModuleInit {
       tile2: this.get('home.hero.tile2') || '',
       tile3: this.get('home.hero.tile3') || '',
     };
+  }
+
+  homeHeroEnabled(): boolean {
+    // Treat anything other than the literal string 'false' as on, so a
+    // missing row (older deploys before this key existed) doesn't hide
+    // the hero unexpectedly.
+    return this.get('home.hero.enabled') !== 'false';
   }
 
   /**

@@ -570,7 +570,9 @@ window.ppz = (function () {
 
   async function saveHero(form) {
     const fd = new FormData(form);
+    const enabled = !!form.querySelector('input[name="home.hero.enabled"]')?.checked;
     await patchSettingsBulk({
+      'home.hero.enabled': enabled ? 'true' : 'false',
       'home.hero.eyebrow': (fd.get('home.hero.eyebrow') || '').toString(),
       'home.hero.heading': (fd.get('home.hero.heading') || '').toString(),
       'home.hero.subheading': (fd.get('home.hero.subheading') || '').toString(),

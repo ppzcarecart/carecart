@@ -23,6 +23,7 @@ const WRITABLE_KEYS = new Set([
   'delivery.feeCents',
   'partner.closeUrl',
   // Home page hero
+  'home.hero.enabled',
   'home.hero.eyebrow',
   'home.hero.heading',
   'home.hero.subheading',
