@@ -788,10 +788,27 @@ window.ppz = (function () {
 
   // ---- Product image zoom lightbox ----
   // openZoom(url, alt) opens a fullscreen overlay with the image.
-  // Mobile gets native pinch-zoom (CSS touch-action:pinch-zoom on the
-  // scroll container). Desktop click on the image toggles between
-  // fit-to-viewport and 1:1 natural size; backdrop click + ESC + the
-  // close button all dismiss.
+  // Mobile gets native pinch-zoom only inside the lightbox: the
+  // viewport meta is locked to user-scalable=no by default so admin
+  // dashboards / forms can't accidentally zoom, and openZoom swaps
+  // it to a zoomable policy for as long as the lightbox is up.
+  // closeZoom restores it. Desktop click on the image toggles between
+  // fit-to-viewport and 1:1 natural size.
+
+  // Site-wide default — kept in sync with views/partials/head.ejs.
+  const VIEWPORT_LOCKED =
+    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+  // Allow up to 5× pinch-zoom while the lightbox is open. The 1×
+  // initial-scale keeps the chrome visible at the same baseline so
+  // closing doesn't snap the layout around.
+  const VIEWPORT_ZOOMABLE =
+    'width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover';
+
+  function setViewport(content) {
+    const meta = document.getElementById('ccViewport');
+    if (meta) meta.setAttribute('content', content);
+  }
+
   function openZoom(url, alt) {
     const root = document.getElementById('ccZoom');
     const img = document.getElementById('ccZoomImg');
@@ -804,6 +821,7 @@ window.ppz = (function () {
     // Stop the page from scrolling underneath while the lightbox is up.
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+    setViewport(VIEWPORT_ZOOMABLE);
   }
 
   function closeZoom(ev) {
@@ -818,6 +836,7 @@ window.ppz = (function () {
     if (img) img.removeAttribute('src');
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
+    setViewport(VIEWPORT_LOCKED);
     void ev;
   }
 

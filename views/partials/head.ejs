@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- Pinch-zoom is disabled site-wide so admins/staff can't accidentally
+       zoom the chrome on the dashboards / forms. The product-detail
+       image lightbox temporarily switches this meta tag to a zoomable
+       policy via ppz.openZoom and restores it on close. -->
+  <meta id="ccViewport" name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title><%= title || 'carecart' %></title>
 
   <!-- PWA -->
