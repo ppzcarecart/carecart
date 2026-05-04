@@ -60,10 +60,19 @@ export class ProductsService {
       let redeemCashCents = r.priceCents;
       let redeemPoints = 0;
       if (isPpzMember && r.pointsPrice && ppd > 0) {
-        const pointsValueCents = Math.round((r.pointsPrice * 100) / ppd);
-        const discountCents = Math.min(pointsValueCents, r.priceCents);
-        redeemCashCents = r.priceCents - discountCents;
-        redeemPoints = Math.round((discountCents * ppd) / 100);
+        if (r.priceCents === 0) {
+          // Redeem-only listing: cash price is $0, so the configured
+          // pointsPrice IS the cost — there's nothing to "discount"
+          // against. Without this branch the offset math caps the
+          // discount at $0 and the customer would see/pay 0 pts.
+          redeemPoints = r.pointsPrice;
+          redeemCashCents = 0;
+        } else {
+          const pointsValueCents = Math.round((r.pointsPrice * 100) / ppd);
+          const discountCents = Math.min(pointsValueCents, r.priceCents);
+          redeemCashCents = r.priceCents - discountCents;
+          redeemPoints = Math.round((discountCents * ppd) / 100);
+        }
       }
       (p as any).effectiveRedeemCashCents = redeemCashCents;
       (p as any).effectiveRedeemPoints = redeemPoints;

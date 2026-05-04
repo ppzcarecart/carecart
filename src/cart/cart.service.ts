@@ -57,6 +57,13 @@ export class CartService {
     if (ppd <= 0) {
       return { unitCashCents: baseCashCents, unitPoints: 0 };
     }
+    if (baseCashCents === 0) {
+      // Redeem-only listing: cash price is $0, so the configured
+      // pointsPrice IS the charge. Without this branch the offset cap
+      // would zero the points out and the customer would get the item
+      // for free.
+      return { unitCashCents: 0, unitPoints: pointsConfigured };
+    }
     const pointsValueCents = Math.round((pointsConfigured * 100) / ppd);
     const discountCents = Math.min(pointsValueCents, baseCashCents);
     const unitCashCents = baseCashCents - discountCents;
