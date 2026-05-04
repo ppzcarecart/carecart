@@ -69,9 +69,15 @@ export class UploadsService implements OnModuleInit {
     // rejects, sending the file silently to /app/"/app/... Defensively
     // strip a single matched pair of leading/trailing quotes plus any
     // surrounding whitespace before resolving.
+    // Strip leading and trailing quote characters independently — the
+    // earlier matched-pair regex didn't fire when only one end had a
+    // stray quote (e.g. UPLOAD_DIR="/app/media/upload missing the
+    // closing "), leaving the raw value with a leading " that broke
+    // path.isAbsolute and silently mis-rooted the upload dir.
     const dir = raw
       .trim()
-      .replace(/^['"]+(.*?)['"]+$/, '$1')
+      .replace(/^['"]+/, '')
+      .replace(/['"]+$/, '')
       .trim();
     if (path.isAbsolute(dir)) return dir;
     return path.join(process.cwd(), dir);
