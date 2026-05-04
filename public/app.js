@@ -786,6 +786,68 @@ window.ppz = (function () {
     img.replaceWith(div);
   }
 
+  // ---- Product image zoom lightbox ----
+  // openZoom(url, alt) opens a fullscreen overlay with the image.
+  // Mobile gets native pinch-zoom (CSS touch-action:pinch-zoom on the
+  // scroll container). Desktop click on the image toggles between
+  // fit-to-viewport and 1:1 natural size; backdrop click + ESC + the
+  // close button all dismiss.
+  function openZoom(url, alt) {
+    const root = document.getElementById('ccZoom');
+    const img = document.getElementById('ccZoomImg');
+    if (!root || !img || !url) return;
+    img.classList.remove('is-actual');
+    img.src = url;
+    img.alt = alt || '';
+    root.removeAttribute('hidden');
+    root.classList.add('is-open');
+    // Stop the page from scrolling underneath while the lightbox is up.
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeZoom(ev) {
+    // When triggered from an on-element handler we still get the click
+    // bubbling from the inner image, but those calls stopPropagation so
+    // ev (if present) is the backdrop click. Either way: close.
+    const root = document.getElementById('ccZoom');
+    const img = document.getElementById('ccZoomImg');
+    if (!root) return;
+    root.classList.remove('is-open');
+    root.setAttribute('hidden', 'true');
+    if (img) img.removeAttribute('src');
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    void ev;
+  }
+
+  // Desktop click on the image inside the lightbox toggles between
+  // fit-to-viewport (default) and 1:1 natural size — pan via the
+  // scroll container. On phones the browser pinch already handles
+  // zooming so the toggle is a bonus rather than the primary path.
+  function toggleZoomScale(img) {
+    if (!img) return;
+    img.classList.toggle('is-actual');
+    if (img.classList.contains('is-actual')) {
+      // After scaling up, scroll the scroll container to centre the
+      // image so the click point doesn't jump to a corner.
+      const wrap = img.parentElement;
+      if (wrap) {
+        wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
+        wrap.scrollTop = (wrap.scrollHeight - wrap.clientHeight) / 2;
+      }
+    }
+  }
+
+  // ESC closes the lightbox. Bound once at module load — no-op when
+  // the page doesn't have a #ccZoom in the DOM.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      const root = document.getElementById('ccZoom');
+      if (root && root.classList.contains('is-open')) closeZoom();
+    }
+  });
+
   /**
    * Try to close the in-app webview and hand control back to the
    * partner app. We try multiple bridges in order of preference so the
@@ -1374,6 +1436,9 @@ window.ppz = (function () {
 
   return {
     imgFallback,
+    openZoom,
+    closeZoom,
+    toggleZoomScale,
     exitToApp,
     collection,
     refreshPoints,

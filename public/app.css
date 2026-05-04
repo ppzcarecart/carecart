@@ -244,8 +244,85 @@ a:hover { color: var(--brand-dark); }
   aspect-ratio: 1 / 1;
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
+  cursor: zoom-in;
+  transition: box-shadow .15s ease;
+}
+.cc-detail .cc-gallery:hover { box-shadow: var(--shadow-sm); }
+.cc-detail .cc-gallery:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
 }
 .cc-detail .cc-gallery img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ============================================================ */
+/* Image zoom lightbox (product detail page)                    */
+/* ============================================================ */
+
+.cc-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  background: rgba(15, 23, 42, 0.92);
+  display: none;
+}
+.cc-zoom[hidden] { display: none; }
+.cc-zoom.is-open { display: block; }
+
+/* The scroll container is what enables both native pinch-zoom on
+   touch devices (touch-action: pinch-zoom) AND panning around a
+   1:1 image on desktop (overflow:auto). The outer .cc-zoom takes
+   the click-to-dismiss; clicks on the inner img stopPropagation
+   and toggle desktop scale. */
+.cc-zoom-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pinch-zoom;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  padding: 24px;
+}
+.cc-zoom-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+  transition: max-width .15s ease, max-height .15s ease;
+}
+/* "1:1 mode" — clicked once. Image renders at its natural size; the
+   scroll container handles overflow on desktop, and pinch-zoom still
+   works on top. Click again to revert to fit. */
+.cc-zoom-img.is-actual {
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  cursor: zoom-out;
+}
+.cc-zoom-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  border: none;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform .12s ease;
+}
+.cc-zoom-close:hover { transform: scale(1.05); }
 .cc-detail .cc-info h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; }
 .cc-detail .cc-info .vendor-tag { color: var(--ink-soft); font-size: 0.95rem; margin-bottom: 18px; }
 .cc-detail .cc-info .price-row { display: flex; align-items: baseline; gap: 14px; margin: 18px 0 22px; }

@@ -13,7 +13,15 @@
     </nav>
 
     <div class="cc-detail">
-      <div class="cc-gallery">
+      <div class="cc-gallery"
+        <% if (product.images && product.images[0]) { %>
+        onclick="ppz.openZoom('<%= product.images[0].url %>', '<%= product.name.replace(/'/g, '&#39;') %>')"
+        role="button"
+        tabindex="0"
+        aria-label="Zoom in on product image"
+        title="Click to zoom"
+        <% } %>
+      >
         <%- include('../partials/product-thumb', { product }) %>
       </div>
       <div class="cc-info">
@@ -104,4 +112,17 @@
     </div>
   <% } %>
 </div>
+
+<!-- Image zoom lightbox. Mobile gets native pinch-zoom via
+     touch-action:pinch-zoom on the scroll container. Desktop click on
+     the inner image toggles between fit-to-viewport and 1:1 natural
+     size (panning via the same scroll container). ESC + backdrop
+     click + close button all dismiss. -->
+<div class="cc-zoom" id="ccZoom" hidden>
+  <button type="button" class="cc-zoom-close" aria-label="Close zoom" onclick="ppz.closeZoom()">×</button>
+  <div class="cc-zoom-scroll" id="ccZoomScroll" onclick="ppz.closeZoom(event)">
+    <img class="cc-zoom-img" id="ccZoomImg" alt="" onclick="event.stopPropagation(); ppz.toggleZoomScale(this)">
+  </div>
+</div>
+
 <%- include('../partials/foot') %>
