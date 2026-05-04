@@ -19,7 +19,7 @@
            and any other deep-link in. Empty string = All. -->
       <div class="admin-panel" style="margin-bottom: 14px;">
         <div class="panel-body padded">
-          <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="d-flex flex-wrap gap-2 align-items-center cc-filter-rail" id="ordersStatusRail">
             <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Status</span>
             <%
             const statuses = [
@@ -43,6 +43,14 @@
               <span class="text-muted" style="font-size:.85rem;"> · <%= orders.length %> match<%= orders.length === 1 ? '' : 'es' %></span>
             <% } %>
           </div>
+          <script>
+            (function () {
+              const active = document.querySelector('#ordersStatusRail .cc-btn-primary');
+              if (active && active.scrollIntoView) {
+                active.scrollIntoView({ inline: 'center', block: 'nearest' });
+              }
+            })();
+          </script>
         </div>
       </div>
 

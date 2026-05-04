@@ -44,7 +44,7 @@ const ranges = [
       <!-- Date-range pills. GET so the URL reflects the active filter. -->
       <div class="admin-panel" style="margin-bottom: 14px;">
         <div class="panel-body padded">
-          <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="d-flex flex-wrap gap-2 align-items-center cc-filter-rail" id="salesRangeRail">
             <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Range</span>
             <% ranges.forEach(function(r) { %>
               <a href="<%= baseHref %>?range=<%= r.k %>"
@@ -54,6 +54,14 @@ const ranges = [
               </a>
             <% }); %>
           </div>
+          <script>
+            (function () {
+              const active = document.querySelector('#salesRangeRail .cc-btn-primary');
+              if (active && active.scrollIntoView) {
+                active.scrollIntoView({ inline: 'center', block: 'nearest' });
+              }
+            })();
+          </script>
         </div>
       </div>
 
