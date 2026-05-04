@@ -1,17 +1,64 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
 @Injectable()
-export class UploadsService {
+export class UploadsService implements OnModuleInit {
   private readonly logger = new Logger(UploadsService.name);
   readonly uploadDir: string;
 
   constructor(private config: ConfigService) {
     this.uploadDir = this.resolveDir();
     fs.mkdirSync(this.uploadDir, { recursive: true });
+  }
+
+  /**
+   * Boot-time diagnostic: prove the configured upload directory exists,
+   * is writable, and shows what's already in it. Lets you tell at a
+   * glance from the Railway logs whether UPLOAD_DIR is pointing at a
+   * mounted volume (file count carries over across deploys) or at a
+   * fresh ephemeral path (count resets to 0 every boot).
+   */
+  async onModuleInit() {
+    let exists = false;
+    let writable = false;
+    let fileCount = 0;
+    let isSymlink = false;
+    try {
+      const stat = fs.statSync(this.uploadDir);
+      exists = stat.isDirectory();
+      try {
+        const link = fs.lstatSync(this.uploadDir);
+        isSymlink = link.isSymbolicLink();
+      } catch {}
+    } catch {}
+    if (exists) {
+      try {
+        const probe = path.join(
+          this.uploadDir,
+          `.write-probe-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        );
+        fs.writeFileSync(probe, 'ok');
+        fs.unlinkSync(probe);
+        writable = true;
+      } catch {}
+      try {
+        fileCount = fs.readdirSync(this.uploadDir).filter((f) => !f.startsWith('.')).length;
+      } catch {}
+    }
+    const summary =
+      `uploadDir=${this.uploadDir} exists=${exists} writable=${writable}` +
+      ` symlink=${isSymlink} persistedFiles=${fileCount}`;
+    if (exists && writable) {
+      this.logger.log(summary);
+    } else {
+      // Bad combo: either the dir doesn't exist, or it does but isn't
+      // writable. Both will silently fail subsequent uploads, so warn
+      // loudly so it shows up in Railway's log highlights.
+      this.logger.warn(`UPLOAD DIR PROBLEM — ${summary}`);
+    }
   }
 
   private resolveDir() {
