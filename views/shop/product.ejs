@@ -73,10 +73,13 @@
         <% if (product.variants && product.variants.length) { %>
           <div class="field">
             <label for="variantId">Variant</label>
-            <select id="variantId" class="form-control">
+            <select id="variantId" class="form-control"
+              onchange="ppz.swapGalleryToVariant(this)">
               <option value="">— Choose —</option>
               <% product.variants.forEach(v => { %>
-                <option value="<%= v.id %>" <%= v.stock === 0 ? 'disabled' : '' %>>
+                <option value="<%= v.id %>"
+                  data-image-url="<%= v.imageUrl || '' %>"
+                  <%= v.stock === 0 ? 'disabled' : '' %>>
                   <%= v.name %><% if (v.priceCentsOverride) { %> · $<%= (v.priceCentsOverride/100).toFixed(2) %><% } %>
                   <%= v.stock === 0 ? '(sold out)' : `(stock: ${v.stock})` %>
                 </option>

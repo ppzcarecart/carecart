@@ -172,6 +172,7 @@
           <table class="admin-table" id="variantTable" <%= (!product.variants || product.variants.length === 0) ? 'hidden' : '' %>>
             <thead>
               <tr>
+                <th>Image</th>
                 <th>Name</th>
                 <th>SKU</th>
                 <th class="num">Price (SGD)</th>
@@ -184,6 +185,18 @@
             <tbody id="variantBody">
               <% (product.variants || []).forEach(v => { %>
                 <tr data-variant-id="<%= v.id %>">
+                  <td>
+                    <div class="variant-image-cell">
+                      <div class="variant-image-thumb"
+                           style="<%= v.imageUrl ? `background-image: url('${v.imageUrl}')` : '' %>"></div>
+                      <input type="hidden" name="imageUrl" value="<%= v.imageUrl || '' %>">
+                      <input type="file" accept="image/*" hidden onchange="ppz.uploadVariantImage(this)">
+                      <button type="button" class="cc-btn cc-btn-ghost" style="padding:4px 8px; font-size:.72rem;"
+                        onclick="this.previousElementSibling.click()">
+                        <%= v.imageUrl ? 'Change' : 'Upload' %>
+                      </button>
+                    </div>
+                  </td>
                   <td><input type="text" name="name" value="<%= v.name %>" placeholder="Size: M / Color: Black"></td>
                   <td><input type="text" name="sku" value="<%= v.sku || '' %>" placeholder="Optional SKU"></td>
                   <td class="num"><input type="number" step="0.01" min="0" name="priceOverride" value="<%= v.priceCentsOverride != null ? (v.priceCentsOverride/100).toFixed(2) : '' %>" placeholder="—"></td>

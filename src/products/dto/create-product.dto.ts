@@ -18,6 +18,7 @@ export class CreateVariantDto {
   @IsOptional() @IsInt() @Min(0) pointsPriceOverride?: number;
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsString() imageUrl?: string;
 }
 
 export class CreateProductDto {

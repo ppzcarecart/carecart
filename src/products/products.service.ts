@@ -185,6 +185,7 @@ export class ProductsService {
           pointsPriceOverride: v.pointsPriceOverride,
           stock: v.stock ?? 0,
           active: v.active ?? true,
+          imageUrl: v.imageUrl ?? null,
         }),
       ),
       images: (dto.imageUrls || []).map((url, i) =>
@@ -271,6 +272,7 @@ export class ProductsService {
         pointsPriceOverride: dto.pointsPriceOverride,
         stock: dto.stock ?? 0,
         active: dto.active ?? true,
+        imageUrl: dto.imageUrl ?? null,
       });
     }
     return this.variants.save(variant);

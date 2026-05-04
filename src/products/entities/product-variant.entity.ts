@@ -40,4 +40,11 @@ export class ProductVariant {
 
   @Column({ default: true })
   active: boolean;
+
+  // Optional per-variant image. When set, the storefront product
+  // detail swaps the main gallery image to this URL whenever the
+  // matching variant is selected from the dropdown. Falls back to
+  // the product's first image when null.
+  @Column({ nullable: true })
+  imageUrl?: string;
 }

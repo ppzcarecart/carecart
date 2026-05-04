@@ -647,6 +647,25 @@ a.admin-stat:hover {
 .variant-row input { width: 70px; }
 .variant-row .name { color: var(--ink); }
 
+/* Variant image cell on the product-edit + product-new variant
+   tables. Square thumbnail + upload button stacked vertically so
+   the row stays compact. */
+.variant-image-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 60px;
+}
+.variant-image-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #f1f5f9 center / cover no-repeat;
+  flex-shrink: 0;
+}
+
 .badge-status {
   display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 500;
   background: #f1f5f9; color: var(--ink-soft);

@@ -166,6 +166,14 @@ window.ppz = (function () {
     if (table) table.hidden = false;
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td>
+        <div class="variant-image-cell">
+          <div class="variant-image-thumb"></div>
+          <input type="hidden" name="imageUrl" value="">
+          <input type="file" accept="image/*" hidden>
+          <button class="cc-btn cc-btn-ghost" style="padding:4px 8px; font-size:.72rem;" type="button">Upload</button>
+        </div>
+      </td>
       <td><input type="text" name="name" placeholder="Size: M / Color: Black"></td>
       <td><input type="text" name="sku" placeholder="Optional SKU"></td>
       <td class="num"><input type="number" step="0.01" min="0" name="priceOverride" placeholder="—"></td>
@@ -180,6 +188,13 @@ window.ppz = (function () {
     const [saveBtn, delBtn] = tr.querySelectorAll('.actions button');
     saveBtn.addEventListener('click', () => saveVariantRow(saveBtn));
     delBtn.addEventListener('click', () => deleteVariantRow(delBtn));
+    // Wire the upload button to the hidden file input → uploadVariantImage.
+    const fileInput = tr.querySelector('input[type="file"]');
+    const uploadBtn = tr.querySelector('.variant-image-cell button');
+    if (fileInput && uploadBtn) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', () => uploadVariantImage(fileInput));
+    }
     body.appendChild(tr);
   }
 
@@ -197,7 +212,36 @@ window.ppz = (function () {
       ppzPriceCentsOverride: dollarsToCents(get('ppzPriceOverride')),
       pointsPriceOverride: intOrUndef(get('pointsPriceOverride')),
       stock: intOrUndef(get('stock')) ?? 0,
+      imageUrl: get('imageUrl') || null,
     };
+  }
+
+  // Upload an image for a single variant row. Reads the chosen file
+  // from the row's hidden file input, posts to /api/uploads (the same
+  // endpoint product-level images use), then writes the resulting
+  // public URL into the row's hidden imageUrl input + paints the
+  // thumbnail. Caller still has to click Save on the row to persist.
+  async function uploadVariantImage(fileInput) {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const tr = fileInput.closest('tr');
+    const thumb = tr && tr.querySelector('.variant-image-thumb');
+    const urlInput = tr && tr.querySelector('input[name="imageUrl"]');
+    const btn = tr && tr.querySelector('.variant-image-cell button');
+    if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+    try {
+      const r = await uploadFile(file);
+      const url = r.url || r.path || '';
+      if (urlInput) urlInput.value = url;
+      if (thumb && url) thumb.style.backgroundImage = `url('${url}')`;
+      if (btn) btn.textContent = 'Change';
+    } catch (e) {
+      alert('Upload failed: ' + (e.message || e));
+      if (btn) btn.textContent = 'Upload';
+    } finally {
+      if (btn) btn.disabled = false;
+      fileInput.value = '';
+    }
   }
 
   async function saveVariantRow(btn) {
@@ -867,6 +911,36 @@ window.ppz = (function () {
     }
   });
 
+  // Variant dropdown on the product detail page. When the user picks a
+  // variant that has its own image, swap the main gallery thumbnail
+  // (and the lightbox source on next open) to that URL. Picking a
+  // variant without a custom image — or the empty "— Choose —"
+  // option — restores the original product hero.
+  function swapGalleryToVariant(selectEl) {
+    const gallery = document.querySelector('.cc-detail .cc-gallery');
+    if (!gallery) return;
+    const img = gallery.querySelector('img');
+    if (!img) return;
+    // Cache the original src once so we can revert when the user
+    // deselects or picks a variant without a dedicated image.
+    if (!gallery.dataset.originalSrc) {
+      gallery.dataset.originalSrc = img.getAttribute('src') || '';
+    }
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const variantUrl = opt && opt.dataset && opt.dataset.imageUrl
+      ? opt.dataset.imageUrl
+      : '';
+    const target = variantUrl || gallery.dataset.originalSrc;
+    if (target) img.setAttribute('src', target);
+    // Update the click-to-zoom handler so the lightbox shows the same
+    // image the user is currently looking at, not the original hero.
+    const newAlt = (img.getAttribute('alt') || '').replace(/'/g, '&#39;');
+    gallery.setAttribute(
+      'onclick',
+      `ppz.openZoom('${target.replace(/'/g, "\\'")}', '${newAlt}')`,
+    );
+  }
+
   /**
    * Try to close the in-app webview and hand control back to the
    * partner app. We try multiple bridges in order of preference so the
@@ -1481,6 +1555,8 @@ window.ppz = (function () {
     addVariantRow,
     saveVariantRow,
     deleteVariantRow,
+    uploadVariantImage,
+    swapGalleryToVariant,
     saveProduct,
     createProduct,
     deleteFromEdit,
