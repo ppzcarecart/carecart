@@ -47,6 +47,14 @@
           redeemCashCents = cashCents - discountCents;
           redeemPoints = Math.round(discountCents * pointsPerDollar / 100);
         }
+        // Cash price of $0 with points set means this is a redeem-only
+        // listing: hide the $0.00 amount and the cash buy button so the
+        // member only sees the points option.
+        const isPointsOnly = showPoints && cashCents === 0 && ptsValue > 0;
+        if (isPointsOnly) {
+          redeemPoints = ptsValue;
+          redeemCashCents = 0;
+        }
         %>
         <div class="cc-info-badges">
           <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
@@ -56,13 +64,15 @@
         <h1><%= product.name %></h1>
         <div class="vendor-tag">by <%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></div>
         <div class="price-row">
-          <span class="amount">$<%= (cashCents/100).toFixed(2) %></span>
-          <% if (showStrike) { %>
-            <span class="amount-strike">$<%= (product.priceCents/100).toFixed(2) %></span>
+          <% if (!isPointsOnly) { %>
+            <span class="amount">$<%= (cashCents/100).toFixed(2) %></span>
+            <% if (showStrike) { %>
+              <span class="amount-strike">$<%= (product.priceCents/100).toFixed(2) %></span>
+            <% } %>
           <% } %>
           <% if (showPoints) { %>
             <span class="points">
-              or <%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
+              <% if (!isPointsOnly) { %>or <% } %><%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
             </span>
           <% } %>
         </div>
@@ -105,18 +115,24 @@
 
         <div class="cc-actions">
           <% if (user) { %>
-            <button class="cc-btn cc-btn-primary"
-              <%= allVariantsSoldOut ? 'disabled' : '' %>
-              onclick="ppz.addToCart('<%= product.id %>', 'price')">
-              <% if (allVariantsSoldOut) { %>
-                Sold out
-              <% } else { %>
-                <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
-              <% } %>
-            </button>
-            <% if (showPoints && !allVariantsSoldOut) { %>
-              <button class="cc-btn cc-btn-outline" onclick="ppz.addToCart('<%= product.id %>', 'points')">
-                <% if (redeemCashCents === 0) { %>
+            <% if (!isPointsOnly) { %>
+              <button class="cc-btn cc-btn-primary"
+                <%= allVariantsSoldOut ? 'disabled' : '' %>
+                onclick="ppz.addToCart('<%= product.id %>', 'price')">
+                <% if (allVariantsSoldOut) { %>
+                  Sold out
+                <% } else { %>
+                  <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
+                <% } %>
+              </button>
+            <% } %>
+            <% if (showPoints) { %>
+              <button class="cc-btn <%= isPointsOnly ? 'cc-btn-primary' : 'cc-btn-outline' %>"
+                <%= allVariantsSoldOut ? 'disabled' : '' %>
+                onclick="ppz.addToCart('<%= product.id %>', 'points')">
+                <% if (allVariantsSoldOut) { %>
+                  Sold out
+                <% } else if (redeemCashCents === 0) { %>
                   Redeem with <%= redeemPoints %> pts
                 <% } else { %>
                   Redeem <%= redeemPoints %> pts at $<%= (redeemCashCents/100).toFixed(2) %>

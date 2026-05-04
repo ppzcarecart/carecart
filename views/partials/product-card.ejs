@@ -14,6 +14,9 @@ const ptsValue = (product.effectivePointsPrice != null) ? product.effectivePoint
 const showPoints = ppzMember && ptsValue;
 const redeemPoints = product.effectiveRedeemPoints != null ? product.effectiveRedeemPoints : ptsValue;
 const redeemCashCents = product.effectiveRedeemCashCents != null ? product.effectiveRedeemCashCents : 0;
+// $0 cash + points set = redeem-only listing; suppress the $0.00 line
+// so the card reads as a points redemption instead of a freebie.
+const isPointsOnly = showPoints && cashCents === 0 && ptsValue > 0;
 %>
 <a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
   <div class="cc-thumb">
@@ -28,13 +31,15 @@ const redeemCashCents = product.effectiveRedeemCashCents != null ? product.effec
     <span class="cc-vendor"><%= product.vendor && (product.vendor.vendorStoreName || product.vendor.name) || 'Vendor' %></span>
     <h3 class="cc-name"><%= product.name %></h3>
     <div class="cc-price">
-      <span class="amount">$<%= (cashCents / 100).toFixed(2) %></span>
-      <% if (showStrike) { %>
-        <span class="amount-strike">$<%= (product.priceCents / 100).toFixed(2) %></span>
+      <% if (!isPointsOnly) { %>
+        <span class="amount">$<%= (cashCents / 100).toFixed(2) %></span>
+        <% if (showStrike) { %>
+          <span class="amount-strike">$<%= (product.priceCents / 100).toFixed(2) %></span>
+        <% } %>
       <% } %>
       <% if (showPoints) { %>
         <span class="points">
-          or <%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
+          <% if (!isPointsOnly) { %>or <% } %><%= redeemPoints %> pts<% if (redeemCashCents > 0) { %> at $<%= (redeemCashCents/100).toFixed(2) %><% } %>
         </span>
       <% } %>
     </div>
