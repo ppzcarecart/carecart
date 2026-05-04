@@ -62,7 +62,17 @@ export class UploadsService implements OnModuleInit {
   }
 
   private resolveDir() {
-    const dir = this.config.get<string>('UPLOAD_DIR') || './uploads';
+    const raw = this.config.get<string>('UPLOAD_DIR') || './uploads';
+    // Some env-var UIs (Railway, certain shells) preserve surrounding
+    // quotes verbatim — UPLOAD_DIR='"/app/media"' would arrive here
+    // as the literal 5-char prefix `"/app`, which path.isAbsolute then
+    // rejects, sending the file silently to /app/"/app/... Defensively
+    // strip a single matched pair of leading/trailing quotes plus any
+    // surrounding whitespace before resolving.
+    const dir = raw
+      .trim()
+      .replace(/^['"]+(.*?)['"]+$/, '$1')
+      .trim();
     if (path.isAbsolute(dir)) return dir;
     return path.join(process.cwd(), dir);
   }
