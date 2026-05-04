@@ -136,9 +136,15 @@
         <div class="panel-body padded">
           <div class="image-grid" id="imageGrid">
             <% (product.images || []).forEach(img => { %>
-              <div class="image-tile" data-image-id="<%= img.id %>">
-                <img src="<%= img.url %>" alt="">
+              <div class="image-tile" data-image-id="<%= img.id %>" title="<%= img.url %>">
+                <img src="<%= img.url %>" alt=""
+                     data-fallback-bg="linear-gradient(135deg,#fee2e2,#fecaca)"
+                     data-fallback-initial="!"
+                     onerror="ppz.imgFallback(this); console.warn('[broken image]', this.dataset.failedUrl || <%- JSON.stringify(img.url) %>);">
                 <button type="button" class="image-remove" title="Remove" onclick="ppz.removeProductImage('<%= img.id %>')">×</button>
+                <a class="image-tile-url" href="<%= img.url %>" target="_blank" rel="noopener" title="Open in new tab to test">
+                  <%= img.url.length > 36 ? img.url.slice(0, 33) + '…' : img.url %>
+                </a>
               </div>
             <% }); %>
           </div>

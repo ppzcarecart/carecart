@@ -700,6 +700,23 @@ a.admin-stat:hover {
 .image-tile:hover .image-remove,
 .image-tile:focus-within .image-remove { opacity: 1; }
 
+/* Image URL caption on the product-edit grid — clickable so admin
+   can open the source in a new tab to test it directly. Helps
+   diagnose broken images (404/expired URL/missing upload). */
+.image-tile-url {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.78) 40%);
+  text-decoration: none;
+  word-break: break-all;
+  line-height: 1.2;
+  pointer-events: auto;
+}
+.image-tile-url:hover { color: #fff; text-decoration: underline; }
+
 .image-upload-zone {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 4px;
