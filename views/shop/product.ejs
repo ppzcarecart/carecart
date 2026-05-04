@@ -70,21 +70,31 @@
           <p class="desc"><%= product.description %></p>
         <% } %>
 
-        <% if (product.variants && product.variants.length) { %>
+        <%
+        const hasVariants = !!(product.variants && product.variants.length);
+        const firstInStockVariant = hasVariants
+          ? product.variants.find((v) => v.stock > 0)
+          : null;
+        const allVariantsSoldOut = hasVariants && !firstInStockVariant;
+        %>
+        <% if (hasVariants) { %>
           <div class="field">
-            <label for="variantId">Variant</label>
-            <select id="variantId" class="form-control"
+            <label for="variantId">Variant <span class="text-danger">*</span></label>
+            <select id="variantId" class="form-control" required
               onchange="ppz.swapGalleryToVariant(this)">
-              <option value="">— Choose —</option>
               <% product.variants.forEach(v => { %>
                 <option value="<%= v.id %>"
                   data-image-url="<%= v.imageUrl || '' %>"
-                  <%= v.stock === 0 ? 'disabled' : '' %>>
+                  <%= v.stock === 0 ? 'disabled' : '' %>
+                  <%= firstInStockVariant && v.id === firstInStockVariant.id ? 'selected' : '' %>>
                   <%= v.name %><% if (v.priceCentsOverride) { %> · $<%= (v.priceCentsOverride/100).toFixed(2) %><% } %>
                   <%= v.stock === 0 ? '(sold out)' : `(stock: ${v.stock})` %>
                 </option>
               <% }); %>
             </select>
+            <% if (allVariantsSoldOut) { %>
+              <small class="text-danger">All variants are sold out right now.</small>
+            <% } %>
           </div>
         <% } %>
 
@@ -95,10 +105,16 @@
 
         <div class="cc-actions">
           <% if (user) { %>
-            <button class="cc-btn cc-btn-primary" onclick="ppz.addToCart('<%= product.id %>', 'price')">
-              <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
+            <button class="cc-btn cc-btn-primary"
+              <%= allVariantsSoldOut ? 'disabled' : '' %>
+              onclick="ppz.addToCart('<%= product.id %>', 'price')">
+              <% if (allVariantsSoldOut) { %>
+                Sold out
+              <% } else { %>
+                <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
+              <% } %>
             </button>
-            <% if (showPoints) { %>
+            <% if (showPoints && !allVariantsSoldOut) { %>
               <button class="cc-btn cc-btn-outline" onclick="ppz.addToCart('<%= product.id %>', 'points')">
                 <% if (redeemCashCents === 0) { %>
                   Redeem with <%= redeemPoints %> pts
@@ -111,6 +127,26 @@
             <a href="/login" class="cc-btn cc-btn-primary">Sign in to buy</a>
           <% } %>
         </div>
+        <% if (hasVariants) { %>
+          <script>
+            // Pre-selected variant's image needs to land in the gallery
+            // on first paint, otherwise the visitor sees the product
+            // hero until they manually toggle the dropdown.
+            (function () {
+              function apply() {
+                const sel = document.getElementById('variantId');
+                if (sel && sel.value && window.ppz && window.ppz.swapGalleryToVariant) {
+                  window.ppz.swapGalleryToVariant(sel);
+                }
+              }
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', apply);
+              } else {
+                apply();
+              }
+            })();
+          </script>
+        <% } %>
       </div>
     </div>
   <% } %>

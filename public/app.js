@@ -1570,6 +1570,15 @@ window.ppz = (function () {
     async addToCart(productId, mode) {
       const variantSel = document.getElementById('variantId');
       const qtyEl = document.getElementById('qty');
+      // If the page rendered a variant select, the customer must pick
+      // one — page render pre-selects the first in-stock variant so
+      // this only trips when an admin disables all variants between
+      // the page load and the click. Block submission cleanly.
+      if (variantSel && !variantSel.value) {
+        alert('Please choose a variant first.');
+        variantSel.focus();
+        return;
+      }
       const variantId = variantSel ? variantSel.value || undefined : undefined;
       const quantity = qtyEl ? parseInt(qtyEl.value, 10) : 1;
       try {
