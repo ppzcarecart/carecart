@@ -65,12 +65,24 @@
     <div class="cc-section-head">
       <h2>Browse categories</h2>
     </div>
-    <div class="cc-chips">
+    <div class="cc-chips" id="ccCategoryChips">
       <a class="cc-chip <%= activeCategorySlug === 'all' ? 'is-active' : '' %>" href="/">All</a>
       <% categories.forEach(c => { %>
         <a class="cc-chip <%= activeCategorySlug === c.slug ? 'is-active' : '' %>" href="/?category=<%= c.slug %>"><%= c.name %></a>
       <% }); %>
     </div>
+    <script>
+      // Mobile rail mode: nudge the active chip into view so a returning
+      // visitor sees their selected filter even when it's deep in the
+      // scroll. inline:'center' keeps it visually centered; block:'nearest'
+      // is a no-op vertically when the chip is already on-screen.
+      (function () {
+        const active = document.querySelector('#ccCategoryChips .cc-chip.is-active');
+        if (active && active.scrollIntoView) {
+          active.scrollIntoView({ inline: 'center', block: 'nearest' });
+        }
+      })();
+    </script>
   <% } %>
 
   <% if (featured && featured.length) { %>

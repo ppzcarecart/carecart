@@ -149,6 +149,31 @@ a:hover { color: var(--brand-dark); }
 }
 .cc-chip:hover, .cc-chip.is-active { background: var(--brand); color: #fff; border-color: var(--brand); }
 
+/* On mobile, many categories wrapping into 4-5 rows eats the viewport.
+   Switch to a single-row horizontal scroll rail with a fade hint on
+   the right edge so the chips stay scannable without crowding the
+   page. The active chip auto-scrolls into view via inline JS. */
+@media (max-width: 720px) {
+  .cc-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+    margin-bottom: 20px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  }
+  .cc-chips::-webkit-scrollbar { display: none; }
+  .cc-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+}
+
 /* ---------- Product card ---------- */
 .cc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
 
