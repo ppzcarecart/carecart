@@ -61,7 +61,14 @@
                     <% } %>
                   </td>
                   <td class="num" data-label="Price">$<%= (p.priceCents/100).toFixed(2) %></td>
-                  <td class="num" data-label="Stock"><%= p.stock %></td>
+                  <td class="num" data-label="Stock">
+                    <% if (p.variants && p.variants.length) { %>
+                      <%= p.variants.reduce((s, v) => s + (v.stock || 0), 0) %>
+                      <small class="text-muted" style="font-size:.75rem;">(variants)</small>
+                    <% } else { %>
+                      <%= p.stock %>
+                    <% } %>
+                  </td>
                   <td data-label="Vendor active">
                     <% if (p.vendor) { %>
                       <span class="tag <%= p.vendor.active ? 'tag-active' : 'tag-inactive' %>">

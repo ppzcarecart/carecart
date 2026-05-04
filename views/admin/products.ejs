@@ -61,7 +61,14 @@
                   <td data-label="Vendor"><%= p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '-' %></td>
                   <td class="num" data-label="Price">$<%= (p.priceCents/100).toFixed(2) %></td>
                   <td class="num" data-label="Points"><%= p.pointsPrice ?? '–' %></td>
-                  <td class="num" data-label="Stock"><%= p.stock %></td>
+                  <td class="num" data-label="Stock">
+                    <% if (p.variants && p.variants.length) { %>
+                      <%= p.variants.reduce((s, v) => s + (v.stock || 0), 0) %>
+                      <small class="text-muted" style="font-size:.75rem;">(variants)</small>
+                    <% } else { %>
+                      <%= p.stock %>
+                    <% } %>
+                  </td>
                   <td data-label="Active">
                     <label class="cc-switch">
                       <input type="checkbox" <%= p.active ? 'checked' : '' %>
