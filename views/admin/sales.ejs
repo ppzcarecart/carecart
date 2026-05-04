@@ -32,6 +32,13 @@ const ranges = [
             <% } %>
           </p>
         </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="<%= baseHref %>/export.csv?range=<%= range %>"
+            class="cc-btn cc-btn-outline"
+            title="Download a UTF-8 CSV that opens directly in Excel">
+            ↓ Export to Excel
+          </a>
+        </div>
       </div>
 
       <!-- Date-range pills. GET so the URL reflects the active filter. -->

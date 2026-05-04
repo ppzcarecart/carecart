@@ -7,9 +7,10 @@ import {
   Query,
   Render,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -83,6 +84,171 @@ function aggregateSalesTotals(rows: SalesRow[]) {
     },
     { unitsSold: 0, revenueCents: 0, pointsCollected: 0 },
   );
+}
+
+/**
+ * Serialise a single CSV cell. Quotes the value when it contains the
+ * delimiter, embedded quotes, or newlines (RFC 4180).
+ */
+function csvCell(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function csvRow(cells: unknown[]): string {
+  return cells.map(csvCell).join(',');
+}
+
+function fmtDate(d: Date | string | null | undefined): string {
+  if (!d) return '';
+  const dt = typeof d === 'string' ? new Date(d) : d;
+  if (Number.isNaN(dt.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+/**
+ * Stamp a sales-report CSV onto the response with a download-friendly
+ * filename and a UTF-8 BOM so Excel handles non-ASCII characters
+ * (currency symbols, names with accents) without mangling them.
+ */
+function sendSalesCsv(
+  res: Response,
+  filename: string,
+  body: string,
+) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename.replace(/"/g, '')}"`,
+  );
+  // ﻿ is the BOM — without it Excel often opens UTF-8 CSVs as
+  // Windows-1252 and turns "—" / "$" into garbage.
+  res.send('﻿' + body);
+}
+
+/**
+ * Compact yyyymmdd-hhmm timestamp for export filenames so a single
+ * folder of downloads sorts chronologically without colliding.
+ */
+function stamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
+    `-${pad(d.getHours())}${pad(d.getMinutes())}`
+  );
+}
+
+/**
+ * Build a single CSV body containing both the by-product rollup and
+ * the per-line order details. Sections are separated by a blank row;
+ * each section starts with a label row + column headers so Excel
+ * shows the structure clearly when the file is opened.
+ */
+interface SalesLine {
+  productName: string;
+  vendorId: string | null;
+  unitsSold?: number;
+  revenueCents?: number;
+  pointsCollected?: number;
+  quantity?: number;
+  lineRevenueCents?: number;
+  linePoints?: number;
+  orderNumber?: string;
+  orderStatus?: string;
+  createdAt?: Date | string;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPpzId?: string | null;
+}
+function buildSalesCsv(input: {
+  title: string;
+  rangeLabel: string;
+  sales: SalesRow[];
+  lines: SalesLine[];
+  vendorById: Map<string, string>;
+  isAdmin: boolean;
+}): string {
+  const out: string[] = [];
+  const cents = (c: number) => (Math.round(c) / 100).toFixed(2);
+
+  // Header preamble — one cell per row so Excel doesn't merge it
+  // with the table headers below.
+  out.push(csvRow([input.title]));
+  out.push(csvRow([`Range: ${input.rangeLabel}`]));
+  out.push(csvRow([`Generated: ${fmtDate(new Date())}`]));
+  out.push('');
+
+  // Section 1 — by-product rollup.
+  out.push(csvRow(['By product']));
+  const summaryHeader = input.isAdmin
+    ? ['Product', 'Vendor', 'Units sold', 'Revenue (SGD)', 'Points collected']
+    : ['Product', 'Units sold', 'Revenue (SGD)', 'Points collected'];
+  out.push(csvRow(summaryHeader));
+  for (const s of input.sales) {
+    const row: unknown[] = [s.productName];
+    if (input.isAdmin) {
+      row.push(
+        (s.vendorId && input.vendorById.get(s.vendorId)) || '',
+      );
+    }
+    row.push(s.unitsSold, cents(s.revenueCents), s.pointsCollected || 0);
+    out.push(csvRow(row));
+  }
+
+  out.push('');
+
+  // Section 2 — per-line order details (most useful for pivoting).
+  out.push(csvRow(['Order details']));
+  const lineHeader = [
+    'Order #',
+    'Date',
+    'Customer name',
+    'Customer email',
+    'Customer type',
+    'PPZ ID',
+    'Product',
+    ...(input.isAdmin ? ['Vendor'] : []),
+    'Qty',
+    'Revenue (SGD)',
+    'Points',
+    'Order status',
+  ];
+  out.push(csvRow(lineHeader));
+  for (const l of input.lines) {
+    const ctype =
+      l.customerName || l.customerEmail
+        ? l.customerPpzId
+          ? 'PPZ'
+          : 'CC'
+        : '';
+    const row: unknown[] = [
+      l.orderNumber || '',
+      fmtDate(l.createdAt),
+      l.customerName || '',
+      l.customerEmail || '',
+      ctype,
+      l.customerPpzId || '',
+      l.productName,
+    ];
+    if (input.isAdmin) {
+      row.push(
+        (l.vendorId && input.vendorById.get(l.vendorId)) || '',
+      );
+    }
+    row.push(
+      l.quantity || 0,
+      cents(l.lineRevenueCents || 0),
+      l.linePoints || 0,
+      l.orderStatus || '',
+    );
+    out.push(csvRow(row));
+  }
+
+  return out.join('\r\n');
 }
 
 @Controller()
@@ -522,6 +688,70 @@ export class ViewsController {
       isAdmin: false,
       activePath: '/vendor/sales',
     };
+  }
+
+  // ---- Sales report CSV export ----
+  // Excel-friendly CSV (UTF-8 BOM, RFC 4180 quoting) covering the same
+  // date range the on-page report uses. One file with two stacked
+  // sections so the admin can keep the rollup and the per-line data
+  // side by side in Excel — they sit in distinct row blocks separated
+  // by a blank row, and Excel happily opens the lot as one sheet.
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/sales/export.csv')
+  async adminSalesExport(
+    @Res() res: Response,
+    @Query('range') range?: string,
+  ) {
+    const r = resolveSalesRange(range);
+    const [sales, lines] = await Promise.all([
+      this.orders.salesSummary({ since: r.since, until: r.until }),
+      this.orders.salesLines({ since: r.since, until: r.until }),
+    ]);
+    const vendorIds = Array.from(
+      new Set(
+        [...sales.map((s) => s.vendorId), ...lines.map((l) => l.vendorId)]
+          .filter((v): v is string => !!v),
+      ),
+    );
+    const vendorById = new Map<string, string>();
+    for (const id of vendorIds) {
+      const v = await this.users.findById(id);
+      if (v) vendorById.set(id, v.vendorStoreName || v.name);
+    }
+    const csv = buildSalesCsv({
+      title: 'Marketplace sales report',
+      rangeLabel: r.label,
+      sales,
+      lines,
+      vendorById,
+      isAdmin: true,
+    });
+    sendSalesCsv(res, `sales-${r.key}-${stamp()}.csv`, csv);
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/sales/export.csv')
+  async vendorSalesExport(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+    @Query('range') range?: string,
+  ) {
+    const r = resolveSalesRange(range);
+    const vendorId = user.id;
+    const [sales, lines] = await Promise.all([
+      this.orders.salesSummary({ vendorId, since: r.since, until: r.until }),
+      this.orders.salesLines({ vendorId, since: r.since, until: r.until }),
+    ]);
+    const csv = buildSalesCsv({
+      title: `${user.vendorStoreName || user.name} — sales report`,
+      rangeLabel: r.label,
+      sales,
+      lines,
+      vendorById: new Map(),
+      isAdmin: false,
+    });
+    sendSalesCsv(res, `sales-${r.key}-${stamp()}.csv`, csv);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)
