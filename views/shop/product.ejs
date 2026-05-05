@@ -85,8 +85,16 @@
         const firstInStockVariant = hasVariants
           ? product.variants.find((v) => v.stock > 0)
           : null;
-        const allVariantsSoldOut = hasVariants && !firstInStockVariant;
+        // Combined out-of-stock flag covering both variant + non-variant
+        // products. The buy/redeem buttons consult this to disable
+        // checkout entirely when there's nothing left to sell.
+        const outOfStock = hasVariants
+          ? !firstInStockVariant
+          : (product.stock || 0) <= 0;
         %>
+        <% if (outOfStock) { %>
+          <div class="cc-badge cc-badge-soldout" style="margin-bottom: 10px;">Out of stock</div>
+        <% } %>
         <% if (hasVariants) { %>
           <div class="field">
             <label for="variantId">Variant <span class="text-danger">*</span></label>
@@ -102,7 +110,7 @@
                 </option>
               <% }); %>
             </select>
-            <% if (allVariantsSoldOut) { %>
+            <% if (outOfStock) { %>
               <small class="text-danger">All variants are sold out right now.</small>
             <% } %>
           </div>
@@ -117,10 +125,10 @@
           <% if (user) { %>
             <% if (!isPointsOnly) { %>
               <button class="cc-btn cc-btn-primary"
-                <%= allVariantsSoldOut ? 'disabled' : '' %>
+                <%= outOfStock ? 'disabled' : '' %>
                 onclick="ppz.addToCart('<%= product.id %>', 'price')">
-                <% if (allVariantsSoldOut) { %>
-                  Sold out
+                <% if (outOfStock) { %>
+                  Out of stock
                 <% } else { %>
                   <%= showPpzPrice ? 'Buy at PPZ price' : 'Add to cart' %> · $<%= (cashCents/100).toFixed(2) %>
                 <% } %>
@@ -128,10 +136,10 @@
             <% } %>
             <% if (showPoints) { %>
               <button class="cc-btn <%= isPointsOnly ? 'cc-btn-primary' : 'cc-btn-outline' %>"
-                <%= allVariantsSoldOut ? 'disabled' : '' %>
+                <%= outOfStock ? 'disabled' : '' %>
                 onclick="ppz.addToCart('<%= product.id %>', 'points')">
-                <% if (allVariantsSoldOut) { %>
-                  Sold out
+                <% if (outOfStock) { %>
+                  Out of stock
                 <% } else if (redeemCashCents === 0) { %>
                   Redeem with <%= redeemPoints %> pts
                 <% } else { %>

@@ -100,6 +100,19 @@ export class CartService {
       ? product.variants?.find((v) => v.id === variantId)
       : undefined;
 
+    // Block adding an out-of-stock item to the cart up front. The
+    // checkout decrement also enforces this, but failing here gives
+    // an immediate, friendly message instead of letting the item sit
+    // in the cart only to choke at "Place order".
+    const onHand = variant
+      ? variant.stock
+      : product.variants?.length
+        ? product.variants.reduce((s, v) => s + (v.stock || 0), 0)
+        : product.stock;
+    if (onHand <= 0) {
+      throw new BadRequestException('This item is out of stock');
+    }
+
     if (pricingMode === 'points') {
       const isMember = await this.isPpzMember(userId);
       if (!isMember) {

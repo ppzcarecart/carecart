@@ -243,6 +243,12 @@ a:hover { color: var(--brand-dark); }
 .cc-badge-featured { background: rgba(245, 158, 11, 0.95); color: #fff; }
 .cc-badge-new { background: rgba(15, 118, 110, 0.95); color: #fff; }
 .cc-badge-ppz { background: rgba(124, 58, 237, 0.95); color: #fff; }
+.cc-badge-soldout { background: rgba(31, 41, 55, 0.92); color: #fff; }
+/* Soft-fade out-of-stock cards on the listing pages so shoppers
+   register the state at a glance without losing the click target —
+   they can still tap through to read the listing. */
+.cc-card-soldout { opacity: 0.6; }
+.cc-card-soldout:hover { opacity: 0.85; }
 .amount-strike {
   text-decoration: line-through;
   color: var(--ink-soft);

@@ -17,11 +17,20 @@ const redeemCashCents = product.effectiveRedeemCashCents != null ? product.effec
 // $0 cash + points set = redeem-only listing; suppress the $0.00 line
 // so the card reads as a points redemption instead of a freebie.
 const isPointsOnly = showPoints && cashCents === 0 && ptsValue > 0;
+// Out-of-stock = all variants sold out, or (when there are no variants)
+// the parent stock has hit zero. Keeps the card clickable so shoppers
+// can still read the listing, but visually flags it.
+const hasVariants = !!(product.variants && product.variants.length);
+const totalStock = hasVariants
+  ? product.variants.reduce((s, v) => s + (v.stock || 0), 0)
+  : (product.stock || 0);
+const outOfStock = totalStock <= 0;
 %>
-<a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
+<a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset <%= outOfStock ? 'cc-card-soldout' : '' %>">
   <div class="cc-thumb">
     <%- include('product-thumb', { product }) %>
     <div class="cc-thumb-badges">
+      <% if (outOfStock) { %><span class="cc-badge cc-badge-soldout">Out of stock</span><% } %>
       <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
       <% if (isNew) { %><span class="cc-badge cc-badge-new">New</span><% } %>
       <% if (showPpzPrice) { %><span class="cc-badge cc-badge-ppz">PPZ</span><% } %>
