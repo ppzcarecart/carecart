@@ -26,11 +26,13 @@ const totalStock = hasVariants
   : (product.stock || 0);
 const outOfStock = totalStock <= 0;
 %>
-<a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset <%= outOfStock ? 'cc-card-soldout' : '' %>">
+<a href="/p/<%= product.slug %>" class="cc-card text-decoration-none text-reset">
   <div class="cc-thumb">
     <%- include('product-thumb', { product }) %>
+    <% if (outOfStock) { %>
+      <div class="cc-soldout-banner">Out of stock</div>
+    <% } %>
     <div class="cc-thumb-badges">
-      <% if (outOfStock) { %><span class="cc-badge cc-badge-soldout">Out of stock</span><% } %>
       <% if (product.featured) { %><span class="cc-badge cc-badge-featured">Featured</span><% } %>
       <% if (isNew) { %><span class="cc-badge cc-badge-new">New</span><% } %>
       <% if (showPpzPrice) { %><span class="cc-badge cc-badge-ppz">PPZ</span><% } %>

@@ -243,12 +243,29 @@ a:hover { color: var(--brand-dark); }
 .cc-badge-featured { background: rgba(245, 158, 11, 0.95); color: #fff; }
 .cc-badge-new { background: rgba(15, 118, 110, 0.95); color: #fff; }
 .cc-badge-ppz { background: rgba(124, 58, 237, 0.95); color: #fff; }
-.cc-badge-soldout { background: rgba(31, 41, 55, 0.92); color: #fff; }
-/* Soft-fade out-of-stock cards on the listing pages so shoppers
-   register the state at a glance without losing the click target —
-   they can still tap through to read the listing. */
-.cc-card-soldout { opacity: 0.6; }
-.cc-card-soldout:hover { opacity: 0.85; }
+/* Out-of-stock visual: a horizontal band stamped across the product
+   image with bold "OUT OF STOCK" lettering. Card opacity stays at
+   100% — the banner alone communicates the state and the listing
+   text remains fully readable. */
+.cc-soldout-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(31, 41, 55, 0.88);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  padding: 8px 4px;
+  pointer-events: none;
+  border-top: 1px solid rgba(255,255,255,0.18);
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+}
+.cc-detail .cc-soldout-banner { font-size: 1.4rem; padding: 14px 8px; letter-spacing: 0.18em; }
 .amount-strike {
   text-decoration: line-through;
   color: var(--ink-soft);
@@ -300,6 +317,7 @@ a:hover { color: var(--brand-dark); }
   display: flex; align-items: center; justify-content: center;
   cursor: zoom-in;
   transition: box-shadow .15s ease;
+  position: relative;
 }
 .cc-detail .cc-gallery:hover { box-shadow: var(--shadow-sm); }
 .cc-detail .cc-gallery:focus-visible {

@@ -12,6 +12,15 @@
       <% } %>
     </nav>
 
+    <%
+    const _hasVariants = !!(product.variants && product.variants.length);
+    const _firstInStockVariant = _hasVariants
+      ? product.variants.find((v) => v.stock > 0)
+      : null;
+    const outOfStock = _hasVariants
+      ? !_firstInStockVariant
+      : (product.stock || 0) <= 0;
+    %>
     <div class="cc-detail">
       <div class="cc-gallery"
         <% if (product.images && product.images[0]) { %>
@@ -23,6 +32,9 @@
         <% } %>
       >
         <%- include('../partials/product-thumb', { product }) %>
+        <% if (outOfStock) { %>
+          <div class="cc-soldout-banner">Out of stock</div>
+        <% } %>
       </div>
       <div class="cc-info">
         <%
@@ -81,20 +93,10 @@
         <% } %>
 
         <%
-        const hasVariants = !!(product.variants && product.variants.length);
-        const firstInStockVariant = hasVariants
-          ? product.variants.find((v) => v.stock > 0)
-          : null;
-        // Combined out-of-stock flag covering both variant + non-variant
-        // products. The buy/redeem buttons consult this to disable
-        // checkout entirely when there's nothing left to sell.
-        const outOfStock = hasVariants
-          ? !firstInStockVariant
-          : (product.stock || 0) <= 0;
+        // Re-alias the gallery-scope variables for the info column.
+        const hasVariants = _hasVariants;
+        const firstInStockVariant = _firstInStockVariant;
         %>
-        <% if (outOfStock) { %>
-          <div class="cc-badge cc-badge-soldout" style="margin-bottom: 10px;">Out of stock</div>
-        <% } %>
         <% if (hasVariants) { %>
           <div class="field">
             <label for="variantId">Variant <span class="text-danger">*</span></label>
