@@ -15,7 +15,6 @@ const customerName = p.customer ? p.customer.name : '—';
 const customerEmail = p.customer ? p.customer.email : '';
 const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
 const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
-const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—';
 %>
 <div class="container admin-shell">
   <div class="admin-layout">
@@ -55,12 +54,6 @@ const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—
               <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Contact</div>
               <strong><%= customerContact %></strong>
             </div>
-            <% if (isAdmin) { %>
-              <div class="col-md-4">
-                <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Vendor</div>
-                <strong><%= vendorName %></strong>
-              </div>
-            <% } %>
             <div class="col-md-4">
               <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Created</div>
               <strong><%= new Date(p.createdAt).toLocaleString() %></strong>
@@ -106,6 +99,7 @@ const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—
                 <tr>
                   <th>Product</th>
                   <th>Variant</th>
+                  <% if (isAdmin) { %><th>Vendor</th><% } %>
                   <th class="num">Qty</th>
                   <th>Price / Points</th>
                 </tr>
@@ -115,6 +109,9 @@ const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—
                   <tr>
                     <td data-label="Product"><strong><%= it.productName %></strong></td>
                     <td data-label="Variant"><%= it.variant ? it.variant.name : '—' %></td>
+                    <% if (isAdmin) { %>
+                      <td data-label="Vendor"><%= it.vendor ? (it.vendor.vendorStoreName || it.vendor.name) : '—' %></td>
+                    <% } %>
                     <td class="num" data-label="Qty"><%= it.quantity %></td>
                     <td data-label="Price">
                       <% if (it.pricingMode === 'points') { %>

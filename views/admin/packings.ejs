@@ -67,7 +67,6 @@ const tabs = [
                   <th>Customer</th>
                   <th>PPZ ID</th>
                   <th>Contact</th>
-                  <% if (isAdmin) { %><th>Vendor</th><% } %>
                   <th class="num">Items</th>
                   <th class="num">Orders</th>
                   <th><%= activeStatus === 'packed' ? 'Packed' : 'Updated' %></th>
@@ -82,7 +81,6 @@ const tabs = [
                   const customerName = p.customer ? p.customer.name : '—';
                   const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
                   const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
-                  const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—';
                   const ts = activeStatus === 'packed' && p.packedAt ? p.packedAt : p.updatedAt;
                   %>
                   <tr id="packing-row-<%= p.id %>">
@@ -94,9 +92,6 @@ const tabs = [
                     </td>
                     <td data-label="PPZ ID"><%= customerPpz %></td>
                     <td data-label="Contact"><%= customerContact %></td>
-                    <% if (isAdmin) { %>
-                      <td data-label="Vendor"><%= vendorName %></td>
-                    <% } %>
                     <td class="num" data-label="Items"><%= r.itemCount %></td>
                     <td class="num" data-label="Orders"><%= r.orderCount %></td>
                     <td data-label="<%= activeStatus === 'packed' ? 'Packed' : 'Updated' %>" class="text-muted">

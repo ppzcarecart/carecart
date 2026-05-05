@@ -13,18 +13,21 @@ import { User } from '../../users/entities/user.entity';
 export type PackingStatus = 'open' | 'packed';
 
 /**
- * A "packing" is a per-(customer, vendor) bundle of OrderItems that the
- * vendor (or admin/manager on their behalf) physically packs together.
- * Multiple paid orders from the same customer for the same vendor merge
- * into the same OPEN packing so staff don't have to pack each order
- * separately. Once marked packed, the bundle is closed and any further
- * paid items from that customer spawn a fresh packing.
+ * A "packing" is a per-customer bundle of OrderItems that staff
+ * physically pack together. Every unpacked paid order from a customer
+ * merges into the same OPEN packing — even if the items span multiple
+ * vendors — so the warehouse sees one place to pull everything for that
+ * customer. Once marked packed the bundle is closed; subsequent paid
+ * orders from that customer spawn a fresh packing.
  *
- * No inverse OneToMany on OrderItem — to avoid the circular import
- * dance we just keep an `items` query in the service via packingId.
+ * Vendor scope is computed from item.vendorId at query time (a vendor
+ * sees only the packings that contain at least one of their items, and
+ * only those items in the detail view). No inverse OneToMany on
+ * OrderItem — to avoid the circular import dance we just keep an
+ * `items` query in the service via packingId.
  */
 @Entity('packings')
-@Index(['customerId', 'vendorId', 'status'])
+@Index(['customerId', 'status'])
 export class Packing {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -35,13 +38,6 @@ export class Packing {
 
   @Column({ nullable: true })
   customerId?: string;
-
-  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'vendorId' })
-  vendor?: User;
-
-  @Column({ nullable: true })
-  vendorId?: string;
 
   @Column({ default: 'open' })
   status: PackingStatus;
