@@ -14,6 +14,7 @@ import { CartService } from '../cart/cart.service';
 import { PointsService } from '../points/points.service';
 import { Role } from '../common/enums/role.enum';
 import { StripeProvider } from '../payments/providers/stripe.provider';
+import { PackingsService } from '../packings/packings.service';
 
 @Injectable()
 export class OrdersService {
@@ -24,6 +25,7 @@ export class OrdersService {
     private cart: CartService,
     private points: PointsService,
     private stripe: StripeProvider,
+    private packings: PackingsService,
   ) {}
 
   private generateNumber() {
@@ -155,8 +157,13 @@ export class OrdersService {
         'Order has been refunded and cannot change status',
       );
     }
+    const prev = order.status;
     order.status = status;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    if (prev !== 'paid' && status === 'paid') {
+      await this.packings.assignFromOrder(saved);
+    }
+    return saved;
   }
 
   /**
@@ -216,7 +223,11 @@ export class OrdersService {
 
     order.status = 'refunded';
     order.refundReason = trimmed;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    // Detach from any open packing so the bundle no longer lists items
+    // that won't actually ship.
+    await this.packings.detachOrder(saved.id);
+    return saved;
   }
 
   /**
@@ -327,15 +338,22 @@ export class OrdersService {
     // 4. Lock terminal state + capture reason.
     order.status = 'cancelled';
     order.refundReason = trimmed;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    await this.packings.detachOrder(saved.id);
+    return saved;
   }
 
   async setPayment(id: string, paymentIntentId: string, status: OrderStatus) {
     const order = await this.findById(id);
     if (!order) throw new NotFoundException('Order not found');
+    const prev = order.status;
     order.paymentIntentId = paymentIntentId;
     order.status = status;
-    return this.orders.save(order);
+    const saved = await this.orders.save(order);
+    if (prev !== 'paid' && status === 'paid') {
+      await this.packings.assignFromOrder(saved);
+    }
+    return saved;
   }
 
   /**

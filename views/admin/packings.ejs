@@ -1,0 +1,127 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<%
+const sidebar = isAdmin ? '../partials/admin-sidebar' : '../partials/vendor-sidebar';
+const baseHref = isAdmin ? '/admin/packings' : '/vendor/packings';
+const tabs = [
+  { k: 'open',   label: 'Open' },
+  { k: 'packed', label: 'Packed' },
+];
+%>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include(sidebar, { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Packings</h1>
+          <p class="lede">
+            Paid items grouped per customer so multiple orders pack
+            together. Mark a packing as <em>packed</em> when it's
+            physically ready — any new paid order from the same
+            customer afterwards starts a fresh packing.
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-body padded">
+          <div class="d-flex flex-wrap gap-2 align-items-center cc-filter-rail" id="packingsTabs">
+            <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Show</span>
+            <% tabs.forEach(function(t) { %>
+              <a href="<%= baseHref %>?status=<%= t.k %>"
+                class="cc-btn <%= activeStatus === t.k ? 'cc-btn-primary' : 'cc-btn-outline' %>"
+                style="padding:6px 14px; font-size:.85rem;">
+                <%= t.label %>
+              </a>
+            <% }); %>
+            <span class="text-muted" style="font-size:.85rem;"> · <%= rows.length %> bundle<%= rows.length === 1 ? '' : 's' %></span>
+          </div>
+          <script>
+            (function () {
+              const active = document.querySelector('#packingsTabs .cc-btn-primary');
+              if (active && active.scrollIntoView) {
+                active.scrollIntoView({ inline: 'center', block: 'nearest' });
+              }
+            })();
+          </script>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-body">
+          <% if (!rows.length) { %>
+            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+              <% if (activeStatus === 'open') { %>
+                No open packings. As paid orders come in they'll appear
+                here grouped by customer.
+              <% } else { %>
+                Nothing has been marked packed yet.
+              <% } %>
+            </div>
+          <% } else { %>
+            <table class="admin-table" data-mobile="cards">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>PPZ ID</th>
+                  <th>Contact</th>
+                  <% if (isAdmin) { %><th>Vendor</th><% } %>
+                  <th class="num">Items</th>
+                  <th class="num">Orders</th>
+                  <th><%= activeStatus === 'packed' ? 'Packed' : 'Updated' %></th>
+                  <th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rows.forEach(r => { %>
+                  <%
+                  const p = r.packing;
+                  const detailHref = (isAdmin ? '/admin/packings/' : '/vendor/packings/') + p.id;
+                  const customerName = p.customer ? p.customer.name : '—';
+                  const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
+                  const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
+                  const vendorName = p.vendor ? (p.vendor.vendorStoreName || p.vendor.name) : '—';
+                  const ts = activeStatus === 'packed' && p.packedAt ? p.packedAt : p.updatedAt;
+                  %>
+                  <tr id="packing-row-<%= p.id %>">
+                    <td data-label="Customer">
+                      <strong><a href="<%= detailHref %>" class="text-reset"><%= customerName %></a></strong>
+                      <% if (p.customer && p.customer.email) { %>
+                        <div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div>
+                      <% } %>
+                    </td>
+                    <td data-label="PPZ ID"><%= customerPpz %></td>
+                    <td data-label="Contact"><%= customerContact %></td>
+                    <% if (isAdmin) { %>
+                      <td data-label="Vendor"><%= vendorName %></td>
+                    <% } %>
+                    <td class="num" data-label="Items"><%= r.itemCount %></td>
+                    <td class="num" data-label="Orders"><%= r.orderCount %></td>
+                    <td data-label="<%= activeStatus === 'packed' ? 'Packed' : 'Updated' %>" class="text-muted">
+                      <%= ts ? new Date(ts).toLocaleString() : '—' %>
+                    </td>
+                    <td class="actions">
+                      <a href="<%= detailHref %>" class="cc-btn cc-btn-outline" style="padding:6px 12px; font-size:.82rem;">View</a>
+                      <% if (p.status === 'open') { %>
+                        <button class="cc-btn cc-btn-primary" style="padding:6px 12px; font-size:.82rem;"
+                          onclick="ppz.markPacked('<%= p.id %>', this)">
+                          Mark packed
+                        </button>
+                      <% } else { %>
+                        <span class="tag tag-active">Packed</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>

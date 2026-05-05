@@ -25,6 +25,7 @@ import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
 import { CollectionService } from '../collection/collection.service';
+import { PackingsService } from '../packings/packings.service';
 import { PPZ_ROLES, PPZ_ROLE_LABELS } from '../users/ppz-role';
 import * as QRCode from 'qrcode';
 
@@ -261,6 +262,7 @@ export class ViewsController {
     private users: UsersService,
     private settings: SettingsService,
     private collection: CollectionService,
+    private packings: PackingsService,
   ) {}
 
   @Public()
@@ -613,6 +615,86 @@ export class ViewsController {
       orders,
       activeStatus: safeStatus || '',
       activePath: '/admin/orders',
+    };
+  }
+
+  // Packings — bundle of paid items grouped per (customer, vendor)
+  // for the warehouse to physically pack together. Admin/manager see
+  // every vendor's packings; vendors see only their own (handler below).
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/packings')
+  @Render('admin/packings')
+  async adminPackings(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'packed' ? 'packed' : 'open';
+    const rows = await this.packings.list({ status: safe });
+    return {
+      title: 'Packings',
+      user,
+      rows,
+      activeStatus: safe,
+      isAdmin: true,
+      activePath: '/admin/packings',
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/packings/:id')
+  @Render('admin/packing-detail')
+  async adminPackingDetail(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    const detail = await this.packings.findDetail(id);
+    return {
+      title: 'Packing detail',
+      user,
+      detail,
+      isAdmin: true,
+      backHref: '/admin/packings',
+      activePath: '/admin/packings',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/packings')
+  @Render('admin/packings')
+  async vendorPackings(
+    @CurrentUser() user: any,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'packed' ? 'packed' : 'open';
+    const rows = await this.packings.list({
+      status: safe,
+      vendorId: user.id,
+    });
+    return {
+      title: 'Packings',
+      user,
+      rows,
+      activeStatus: safe,
+      isAdmin: false,
+      activePath: '/vendor/packings',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/packings/:id')
+  @Render('admin/packing-detail')
+  async vendorPackingDetail(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+  ) {
+    const detail = await this.packings.findDetail(id, user.id);
+    return {
+      title: 'Packing detail',
+      user,
+      detail,
+      isAdmin: false,
+      backHref: '/vendor/packings',
+      activePath: '/vendor/packings',
     };
   }
 

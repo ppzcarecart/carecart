@@ -58,4 +58,12 @@ export class OrderItem {
 
   @Column({ type: 'varchar', default: 'price' })
   pricingMode: 'price' | 'points';
+
+  // Packing assignment — set when the order moves to 'paid'. Items are
+  // grouped per (customer, vendor) into an OPEN packing, or a new one
+  // if there isn't one yet. NULL until paid (and again if the order is
+  // cancelled/refunded, in which case we detach to keep the packing
+  // representative of what's actually shippable).
+  @Column({ nullable: true })
+  packingId?: string;
 }

@@ -1,0 +1,31 @@
+import {
+  BadRequestException,
+  Controller,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+
+import { PackingsService } from './packings.service';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/enums/role.enum';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('api/packings')
+export class PackingsController {
+  constructor(private readonly packings: PackingsService) {}
+
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/pack')
+  async pack(@Param('id') id: string, @CurrentUser() user: any) {
+    if (!id) throw new BadRequestException('id required');
+    const updated = await this.packings.markPacked(id, {
+      id: user.id,
+      role: user.role,
+    });
+    return { id: updated.id, status: updated.status, packedAt: updated.packedAt };
+  }
+}
