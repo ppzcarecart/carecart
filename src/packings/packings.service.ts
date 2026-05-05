@@ -53,6 +53,11 @@ export class PackingsService {
       .map((i) => i.id);
     if (!itemIds.length) return;
 
+    // Heal any legacy duplicates (multiple open packings for the same
+    // customer left over from the earlier per-vendor grouping) before
+    // picking the target.
+    await this.consolidateOpenForCustomer(order.customerId);
+
     let packing = await this.packings.findOne({
       where: { customerId: order.customerId, status: 'open' },
     });
@@ -69,6 +74,48 @@ export class PackingsService {
     );
     // Bump updatedAt so list sorting reflects recent activity.
     await this.packings.save({ ...packing, updatedAt: new Date() });
+  }
+
+  /**
+   * Merge any duplicate OPEN packings for a single customer into the
+   * oldest one. Reassigns the items from the duplicates and deletes
+   * the now-empty packing rows. Idempotent — safe to call freely.
+   */
+  private async consolidateOpenForCustomer(customerId: string): Promise<void> {
+    const open = await this.packings.find({
+      where: { customerId, status: 'open' },
+      order: { createdAt: 'ASC' },
+    });
+    if (open.length <= 1) return;
+    const target = open[0];
+    const otherIds = open.slice(1).map((p) => p.id);
+    await this.orderItems.update(
+      { packingId: In(otherIds) },
+      { packingId: target.id },
+    );
+    await this.packings.save({ ...target, updatedAt: new Date() });
+    await this.packings.delete({ id: In(otherIds) });
+  }
+
+  /**
+   * Walk every customer that currently has more than one open packing
+   * and merge them. Cheap when there's nothing to do (a single grouped
+   * query) so it's safe to call on every list render — that way the
+   * UI is self-healing for legacy data without any manual migration.
+   */
+  private async consolidateAllOpen(): Promise<void> {
+    const dupRows = await this.packings
+      .createQueryBuilder('p')
+      .select('p.customerId', 'customerId')
+      .addSelect('COUNT(*)', 'cnt')
+      .where("p.status = 'open'")
+      .andWhere('p.customerId IS NOT NULL')
+      .groupBy('p.customerId')
+      .having('COUNT(*) > 1')
+      .getRawMany<{ customerId: string; cnt: string }>();
+    for (const row of dupRows) {
+      await this.consolidateOpenForCustomer(row.customerId);
+    }
   }
 
   /**
@@ -114,6 +161,12 @@ export class PackingsService {
     vendorId?: string;
   }): Promise<PackingListRow[]> {
     const status = opts.status || 'open';
+
+    // Self-heal: any customers with multiple open packings (legacy
+    // per-vendor split) get merged before we render the list.
+    if (status === 'open') {
+      await this.consolidateAllOpen();
+    }
 
     let candidateIds: string[] | null = null;
     if (opts.vendorId) {
