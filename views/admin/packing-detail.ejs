@@ -14,6 +14,7 @@ detail.items.forEach(it => {
 const customerName = p.customer ? p.customer.name : '—';
 const customerEmail = p.customer ? p.customer.email : '';
 const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
+const customerTeam = p.customer && p.customer.team != null ? p.customer.team : '–';
 const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
 %>
 <div class="container admin-shell">
@@ -32,7 +33,7 @@ const customerContact = p.customer && p.customer.contact ? p.customer.contact : 
               ✓ Mark packed
             </button>
           <% } else { %>
-            <span class="tag tag-active" style="padding:8px 14px;">Packed <%= p.packedAt ? '· ' + new Date(p.packedAt).toLocaleString() : '' %></span>
+            <span class="tag tag-active" style="padding:8px 14px;">Packed <%= p.packedAt ? '· ' + fmtSg(p.packedAt) : '' %></span>
           <% } %>
         </div>
       </div>
@@ -55,12 +56,16 @@ const customerContact = p.customer && p.customer.contact ? p.customer.contact : 
               <strong><%= customerContact %></strong>
             </div>
             <div class="col-md-4">
+              <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Team</div>
+              <strong><%= customerTeam %></strong>
+            </div>
+            <div class="col-md-4">
               <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Created</div>
-              <strong><%= new Date(p.createdAt).toLocaleString() %></strong>
+              <strong><%= fmtSg(p.createdAt) %></strong>
             </div>
             <div class="col-md-4">
               <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Last update</div>
-              <strong><%= new Date(p.updatedAt).toLocaleString() %></strong>
+              <strong><%= fmtSg(p.updatedAt) %></strong>
             </div>
           </div>
         </div>
@@ -76,7 +81,7 @@ const customerContact = p.customer && p.customer.contact ? p.customer.contact : 
             <h3>
               Order <a href="<%= orderHref %>" class="text-reset"><%= order.number %></a>
               <small class="text-muted" style="font-weight: 400; font-size:.85rem;">
-                · <%= new Date(order.createdAt).toLocaleString() %>
+                · <%= fmtSg(order.createdAt) %>
                 · <%= order.fulfilmentMethod === 'collection' ? 'Self-collection' : 'Delivery' %>
               </small>
             </h3>

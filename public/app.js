@@ -1062,7 +1062,7 @@ window.ppz = (function () {
         html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}</dd>`;
       }
       if (o.collectedAt) {
-        html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString()}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
+        html += `<dt>Collected</dt><dd>${new Date(o.collectedAt).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })}${o.collectedByName ? ' by ' + escapeHtml(o.collectedByName) : ''}</dd>`;
       }
       html += `</dl>`;
 

@@ -30,8 +30,27 @@ async function bootstrap() {
   // controller threading it through. SettingsService caches in memory,
   // so this is a sync map lookup per request.
   const settings = app.get(SettingsService);
+  // Date helpers — every timestamp the site renders should be in SG time
+  // regardless of where the server actually runs (Railway is UTC). The
+  // helpers tolerate strings, Dates, null, and undefined so templates
+  // don't need defensive guards.
+  const SG_TZ = 'Asia/Singapore';
+  const fmtSg = (d: any): string => {
+    if (!d) return '';
+    const dt = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(dt.getTime())) return '';
+    return dt.toLocaleString('en-SG', { timeZone: SG_TZ });
+  };
+  const fmtSgDate = (d: any): string => {
+    if (!d) return '';
+    const dt = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(dt.getTime())) return '';
+    return dt.toLocaleDateString('en-SG', { timeZone: SG_TZ });
+  };
   app.use((_req: any, res: any, next: any) => {
     res.locals.partnerCloseUrl = settings.get('partner.closeUrl') || '';
+    res.locals.fmtSg = fmtSg;
+    res.locals.fmtSgDate = fmtSgDate;
     next();
   });
 

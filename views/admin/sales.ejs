@@ -177,7 +177,7 @@ const ranges = [
                     <td>
                       <strong><a href="<%= orderHref %>" class="text-reset"><%= l.orderNumber %></a></strong>
                     </td>
-                    <td data-label="Date" class="text-muted"><%= new Date(l.createdAt).toLocaleString() %></td>
+                    <td data-label="Date" class="text-muted"><%= fmtSg(l.createdAt) %></td>
                     <td data-label="Customer">
                       <% if (l.customerName) { %>
                         <strong><%= l.customerName %></strong>

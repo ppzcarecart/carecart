@@ -16,7 +16,7 @@
     <div>
       <h1 style="margin:0; font-weight:700; letter-spacing:-0.01em;"><%= profile.name %></h1>
       <p class="text-muted mb-0"><%= profile.email %> · <%= profile.role %></p>
-      <p class="text-muted mb-0" style="font-size:.85rem;">Member since <%= new Date(profile.createdAt).toLocaleDateString() %></p>
+      <p class="text-muted mb-0" style="font-size:.85rem;">Member since <%= fmtSgDate(profile.createdAt) %></p>
     </div>
   </div>
 

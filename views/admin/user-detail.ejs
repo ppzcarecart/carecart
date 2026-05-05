@@ -33,8 +33,8 @@
               <dt>Role</dt><dd><%= target.role %></dd>
               <dt>Status</dt><dd><%= target.active ? 'Active' : 'Disabled' %></dd>
               <dt>Password set</dt><dd><%= target.hasSetPassword ? 'Yes' : 'No (handoff)' %></dd>
-              <dt>Created</dt><dd><%= new Date(target.createdAt).toLocaleString() %></dd>
-              <dt>Updated</dt><dd><%= new Date(target.updatedAt).toLocaleString() %></dd>
+              <dt>Created</dt><dd><%= fmtSg(target.createdAt) %></dd>
+              <dt>Updated</dt><dd><%= fmtSg(target.updatedAt) %></dd>
             </dl>
           </div>
         </div>

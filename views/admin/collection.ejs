@@ -103,7 +103,7 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
                       <dt>Notes</dt>
                       <dd><%= log.notes || '—' %></dd>
                       <dt>When</dt>
-                      <dd><%= new Date(log.createdAt).toLocaleString() %></dd>
+                      <dd><%= fmtSg(log.createdAt) %></dd>
                     </dl>
                   </div>
                 </details>

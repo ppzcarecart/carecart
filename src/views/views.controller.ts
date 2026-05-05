@@ -106,8 +106,18 @@ function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return '';
   const dt = typeof d === 'string' ? new Date(d) : d;
   if (Number.isNaN(dt.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  // Force Asia/Singapore so Excel exports always show SG time regardless
+  // of where the server (Railway) actually runs. en-CA gives a clean
+  // YYYY-MM-DD ordering for the date half.
+  const dateStr = dt.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Singapore',
+  });
+  const timeStr = dt.toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Singapore',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${dateStr} ${timeStr}`;
 }
 
 /**

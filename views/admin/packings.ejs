@@ -66,6 +66,7 @@ const tabs = [
                 <tr>
                   <th>Customer</th>
                   <th>PPZ ID</th>
+                  <th class="num">Team</th>
                   <th>Contact</th>
                   <th class="num">Items</th>
                   <th class="num">Orders</th>
@@ -80,6 +81,7 @@ const tabs = [
                   const detailHref = (isAdmin ? '/admin/packings/' : '/vendor/packings/') + p.id;
                   const customerName = p.customer ? p.customer.name : '—';
                   const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
+                  const customerTeam = p.customer && p.customer.team != null ? p.customer.team : '–';
                   const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
                   const ts = activeStatus === 'packed' && p.packedAt ? p.packedAt : p.updatedAt;
                   %>
@@ -91,11 +93,12 @@ const tabs = [
                       <% } %>
                     </td>
                     <td data-label="PPZ ID"><%= customerPpz %></td>
+                    <td class="num" data-label="Team"><%= customerTeam %></td>
                     <td data-label="Contact"><%= customerContact %></td>
                     <td class="num" data-label="Items"><%= r.itemCount %></td>
                     <td class="num" data-label="Orders"><%= r.orderCount %></td>
                     <td data-label="<%= activeStatus === 'packed' ? 'Packed' : 'Updated' %>" class="text-muted">
-                      <%= ts ? new Date(ts).toLocaleString() : '—' %>
+                      <%= ts ? fmtSg(ts) : '—' %>
                     </td>
                     <td class="actions">
                       <a href="<%= detailHref %>" class="cc-btn cc-btn-outline" style="padding:6px 12px; font-size:.82rem;">View</a>

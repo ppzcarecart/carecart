@@ -110,7 +110,7 @@
                     </td>
                     <td data-label="Status"><span class="badge-status <%= o.status %>"><%= o.status %></span></td>
                     <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
-                    <td class="text-muted" data-label="Created"><%= new Date(o.createdAt).toLocaleString() %></td>
+                    <td class="text-muted" data-label="Created"><%= fmtSg(o.createdAt) %></td>
                   </tr>
                 <% }); %>
               </tbody>
