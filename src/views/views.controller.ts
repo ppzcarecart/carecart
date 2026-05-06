@@ -889,34 +889,71 @@ export class ViewsController {
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('admin/collection')
   @Render('admin/collection')
-  async adminCollection(@CurrentUser() user: any) {
-    const logs = await this.collection.listLogs({
-      id: user.id,
-      role: user.role,
-    });
-    return {
-      title: 'Manage Collection',
-      user,
-      logs,
-      activePath: '/admin/collection',
-      scope: 'all',
-    };
+  async adminCollection(
+    @CurrentUser() user: any,
+    @Query('tab') tab?: string,
+  ) {
+    return this.renderCollectionPage(user, tab, '/admin/collection', 'all');
   }
 
   @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
   @Get('vendor/collection')
   @Render('admin/collection')
-  async vendorCollection(@CurrentUser() user: any) {
-    const logs = await this.collection.listLogs({
-      id: user.id,
-      role: user.role,
-    });
+  async vendorCollection(
+    @CurrentUser() user: any,
+    @Query('tab') tab?: string,
+  ) {
+    return this.renderCollectionPage(
+      user,
+      tab,
+      '/vendor/collection',
+      user.role === Role.VENDOR ? 'vendor' : 'all',
+    );
+  }
+
+  /**
+   * Shared loader for both /admin/collection and /vendor/collection so
+   * the same EJS template can render either. Each tab pulls only the
+   * data it actually shows so a busy "Logs" doesn't slow down "Ready".
+   */
+  private async renderCollectionPage(
+    user: any,
+    tab: string | undefined,
+    activePath: string,
+    scope: 'all' | 'vendor',
+  ) {
+    const validTabs = new Set(['ready', 'uncollected', 'logs']);
+    const activeTab = validTabs.has(tab || '') ? (tab as string) : 'ready';
+    const thresholdDays = this.settings.uncollectedDays();
+    const actor = { id: user.id, role: user.role };
+    const ready =
+      activeTab === 'ready'
+        ? await this.collection.listCollectionOrders({
+            actor,
+            mode: 'ready',
+            thresholdDays,
+          })
+        : [];
+    const uncollected =
+      activeTab === 'uncollected'
+        ? await this.collection.listCollectionOrders({
+            actor,
+            mode: 'uncollected',
+            thresholdDays,
+          })
+        : [];
+    const logs =
+      activeTab === 'logs' ? await this.collection.listLogs(actor) : [];
     return {
       title: 'Manage Collection',
       user,
+      ready,
+      uncollected,
       logs,
-      activePath: '/vendor/collection',
-      scope: user.role === Role.VENDOR ? 'vendor' : 'all',
+      activeTab,
+      thresholdDays,
+      activePath,
+      scope,
     };
   }
 
@@ -944,6 +981,7 @@ export class ViewsController {
           postalCode: all['collection.postalCode'] || '',
           contact: all['collection.contact'] || '',
           hours: all['collection.hours'] || '',
+          uncollectedDays: parseInt(all['collection.uncollectedDays'] || '16', 10),
         },
         delivery: {
           enabled: all['delivery.enabled'] === 'true',

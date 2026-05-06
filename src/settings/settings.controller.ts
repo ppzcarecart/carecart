@@ -19,6 +19,7 @@ const WRITABLE_KEYS = new Set([
   'collection.postalCode',
   'collection.contact',
   'collection.hours',
+  'collection.uncollectedDays',
   'delivery.enabled',
   'delivery.feeCents',
   'partner.closeUrl',

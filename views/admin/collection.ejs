@@ -3,6 +3,16 @@
 <%
 const isVendor = user.role === 'vendor';
 const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sidebar';
+const baseHref = activePath; // /admin/collection or /vendor/collection
+const tabs = [
+  { k: 'ready',       label: 'Ready for collection' },
+  { k: 'uncollected', label: 'Uncollected' },
+  { k: 'logs',        label: 'Logs' },
+];
+function ageInDays(ts) {
+  if (!ts) return 0;
+  return Math.floor((Date.now() - new Date(ts).getTime()) / (24 * 60 * 60 * 1000));
+}
 %>
 <div class="container admin-shell">
   <div class="admin-layout">
@@ -21,14 +31,8 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
           <span class="muted" id="scannerStatus">Starting camera…</span>
         </div>
         <div class="panel-body padded">
-          <!-- Camera viewport. Auto-starts on page load and auto-stops
-               when the user navigates away — no Start/Stop buttons.
-               Sized small (~40% of the old footprint) so the search
-               input and logs stay above the fold on phones. -->
           <div id="reader" style="max-width: 200px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; min-height: 100px;"></div>
 
-          <!-- Live-search fallback. Triggers automatically when the
-               value looks like a complete order number, or on Enter. -->
           <div class="cc-scan-search mt-3">
             <svg class="cc-scan-search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"/>
@@ -45,8 +49,6 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
         </div>
       </div>
 
-      <!-- Scan-result modal. Populated by ppz.collection.renderResult().
-           Border tone (green / grey / red) reflects the outcome. -->
       <div class="cc-scan-modal" id="scanModal" aria-hidden="true">
         <div class="cc-scan-backdrop" onclick="ppz.collection.dismiss()"></div>
         <div class="cc-scan-dialog" id="scanDialog" role="dialog" aria-modal="true">
@@ -59,59 +61,187 @@ const sidebar = isVendor ? '../partials/vendor-sidebar' : '../partials/admin-sid
         </div>
       </div>
 
-      <div class="admin-panel">
-        <div class="panel-head">
-          <h3>Collection logs</h3>
-          <span class="muted">
-            <% if (scope === 'vendor') { %>
-              Scans you ran or scans on orders containing your products
-            <% } else { %>
-              Most recent first · all vendors
-            <% } %>
-          </span>
-        </div>
-        <div class="panel-body">
-          <% if (!logs.length) { %>
-            <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No scans logged yet.</div>
-          <% } else { %>
-            <div class="cc-logs">
-              <% logs.forEach(log => { %>
-                <%
-                const cls = {
-                  success: 'badge-status fulfilled',
-                  duplicate: 'badge-status awaiting_payment',
-                  unauthorized_vendor: 'badge-status cancelled',
-                  not_found: 'badge-status cancelled',
-                  invalid_state: 'badge-status awaiting_payment',
-                }[log.result] || 'badge-status';
-                %>
-                <details class="cc-log-row">
-                  <summary>
-                    <span class="cc-log-order">
-                      <% if (log.order) { %>
-                        <strong><a href="/admin/orders/<%= log.order.id %>" class="text-reset" onclick="event.stopPropagation()"><%= log.order.number %></a></strong>
-                      <% } else { %>
-                        <span class="text-muted"><%= log.scannedValue %></span>
-                      <% } %>
-                    </span>
-                    <span class="cc-log-result"><span class="<%= cls %>"><%= log.result.replace(/_/g, ' ') %></span></span>
-                  </summary>
-                  <div class="cc-log-body">
-                    <dl class="profile-dl">
-                      <dt>By</dt>
-                      <dd><%= log.scannedBy ? log.scannedBy.name : '—' %></dd>
-                      <dt>Notes</dt>
-                      <dd><%= log.notes || '—' %></dd>
-                      <dt>When</dt>
-                      <dd><%= fmtSg(log.createdAt) %></dd>
-                    </dl>
-                  </div>
-                </details>
-              <% }); %>
-            </div>
-          <% } %>
+      <div class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-body padded">
+          <div class="d-flex flex-wrap gap-2 align-items-center cc-filter-rail" id="collectionTabs">
+            <span class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Show</span>
+            <% tabs.forEach(function(t) { %>
+              <a href="<%= baseHref %>?tab=<%= t.k %>"
+                class="cc-btn <%= activeTab === t.k ? 'cc-btn-primary' : 'cc-btn-outline' %>"
+                style="padding:6px 14px; font-size:.85rem;">
+                <%= t.label %>
+              </a>
+            <% }); %>
+          </div>
+          <script>
+            (function () {
+              const active = document.querySelector('#collectionTabs .cc-btn-primary');
+              if (active && active.scrollIntoView) {
+                active.scrollIntoView({ inline: 'center', block: 'nearest' });
+              }
+            })();
+          </script>
         </div>
       </div>
+
+      <% if (activeTab === 'ready') { %>
+        <div class="admin-panel">
+          <div class="panel-head">
+            <h3>Ready for collection</h3>
+            <span class="muted">Paid · placed within the last <%= thresholdDays %> day<%= thresholdDays === 1 ? '' : 's' %> · <%= ready.length %> order<%= ready.length === 1 ? '' : 's' %></span>
+          </div>
+          <div class="panel-body">
+            <% if (!ready.length) { %>
+              <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+                Nothing waiting for pickup right now.
+              </div>
+            <% } else { %>
+              <table class="admin-table" data-mobile="cards">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>PPZ ID</th>
+                    <th>Contact</th>
+                    <th class="num">Items</th>
+                    <th class="num">Total</th>
+                    <th>Placed</th>
+                    <th class="num">Age</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% ready.forEach(o => {
+                    const itemCount = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
+                    const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id;
+                  %>
+                    <tr>
+                      <td><strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong></td>
+                      <td data-label="Customer">
+                        <% if (o.customer) { %>
+                          <strong><%= o.customer.name %></strong>
+                          <% if (o.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= o.customer.email %></div><% } %>
+                        <% } else { %>—<% } %>
+                      </td>
+                      <td data-label="PPZ ID"><%= o.customer && o.customer.ppzId ? o.customer.ppzId : '–' %></td>
+                      <td data-label="Contact"><%= o.customer && o.customer.contact ? o.customer.contact : '–' %></td>
+                      <td class="num" data-label="Items"><%= itemCount %></td>
+                      <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
+                      <td data-label="Placed" class="text-muted"><%= fmtSg(o.createdAt) %></td>
+                      <td class="num" data-label="Age"><%= ageInDays(o.createdAt) %>d</td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+      <% } else if (activeTab === 'uncollected') { %>
+        <div class="admin-panel">
+          <div class="panel-head">
+            <h3>Uncollected</h3>
+            <span class="muted">Placed <%= thresholdDays %>+ day<%= thresholdDays === 1 ? '' : 's' %> ago, still not picked up · <%= uncollected.length %> order<%= uncollected.length === 1 ? '' : 's' %></span>
+          </div>
+          <div class="panel-body">
+            <% if (!uncollected.length) { %>
+              <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
+                Nothing overdue right now.
+              </div>
+            <% } else { %>
+              <table class="admin-table" data-mobile="cards">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>PPZ ID</th>
+                    <th>Contact</th>
+                    <th class="num">Items</th>
+                    <th class="num">Total</th>
+                    <th>Placed</th>
+                    <th class="num">Age</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% uncollected.forEach(o => {
+                    const itemCount = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
+                    const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id;
+                    const age = ageInDays(o.createdAt);
+                  %>
+                    <tr>
+                      <td><strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong></td>
+                      <td data-label="Customer">
+                        <% if (o.customer) { %>
+                          <strong><%= o.customer.name %></strong>
+                          <% if (o.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= o.customer.email %></div><% } %>
+                        <% } else { %>—<% } %>
+                      </td>
+                      <td data-label="PPZ ID"><%= o.customer && o.customer.ppzId ? o.customer.ppzId : '–' %></td>
+                      <td data-label="Contact"><%= o.customer && o.customer.contact ? o.customer.contact : '–' %></td>
+                      <td class="num" data-label="Items"><%= itemCount %></td>
+                      <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
+                      <td data-label="Placed" class="text-muted"><%= fmtSg(o.createdAt) %></td>
+                      <td class="num" data-label="Age"><span class="text-danger"><strong><%= age %>d</strong></span></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="admin-panel">
+          <div class="panel-head">
+            <h3>Logs</h3>
+            <span class="muted">
+              <% if (scope === 'vendor') { %>
+                Scans you ran or scans on orders containing your products
+              <% } else { %>
+                Most recent first · all vendors
+              <% } %>
+            </span>
+          </div>
+          <div class="panel-body">
+            <% if (!logs.length) { %>
+              <div class="cc-empty" style="margin:0; border:none; border-radius:0;">No scans logged yet.</div>
+            <% } else { %>
+              <div class="cc-logs">
+                <% logs.forEach(log => { %>
+                  <%
+                  const cls = {
+                    success: 'badge-status fulfilled',
+                    duplicate: 'badge-status awaiting_payment',
+                    unauthorized_vendor: 'badge-status cancelled',
+                    not_found: 'badge-status cancelled',
+                    invalid_state: 'badge-status awaiting_payment',
+                  }[log.result] || 'badge-status';
+                  %>
+                  <details class="cc-log-row">
+                    <summary>
+                      <span class="cc-log-order">
+                        <% if (log.order) { %>
+                          <strong><a href="/admin/orders/<%= log.order.id %>" class="text-reset" onclick="event.stopPropagation()"><%= log.order.number %></a></strong>
+                        <% } else { %>
+                          <span class="text-muted"><%= log.scannedValue %></span>
+                        <% } %>
+                      </span>
+                      <span class="cc-log-result"><span class="<%= cls %>"><%= log.result.replace(/_/g, ' ') %></span></span>
+                    </summary>
+                    <div class="cc-log-body">
+                      <dl class="profile-dl">
+                        <dt>By</dt>
+                        <dd><%= log.scannedBy ? log.scannedBy.name : '—' %></dd>
+                        <dt>Notes</dt>
+                        <dd><%= log.notes || '—' %></dd>
+                        <dt>When</dt>
+                        <dd><%= fmtSg(log.createdAt) %></dd>
+                      </dl>
+                    </div>
+                  </details>
+                <% }); %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
 
     </main>
   </div>

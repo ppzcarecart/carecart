@@ -592,6 +592,19 @@ window.ppz = (function () {
     }, document.getElementById('collectionStatus'));
   }
 
+  async function saveCollectionThreshold(form) {
+    const fd = new FormData(form);
+    const raw = parseInt((fd.get('collection.uncollectedDays') || '').toString(), 10);
+    if (!Number.isFinite(raw) || raw < 1 || raw > 365) {
+      const status = document.getElementById('collectionThresholdStatus');
+      if (status) { status.style.color = '#b91c1c'; status.textContent = 'Days must be 1–365'; }
+      return;
+    }
+    await patchSettingsBulk({
+      'collection.uncollectedDays': String(raw),
+    }, document.getElementById('collectionThresholdStatus'));
+  }
+
   async function savePartnerSettings(form) {
     const fd = new FormData(form);
     await patchSettingsBulk({
@@ -1540,6 +1553,7 @@ window.ppz = (function () {
     bindAllowPointsToggle,
     savePointsRate,
     saveCollectionPoint,
+    saveCollectionThreshold,
     saveDeliverySettings,
     savePartnerSettings,
     saveHero,

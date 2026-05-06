@@ -12,6 +12,10 @@ const DEFAULTS: Record<string, string> = {
   'collection.postalCode': '',
   'collection.contact': '',
   'collection.hours': '',
+  // Number of days after purchase at which a collection order that
+  // hasn't been picked up rolls over from "Ready for collection" into
+  // the "Uncollected" tab so staff can chase the customer.
+  'collection.uncollectedDays': '16',
   // Delivery
   'delivery.enabled': 'true',
   // Default delivery fee (in cents) used when a product has no override
@@ -83,6 +87,10 @@ export class SettingsService implements OnModuleInit {
 
   deliveryFeeCents(): number {
     return this.getInt('delivery.feeCents', 0);
+  }
+
+  uncollectedDays(): number {
+    return this.getInt('collection.uncollectedDays', 16);
   }
 
   collectionPoint() {

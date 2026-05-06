@@ -73,6 +73,33 @@
 
       <div class="admin-panel" style="max-width: 720px;">
         <div class="panel-head">
+          <h3>Uncollected threshold</h3>
+          <span class="muted">Manage Collection · Uncollected tab</span>
+        </div>
+        <div class="panel-body padded">
+          <p class="text-muted" style="font-size:.92rem;">
+            Number of days after purchase at which a paid collection
+            order that hasn't been picked up rolls over from
+            <strong>Ready for collection</strong> into <strong>Uncollected</strong>.
+            Default is 16 days.
+          </p>
+          <form id="thresholdForm" class="row g-2" onsubmit="event.preventDefault(); ppz.saveCollectionThreshold(this)">
+            <div class="col-md-5">
+              <label>Days before "uncollected"</label>
+              <input type="number" min="1" max="365" step="1" class="form-control"
+                name="collection.uncollectedDays"
+                value="<%= settings.collection.uncollectedDays %>" required>
+            </div>
+            <div class="col-md-7 d-flex align-items-end">
+              <button class="cc-btn cc-btn-primary" style="padding:8px 18px;">Save</button>
+              <span id="collectionThresholdStatus" class="ms-3 small"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="max-width: 720px;">
+        <div class="panel-head">
           <h3>Partner integration</h3>
           <span class="muted">Mobile bottom-nav "Home" button</span>
         </div>

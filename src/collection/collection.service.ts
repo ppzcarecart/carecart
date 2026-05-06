@@ -163,6 +163,48 @@ export class CollectionService {
   }
 
   /**
+   * Collection orders waiting to be picked up. Filters down to the
+   * paid/fulfilled, not-yet-collected, fulfilment=collection set;
+   * `mode` decides whether we want the in-window ("ready") or overdue
+   * ("uncollected") subset, where the boundary is `thresholdDays`
+   * since the order was placed.
+   *
+   * Vendors are scoped to orders containing at least one of their
+   * items; admins/managers see everything.
+   */
+  async listCollectionOrders(opts: {
+    actor: { id: string; role: Role };
+    mode: 'ready' | 'uncollected';
+    thresholdDays: number;
+  }): Promise<Order[]> {
+    const { actor, mode, thresholdDays } = opts;
+    const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000);
+    const qb = this.orders
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.items', 'items')
+      .leftJoinAndSelect('items.vendor', 'itemVendor')
+      .leftJoinAndSelect('o.customer', 'customer')
+      .where("o.fulfilmentMethod = 'collection'")
+      .andWhere("o.status IN ('paid', 'fulfilled')")
+      .andWhere('o.collectedAt IS NULL');
+    if (mode === 'ready') {
+      qb.andWhere('o.createdAt > :cutoff', { cutoff });
+    } else {
+      qb.andWhere('o.createdAt <= :cutoff', { cutoff });
+    }
+    if (actor.role === Role.VENDOR) {
+      // EXISTS subquery so an order with no items of theirs is excluded
+      // entirely (otherwise the leftJoin would still return the row).
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM order_items oi WHERE oi."orderId" = o.id AND oi."vendorId" = :vid)`,
+        { vid: actor.id },
+      );
+    }
+    qb.orderBy('o.createdAt', mode === 'ready' ? 'DESC' : 'ASC');
+    return qb.getMany();
+  }
+
+  /**
    * List collection logs visible to the actor. Vendors see only logs
    * tied to orders that contain their items (or that they themselves
    * scanned). Admins/managers see everything.
