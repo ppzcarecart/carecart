@@ -362,20 +362,27 @@ export class ViewsController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
   @Render('shop/index')
-  async home(@Req() req: Request, @Query('category') categorySlug?: string) {
+  async home(
+    @Req() req: Request,
+    @Query('category') categorySlug?: string,
+    @Query('q') q?: string,
+  ) {
     const categories = await this.categories.list();
     const activeCategory = categorySlug
       ? categories.find((c) => c.slug === categorySlug)
       : undefined;
+    const activeQuery = (q || '').trim();
 
-    // Featured and New rails only render when no category filter is active.
+    // Featured and New rails only render when no category filter or
+    // search query is active — both narrow the page to focused results.
     const newSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const skipRails = !!activeCategory;
+    const skipRails = !!activeCategory || !!activeQuery;
 
     const [products, featured, newProducts] = await Promise.all([
       this.products.list({
         activeOnly: true,
         categoryId: activeCategory?.id,
+        q: activeQuery || undefined,
       }),
       skipRails
         ? Promise.resolve([])
@@ -406,6 +413,7 @@ export class ViewsController {
       newProducts,
       categories,
       activeCategorySlug: categorySlug || 'all',
+      activeQuery,
       hero,
       banners,
     };
