@@ -1850,6 +1850,26 @@ window.ppz = (function () {
         alert(e.message || 'Could not mark packed');
       }
     },
+    // Forfeit an uncollected bundle. No refund, no points return —
+    // the cash and the PPZ points stay with us. Cascades to every
+    // constituent order (status='forfeited').
+    async markForfeit(id, btn, redirectHref) {
+      if (!confirm('Forfeit this bundle? The customer will NOT be refunded and PPZ points will NOT be returned. This cannot be undone.')) return;
+      const original = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Saving…'; }
+      try {
+        await api('/api/packings/' + id + '/forfeit', { method: 'POST' });
+        if (redirectHref) {
+          window.location.href = redirectHref;
+          return;
+        }
+        const row = document.getElementById('packing-row-' + id);
+        if (row) row.remove();
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+        alert(e.message || 'Could not forfeit bundle');
+      }
+    },
     // Mark a packed delivery bundle as shipped. Cascades to every
     // constituent order (status='fulfilled') and bumps the packing
     // out of the Packed list. Used from the customer-scoped packing

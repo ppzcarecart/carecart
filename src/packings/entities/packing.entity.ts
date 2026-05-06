@@ -10,7 +10,12 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export type PackingStatus = 'open' | 'packed' | 'collected' | 'shipped';
+export type PackingStatus =
+  | 'open'
+  | 'packed'
+  | 'collected'
+  | 'shipped'
+  | 'forfeited';
 export type PackingFulfilment = 'delivery' | 'collection';
 
 /**
@@ -86,6 +91,18 @@ export class Packing {
 
   @Column({ nullable: true })
   shippedById?: string;
+
+  // Set when an uncollected bundle is forfeited. No Stripe refund,
+  // no PPZ points reversal — the customer simply forfeits the order.
+  @Column({ type: 'timestamptz', nullable: true })
+  forfeitedAt?: Date;
+
+  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'forfeitedById' })
+  forfeitedBy?: User;
+
+  @Column({ nullable: true })
+  forfeitedById?: string;
 
   @CreateDateColumn()
   createdAt: Date;

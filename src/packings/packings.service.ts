@@ -693,6 +693,71 @@ export class PackingsService {
   }
 
   /**
+   * Forfeit an uncollected bundle. No Stripe refund, no PPZ points
+   * reversal — the cash and points stay with us. Cascades every
+   * constituent order to status='forfeited' so the customer's order
+   * history reflects what happened, and the packing drops out of the
+   * Uncollected list. Only valid on packed (not collected/shipped)
+   * collection bundles.
+   */
+  async markForfeit(
+    id: string,
+    actor: { id: string; role: Role },
+  ): Promise<{ packing: Packing; orderNumbers: string[] }> {
+    const packing = await this.packings.findOne({ where: { id } });
+    if (!packing) throw new NotFoundException('Packing not found');
+    if (packing.status === 'forfeited') {
+      throw new BadRequestException('Bundle is already forfeited');
+    }
+    if (packing.status === 'collected') {
+      throw new BadRequestException(
+        'Bundle was already collected and cannot be forfeited',
+      );
+    }
+    if (packing.status !== 'packed') {
+      throw new BadRequestException(
+        'Only packed bundles can be forfeited',
+      );
+    }
+    if (actor.role === Role.VENDOR) {
+      const owned = await this.orderItems.findOne({
+        where: { packingId: id, vendorId: actor.id },
+      });
+      if (!owned) {
+        throw new ForbiddenException('This packing has none of your items');
+      }
+    }
+    const items = await this.orderItems.find({ where: { packingId: id } });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    const now = new Date();
+    const orderNumbers: string[] = [];
+    for (const o of orders) {
+      orderNumbers.push(o.number);
+      // Idempotent at the order level — anything already terminal is
+      // left alone. CRITICAL: no points refund, no Stripe refund —
+      // forfeiture means we keep both.
+      if (
+        o.status === 'collected' ||
+        o.status === 'cancelled' ||
+        o.status === 'refunded' ||
+        o.status === 'forfeited'
+      ) {
+        continue;
+      }
+      o.status = 'forfeited';
+      await this.orders.save(o);
+    }
+    packing.status = 'forfeited';
+    packing.forfeitedAt = now;
+    packing.forfeitedById = actor.id;
+    const saved = await this.packings.save(packing);
+    return { packing: saved, orderNumbers };
+  }
+
+  /**
    * Mark a packed delivery bundle as shipped — the courier has it,
    * staff are done with it. Cascades to every constituent order:
    * order.status = 'fulfilled'. Status moves to 'shipped' so the

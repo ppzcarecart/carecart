@@ -19,7 +19,11 @@ export type OrderStatus =
   | 'fulfilled'
   | 'collected'
   | 'cancelled'
-  | 'refunded';
+  | 'refunded'
+  // Customer never picked up after the configured uncollected
+  // window. Distinct from 'cancelled': we keep the cash AND keep
+  // the PPZ points (no Stripe refund, no points return).
+  | 'forfeited';
 
 export type FulfilmentMethod = 'delivery' | 'collection';
 

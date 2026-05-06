@@ -173,11 +173,12 @@ function ageInDays(ts) {
                     <th class="num">Total</th>
                     <th>Packed</th>
                     <th class="num">Age</th>
+                    <th class="actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% uncollected.forEach(p => { const r = renderBundleRow(p); %>
-                    <tr>
+                    <tr id="packing-row-<%= p.id %>">
                       <td data-label="Order(s)">
                         <% r.ownOrders.forEach((o, idx) => { %>
                           <% const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id; %>
@@ -197,6 +198,13 @@ function ageInDays(ts) {
                       <td class="num" data-label="Total">$<%= (r.totalCents/100).toFixed(2) %></td>
                       <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
                       <td class="num" data-label="Age"><span class="text-danger"><strong><%= r.age %>d</strong></span></td>
+                      <td class="actions">
+                        <button class="cc-btn cc-btn-danger" style="padding:6px 12px; font-size:.82rem;"
+                          onclick="ppz.markForfeit('<%= p.id %>', this)"
+                          title="No refund, no points return">
+                          Forfeit
+                        </button>
+                      </td>
                     </tr>
                   <% }); %>
                 </tbody>

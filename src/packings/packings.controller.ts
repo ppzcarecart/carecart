@@ -30,6 +30,22 @@ export class PackingsController {
   }
 
   @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/forfeit')
+  async forfeit(@Param('id') id: string, @CurrentUser() user: any) {
+    if (!id) throw new BadRequestException('id required');
+    const result = await this.packings.markForfeit(id, {
+      id: user.id,
+      role: user.role,
+    });
+    return {
+      id: result.packing.id,
+      status: result.packing.status,
+      forfeitedAt: result.packing.forfeitedAt,
+      orderNumbers: result.orderNumbers,
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
   @Post(':id/ship')
   async ship(@Param('id') id: string, @CurrentUser() user: any) {
     if (!id) throw new BadRequestException('id required');

@@ -428,6 +428,8 @@ a:hover { color: var(--brand-dark); }
 .cc-btn-outline:hover { background: var(--brand-soft); color: var(--brand-dark); }
 .cc-btn-ghost { background: transparent; color: var(--ink-soft); }
 .cc-btn-ghost:hover { background: var(--bg); color: var(--ink); }
+.cc-btn-danger { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+.cc-btn-danger:hover { background: #991b1b; color: #fff; border-color: #991b1b; }
 .cc-btn-block { width: 100%; }
 
 /* ---------- Cart ---------- */
