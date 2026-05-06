@@ -53,17 +53,25 @@ export class PackingsService {
       .map((i) => i.id);
     if (!itemIds.length) return;
 
-    // Heal any legacy duplicates (multiple open packings for the same
-    // customer left over from the earlier per-vendor grouping) before
+    const fulfilmentMethod = (order.fulfilmentMethod === 'collection'
+      ? 'collection'
+      : 'delivery') as 'collection' | 'delivery';
+
+    // Heal any legacy duplicates for this customer + method before
     // picking the target.
-    await this.consolidateOpenForCustomer(order.customerId);
+    await this.consolidateOpenForCustomer(order.customerId, fulfilmentMethod);
 
     let packing = await this.packings.findOne({
-      where: { customerId: order.customerId, status: 'open' },
+      where: {
+        customerId: order.customerId,
+        fulfilmentMethod,
+        status: 'open',
+      },
     });
     if (!packing) {
       packing = this.packings.create({
         customerId: order.customerId,
+        fulfilmentMethod,
         status: 'open',
       });
       packing = await this.packings.save(packing);
@@ -77,13 +85,17 @@ export class PackingsService {
   }
 
   /**
-   * Merge any duplicate OPEN packings for a single customer into the
-   * oldest one. Reassigns the items from the duplicates and deletes
-   * the now-empty packing rows. Idempotent — safe to call freely.
+   * Merge any duplicate OPEN packings for a single (customer, method)
+   * into the oldest one. Reassigns the items from the duplicates and
+   * deletes the now-empty packing rows. Idempotent — safe to call
+   * freely.
    */
-  private async consolidateOpenForCustomer(customerId: string): Promise<void> {
+  private async consolidateOpenForCustomer(
+    customerId: string,
+    fulfilmentMethod: 'delivery' | 'collection',
+  ): Promise<void> {
     const open = await this.packings.find({
-      where: { customerId, status: 'open' },
+      where: { customerId, fulfilmentMethod, status: 'open' },
       order: { createdAt: 'ASC' },
     });
     if (open.length <= 1) return;
@@ -98,23 +110,34 @@ export class PackingsService {
   }
 
   /**
-   * Walk every customer that currently has more than one open packing
-   * and merge them. Cheap when there's nothing to do (a single grouped
-   * query) so it's safe to call on every list render — that way the
-   * UI is self-healing for legacy data without any manual migration.
+   * Walk every (customer, method) that currently has more than one
+   * open packing and merge them. Cheap when there's nothing to do
+   * (a single grouped query) so it's safe to call on every list
+   * render — that way the UI is self-healing for legacy data without
+   * any manual migration.
    */
   private async consolidateAllOpen(): Promise<void> {
     const dupRows = await this.packings
       .createQueryBuilder('p')
       .select('p.customerId', 'customerId')
+      .addSelect('p.fulfilmentMethod', 'fulfilmentMethod')
       .addSelect('COUNT(*)', 'cnt')
       .where("p.status = 'open'")
       .andWhere('p.customerId IS NOT NULL')
+      .andWhere('p.fulfilmentMethod IS NOT NULL')
       .groupBy('p.customerId')
+      .addGroupBy('p.fulfilmentMethod')
       .having('COUNT(*) > 1')
-      .getRawMany<{ customerId: string; cnt: string }>();
+      .getRawMany<{
+        customerId: string;
+        fulfilmentMethod: 'delivery' | 'collection';
+        cnt: string;
+      }>();
     for (const row of dupRows) {
-      await this.consolidateOpenForCustomer(row.customerId);
+      await this.consolidateOpenForCustomer(
+        row.customerId,
+        row.fulfilmentMethod,
+      );
     }
   }
 
@@ -231,6 +254,90 @@ export class PackingsService {
       ? await this.orders.find({ where: { id: In(orderIds) } })
       : [];
     return { packing, items, orders };
+  }
+
+  /**
+   * Resolve a scanned QR / typed value into the matching packing. The
+   * QR a customer shows at pickup encodes the packing.id (UUID), so we
+   * try that first. As a fallback for staff who type an order number,
+   * we also resolve "this order's packing".
+   */
+  async findByScannedValue(value: string): Promise<Packing | null> {
+    const v = (value || '').trim();
+    if (!v) return null;
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        v,
+      );
+    if (isUuid) {
+      const direct = await this.packings.findOne({ where: { id: v } });
+      if (direct) return direct;
+    }
+    const order = await this.orders.findOne({ where: { number: v } });
+    if (!order) return null;
+    const item = await this.orderItems.findOne({
+      where: { orderId: order.id },
+    });
+    if (!item || !item.packingId) return null;
+    return this.packings.findOne({ where: { id: item.packingId } });
+  }
+
+  async findPackingForOrder(orderId: string): Promise<Packing | null> {
+    const item = await this.orderItems.findOne({ where: { orderId } });
+    if (!item || !item.packingId) return null;
+    return this.packings.findOne({ where: { id: item.packingId } });
+  }
+
+  /**
+   * Mark a packing as collected. Cascades to every constituent
+   * order: order.status = 'collected', collectedAt + collectedById
+   * stamped. Idempotent at the order level — orders already in
+   * 'collected' are left alone.
+   */
+  async markCollected(
+    id: string,
+    actor: { id: string; role: Role },
+  ): Promise<{ packing: Packing; orderNumbers: string[] }> {
+    const packing = await this.packings.findOne({ where: { id } });
+    if (!packing) throw new NotFoundException('Packing not found');
+    if (packing.status === 'collected') {
+      throw new BadRequestException('Packing was already collected');
+    }
+    if (packing.status !== 'packed') {
+      throw new BadRequestException(
+        'Packing is not packed yet — finish packing it first',
+      );
+    }
+    if (actor.role === Role.VENDOR) {
+      const owned = await this.orderItems.findOne({
+        where: { packingId: id, vendorId: actor.id },
+      });
+      if (!owned) {
+        throw new ForbiddenException(
+          'This packing has none of your items',
+        );
+      }
+    }
+    const items = await this.orderItems.find({ where: { packingId: id } });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    const now = new Date();
+    const orderNumbers: string[] = [];
+    for (const o of orders) {
+      orderNumbers.push(o.number);
+      if (o.status === 'collected') continue;
+      o.status = 'collected';
+      o.collectedAt = now;
+      o.collectedById = actor.id;
+      await this.orders.save(o);
+    }
+    packing.status = 'collected';
+    packing.collectedAt = now;
+    packing.collectedById = actor.id;
+    const saved = await this.packings.save(packing);
+    return { packing: saved, orderNumbers };
   }
 
   async markPacked(

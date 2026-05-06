@@ -84,50 +84,65 @@ function ageInDays(ts) {
         </div>
       </div>
 
+      <%
+      function renderBundleRow(p, options) {
+        const ownItems = p._items || [];
+        const ownOrders = p._orders || [];
+        const itemCount = ownItems.reduce((s, i) => s + (i.quantity || 0), 0);
+        const totalCents = ownOrders.reduce((s, o) => s + (o.totalCents || 0), 0);
+        const since = p.packedAt || p.createdAt;
+        const age = ageInDays(since);
+        return { ownItems, ownOrders, itemCount, totalCents, since, age };
+      }
+      %>
       <% if (activeTab === 'ready') { %>
         <div class="admin-panel">
           <div class="panel-head">
             <h3>Ready for collection</h3>
-            <span class="muted">Paid · placed within the last <%= thresholdDays %> day<%= thresholdDays === 1 ? '' : 's' %> · <%= ready.length %> order<%= ready.length === 1 ? '' : 's' %></span>
+            <span class="muted">Packed bundles awaiting pickup · within <%= thresholdDays %> day<%= thresholdDays === 1 ? '' : 's' %> · <%= ready.length %> bundle<%= ready.length === 1 ? '' : 's' %></span>
           </div>
           <div class="panel-body">
             <% if (!ready.length) { %>
               <div class="cc-empty" style="margin:0; border:none; border-radius:0;">
-                Nothing waiting for pickup right now.
+                Nothing waiting for pickup. Bundles only show up here
+                once admin or the vendor marks them as <strong>packed</strong>.
               </div>
             <% } else { %>
               <table class="admin-table" data-mobile="cards">
                 <thead>
                   <tr>
-                    <th>Order</th>
+                    <th>Order(s)</th>
                     <th>Customer</th>
                     <th>PPZ ID</th>
                     <th>Contact</th>
                     <th class="num">Items</th>
                     <th class="num">Total</th>
-                    <th>Placed</th>
+                    <th>Packed</th>
                     <th class="num">Age</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <% ready.forEach(o => {
-                    const itemCount = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
-                    const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id;
-                  %>
+                  <% ready.forEach(p => { const r = renderBundleRow(p); %>
                     <tr>
-                      <td><strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong></td>
+                      <td data-label="Order(s)">
+                        <% r.ownOrders.forEach((o, idx) => { %>
+                          <% const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id; %>
+                          <strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong>
+                          <% if (idx < r.ownOrders.length - 1) { %><br><% } %>
+                        <% }); %>
+                      </td>
                       <td data-label="Customer">
-                        <% if (o.customer) { %>
-                          <strong><%= o.customer.name %></strong>
-                          <% if (o.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= o.customer.email %></div><% } %>
+                        <% if (p.customer) { %>
+                          <strong><%= p.customer.name %></strong>
+                          <% if (p.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div><% } %>
                         <% } else { %>—<% } %>
                       </td>
-                      <td data-label="PPZ ID"><%= o.customer && o.customer.ppzId ? o.customer.ppzId : '–' %></td>
-                      <td data-label="Contact"><%= o.customer && o.customer.contact ? o.customer.contact : '–' %></td>
-                      <td class="num" data-label="Items"><%= itemCount %></td>
-                      <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
-                      <td data-label="Placed" class="text-muted"><%= fmtSg(o.createdAt) %></td>
-                      <td class="num" data-label="Age"><%= ageInDays(o.createdAt) %>d</td>
+                      <td data-label="PPZ ID"><%= p.customer && p.customer.ppzId ? p.customer.ppzId : '–' %></td>
+                      <td data-label="Contact"><%= p.customer && p.customer.contact ? p.customer.contact : '–' %></td>
+                      <td class="num" data-label="Items"><%= r.itemCount %></td>
+                      <td class="num" data-label="Total">$<%= (r.totalCents/100).toFixed(2) %></td>
+                      <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
+                      <td class="num" data-label="Age"><%= r.age %>d</td>
                     </tr>
                   <% }); %>
                 </tbody>
@@ -139,7 +154,7 @@ function ageInDays(ts) {
         <div class="admin-panel">
           <div class="panel-head">
             <h3>Uncollected</h3>
-            <span class="muted">Placed <%= thresholdDays %>+ day<%= thresholdDays === 1 ? '' : 's' %> ago, still not picked up · <%= uncollected.length %> order<%= uncollected.length === 1 ? '' : 's' %></span>
+            <span class="muted">Packed <%= thresholdDays %>+ day<%= thresholdDays === 1 ? '' : 's' %> ago, still not picked up · <%= uncollected.length %> bundle<%= uncollected.length === 1 ? '' : 's' %></span>
           </div>
           <div class="panel-body">
             <% if (!uncollected.length) { %>
@@ -150,36 +165,38 @@ function ageInDays(ts) {
               <table class="admin-table" data-mobile="cards">
                 <thead>
                   <tr>
-                    <th>Order</th>
+                    <th>Order(s)</th>
                     <th>Customer</th>
                     <th>PPZ ID</th>
                     <th>Contact</th>
                     <th class="num">Items</th>
                     <th class="num">Total</th>
-                    <th>Placed</th>
+                    <th>Packed</th>
                     <th class="num">Age</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <% uncollected.forEach(o => {
-                    const itemCount = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
-                    const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id;
-                    const age = ageInDays(o.createdAt);
-                  %>
+                  <% uncollected.forEach(p => { const r = renderBundleRow(p); %>
                     <tr>
-                      <td><strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong></td>
+                      <td data-label="Order(s)">
+                        <% r.ownOrders.forEach((o, idx) => { %>
+                          <% const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id; %>
+                          <strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong>
+                          <% if (idx < r.ownOrders.length - 1) { %><br><% } %>
+                        <% }); %>
+                      </td>
                       <td data-label="Customer">
-                        <% if (o.customer) { %>
-                          <strong><%= o.customer.name %></strong>
-                          <% if (o.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= o.customer.email %></div><% } %>
+                        <% if (p.customer) { %>
+                          <strong><%= p.customer.name %></strong>
+                          <% if (p.customer.email) { %><div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div><% } %>
                         <% } else { %>—<% } %>
                       </td>
-                      <td data-label="PPZ ID"><%= o.customer && o.customer.ppzId ? o.customer.ppzId : '–' %></td>
-                      <td data-label="Contact"><%= o.customer && o.customer.contact ? o.customer.contact : '–' %></td>
-                      <td class="num" data-label="Items"><%= itemCount %></td>
-                      <td class="num" data-label="Total">$<%= (o.totalCents/100).toFixed(2) %></td>
-                      <td data-label="Placed" class="text-muted"><%= fmtSg(o.createdAt) %></td>
-                      <td class="num" data-label="Age"><span class="text-danger"><strong><%= age %>d</strong></span></td>
+                      <td data-label="PPZ ID"><%= p.customer && p.customer.ppzId ? p.customer.ppzId : '–' %></td>
+                      <td data-label="Contact"><%= p.customer && p.customer.contact ? p.customer.contact : '–' %></td>
+                      <td class="num" data-label="Items"><%= r.itemCount %></td>
+                      <td class="num" data-label="Total">$<%= (r.totalCents/100).toFixed(2) %></td>
+                      <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
+                      <td class="num" data-label="Age"><span class="text-danger"><strong><%= r.age %>d</strong></span></td>
                     </tr>
                   <% }); %>
                 </tbody>

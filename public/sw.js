@@ -6,7 +6,7 @@
 // goes live immediately after deploy, no double-reload needed.
 // Bump VERSION whenever the activate-time cache wipe should fire.
 
-const VERSION = 'carecart-v61';
+const VERSION = 'carecart-v62';
 const SHELL = ['/', '/static/app.css', '/static/app.js', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

@@ -423,18 +423,32 @@ export class ViewsController {
         'This is a delivery order, no collection QR is needed.',
       );
     }
-    const qrSvg = await QRCode.toString(order.number, {
-      type: 'svg',
-      errorCorrectionLevel: 'M',
-      margin: 1,
-      width: 260,
-      color: { dark: '#0f172a', light: '#ffffff' },
-    });
+    // The QR encodes the packing.id (UUID) — every order in the
+    // packed bundle shares it, and one scan collects them all. Until
+    // the packing is marked PACKED we don't render a QR; the
+    // template shows a "your bundle is being prepared" message in
+    // its place.
+    const packing = await this.packings.findPackingForOrder(order.id);
+    let qrSvg: string | null = null;
+    let bundleOrders: any[] = [];
+    if (packing && packing.status === 'packed') {
+      qrSvg = await QRCode.toString(packing.id, {
+        type: 'svg',
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        width: 260,
+        color: { dark: '#0f172a', light: '#ffffff' },
+      });
+      const items = await this.collection.expandPackings([packing]);
+      bundleOrders = items[0]?._orders || [];
+    }
     return {
       title: 'Collect ' + order.number,
       user,
       order,
+      packing,
       qrSvg,
+      bundleOrders,
     };
   }
 
@@ -928,19 +942,23 @@ export class ViewsController {
     const actor = { id: user.id, role: user.role };
     const ready =
       activeTab === 'ready'
-        ? await this.collection.listCollectionOrders({
-            actor,
-            mode: 'ready',
-            thresholdDays,
-          })
+        ? await this.collection.expandPackings(
+            await this.collection.listCollectionPackings({
+              actor,
+              mode: 'ready',
+              thresholdDays,
+            }),
+          )
         : [];
     const uncollected =
       activeTab === 'uncollected'
-        ? await this.collection.listCollectionOrders({
-            actor,
-            mode: 'uncollected',
-            thresholdDays,
-          })
+        ? await this.collection.expandPackings(
+            await this.collection.listCollectionPackings({
+              actor,
+              mode: 'uncollected',
+              thresholdDays,
+            }),
+          )
         : [];
     const logs =
       activeTab === 'logs' ? await this.collection.listLogs(actor) : [];

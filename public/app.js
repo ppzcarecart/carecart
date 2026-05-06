@@ -1068,8 +1068,16 @@ window.ppz = (function () {
       // collected timestamp on duplicates — that's the critical info
       // for staff to identify what happened). Everything else lives
       // behind a collapsible to keep the modal small on phones.
+      // o.number can be a newline-joined list of order numbers (when
+      // the QR resolves to a packed bundle); render each on its own line.
+      const numbersHtml = (o.number || '')
+        .split('\n')
+        .filter(Boolean)
+        .map((n) => `<strong>${escapeHtml(n)}</strong>`)
+        .join('<br>');
+      const orderLabel = o.number && o.number.includes('\n') ? 'Orders' : 'Order';
       html += `<dl class="profile-dl">`;
-      html += `<dt>Order</dt><dd><strong>${escapeHtml(o.number)}</strong></dd>`;
+      html += `<dt>${orderLabel}</dt><dd>${numbersHtml || '—'}</dd>`;
       html += `<dt>Status</dt><dd><span class="badge-status ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></dd>`;
       if (o.customerName) {
         html += `<dt>Customer</dt><dd>${escapeHtml(o.customerName)}</dd>`;
@@ -1115,9 +1123,12 @@ window.ppz = (function () {
 
     function buildActions(outcome) {
       if (outcome.result === 'success' && outcome.order) {
+        // outcome.order.id is the packing.id (the QR's actual payload).
+        // Sending it back to /api/collection/mark cascades collection
+        // to every order in the bundle in one round-trip.
         return (
           `<button type="button" class="cc-btn cc-btn-ghost" onclick="ppz.collection.dismiss()">Cancel</button>` +
-          `<button type="button" class="cc-btn cc-btn-primary" onclick="ppz.collection.markCollected('${escapeHtml(outcome.order.number)}')">Mark as collected</button>`
+          `<button type="button" class="cc-btn cc-btn-primary" onclick="ppz.collection.markCollected('${escapeHtml(outcome.order.id)}')">Mark as collected</button>`
         );
       }
       return `<button type="button" class="cc-btn cc-btn-primary" onclick="ppz.collection.dismiss()">OK</button>`;

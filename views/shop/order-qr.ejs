@@ -12,16 +12,44 @@
         <%= order.number %>
       </h2>
 
-      <div style="display:flex; justify-content:center; padding: 12px;">
-        <div style="background:#fff; padding:18px; border-radius:14px; box-shadow: 0 1px 3px rgba(0,0,0,.06);">
-          <%- qrSvg %>
+      <% if (qrSvg) { %>
+        <div style="display:flex; justify-content:center; padding: 12px;">
+          <div style="background:#fff; padding:18px; border-radius:14px; box-shadow: 0 1px 3px rgba(0,0,0,.06);">
+            <%- qrSvg %>
+          </div>
         </div>
-      </div>
 
-      <p class="text-muted mt-3" style="font-size:.92rem;">
-        Show this QR at the collection counter. Staff will scan it and
-        mark your order as collected.
-      </p>
+        <p class="text-muted mt-3" style="font-size:.92rem;">
+          Show this QR at the collection counter. Staff will scan it and
+          mark your order as collected.
+        </p>
+
+        <% if (bundleOrders && bundleOrders.length > 1) { %>
+          <div class="mt-3" style="border:1px solid var(--line); border-radius:12px; padding:12px; background: var(--surface-soft); text-align:left;">
+            <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">
+              This QR also collects
+            </div>
+            <ul class="mb-0 mt-1" style="padding-left:18px;">
+              <% bundleOrders.forEach(b => { %>
+                <% if (b.id !== order.id) { %>
+                  <li><%= b.number %></li>
+                <% } %>
+              <% }); %>
+            </ul>
+          </div>
+        <% } %>
+      <% } else { %>
+        <div style="display:flex; justify-content:center; padding: 24px 12px;">
+          <div style="background: var(--surface-soft); border:1px dashed var(--line); border-radius:14px; padding: 28px 18px; max-width: 320px;">
+            <div style="font-size: 2rem; line-height: 1; margin-bottom: 8px;">⏳</div>
+            <strong>Your bundle is being prepared</strong>
+            <p class="text-muted mt-2 mb-0" style="font-size:.9rem;">
+              Once the team has packed your order(s) you'll see your
+              pickup QR right here. We'll notify you the moment it's ready.
+            </p>
+          </div>
+        </div>
+      <% } %>
 
       <hr class="mt-3 mb-3">
 

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { Order } from '../orders/entities/order.entity';
+import { OrderItem } from '../orders/entities/order-item.entity';
 import { CollectionLog, CollectionResult } from './entities/collection-log.entity';
 import { Role } from '../common/enums/role.enum';
+import { PackingsService } from '../packings/packings.service';
+import { Packing } from '../packings/entities/packing.entity';
 
 export interface ScanOutcome {
   result: CollectionResult;
@@ -37,16 +40,21 @@ export interface ScanOutcome {
 export class CollectionService {
   constructor(
     @InjectRepository(Order) private orders: Repository<Order>,
+    @InjectRepository(OrderItem) private orderItems: Repository<OrderItem>,
     @InjectRepository(CollectionLog) private logs: Repository<CollectionLog>,
+    @InjectRepository(Packing) private packings: Repository<Packing>,
+    private packingsService: PackingsService,
   ) {}
 
   /**
-   * Validate a scanned QR / typed order number against the rules for the
-   * acting user. Logs the attempt only when the result is not 'success'
-   * (so a successful scan + later mark only writes one log row).
+   * Validate a scanned QR / typed value against packing-based pickup
+   * rules. The QR a customer shows at pickup encodes the packing.id,
+   * so we resolve to a packing first; staff who type an order number
+   * are routed to that order's packing as a fallback. Logs every
+   * non-success outcome so admins have an audit trail of misfires.
    *
-   * Vendors may only scan orders that contain at least one of their items.
-   * Admins/managers may scan any order.
+   * Vendors may only scan packings that contain at least one of their
+   * items. Admins/managers may scan any packing.
    */
   async scan(
     scannedValue: string,
@@ -56,37 +64,71 @@ export class CollectionService {
     if (!value) {
       return { result: 'not_found', message: 'Empty scan' };
     }
-
-    const order = await this.orders.findOne({ where: { number: value } });
-    if (!order) {
-      // Don't log random misreads — they're noise.
+    const packing = await this.packingsService.findByScannedValue(value);
+    if (!packing) {
       return {
         result: 'not_found',
-        message: `No order matches "${value}".`,
+        message: `No packing or order matches "${value}".`,
       };
     }
+    return this.evaluatePacking(packing, value, actor, { mark: false });
+  }
 
-    if (order.fulfilmentMethod !== 'collection') {
-      const outcome: ScanOutcome = {
-        result: 'invalid_state',
-        message: `Order ${order.number} is for delivery, not collection.`,
-        order: this.shapeOrder(order),
-      };
-      await this.log(value, order.id, actor.id, 'invalid_state', outcome.message);
-      return outcome;
+  /**
+   * Mark the packing as collected — and cascade to every order in it.
+   * Vendors must have at least one of their items in the packing. We
+   * piggy-back on scan() for validation so the logged outcomes are
+   * identical to a "view-only" scan that hit the same rule.
+   */
+  async markCollected(
+    scannedValue: string,
+    actor: { id: string; role: Role },
+  ): Promise<ScanOutcome> {
+    const value = (scannedValue || '').trim();
+    if (!value) {
+      return { result: 'not_found', message: 'Empty scan' };
     }
+    const packing = await this.packingsService.findByScannedValue(value);
+    if (!packing) {
+      return {
+        result: 'not_found',
+        message: `No packing or order matches "${value}".`,
+      };
+    }
+    return this.evaluatePacking(packing, value, actor, { mark: true });
+  }
+
+  /**
+   * Internal — share validation between scan and mark so the rules
+   * never drift apart. When `mark` is true and the packing passes
+   * every check, we cascade order.status='collected' onto every
+   * constituent order via PackingsService.markCollected.
+   */
+  private async evaluatePacking(
+    packing: Packing,
+    scannedValue: string,
+    actor: { id: string; role: Role },
+    opts: { mark: boolean },
+  ): Promise<ScanOutcome> {
+    const items = await this.orderItems.find({
+      where: { packingId: packing.id },
+    });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
 
     if (
       actor.role === Role.VENDOR &&
-      !order.items.some((i) => i.vendorId === actor.id)
+      !items.some((i) => i.vendorId === actor.id)
     ) {
       const outcome: ScanOutcome = {
         result: 'unauthorized_vendor',
-        message: `Order ${order.number} contains no items from your store.`,
+        message: `This packing contains no items from your store.`,
       };
       await this.log(
-        value,
-        order.id,
+        scannedValue,
+        undefined,
         actor.id,
         'unauthorized_vendor',
         outcome.message,
@@ -94,114 +136,147 @@ export class CollectionService {
       return outcome;
     }
 
-    if (order.collectedAt) {
-      const outcome: ScanOutcome = {
-        result: 'duplicate',
-        message: `Order ${order.number} was already collected.`,
-        order: this.shapeOrder(order),
-      };
-      await this.log(value, order.id, actor.id, 'duplicate', outcome.message);
-      return outcome;
-    }
-
-    if (order.status !== 'paid' && order.status !== 'fulfilled') {
+    if (packing.fulfilmentMethod && packing.fulfilmentMethod !== 'collection') {
       const outcome: ScanOutcome = {
         result: 'invalid_state',
-        message: `Order ${order.number} is "${order.status}" — only paid/fulfilled orders can be collected.`,
-        order: this.shapeOrder(order),
+        message: 'This bundle is for delivery, not self-collection.',
+        order: this.shapePackingAsOrder(packing, orders, items),
       };
-      await this.log(value, order.id, actor.id, 'invalid_state', outcome.message);
+      await this.log(
+        scannedValue,
+        orders[0]?.id,
+        actor.id,
+        'invalid_state',
+        outcome.message,
+      );
       return outcome;
     }
 
-    return {
-      result: 'success',
-      message: 'Ready to mark as collected.',
-      order: this.shapeOrder(order),
-    };
-  }
-
-  /**
-   * Mark the order as collected. Idempotency: if it's already collected,
-   * we record a 'duplicate' log entry and return the duplicate outcome
-   * without changing the order. Vendors are still constrained to their
-   * own orders.
-   */
-  async markCollected(
-    scannedValue: string,
-    actor: { id: string; role: Role },
-  ): Promise<ScanOutcome> {
-    const validation = await this.scan(scannedValue, actor);
-    if (validation.result !== 'success') {
-      // scan() already logged duplicate / unauthorized / invalid; just return.
-      return validation;
+    if (packing.status === 'collected') {
+      const outcome: ScanOutcome = {
+        result: 'duplicate',
+        message: 'This bundle was already collected.',
+        order: this.shapePackingAsOrder(packing, orders, items),
+      };
+      await this.log(
+        scannedValue,
+        orders[0]?.id,
+        actor.id,
+        'duplicate',
+        outcome.message,
+      );
+      return outcome;
     }
 
-    const order = await this.orders.findOne({
-      where: { number: scannedValue.trim() },
-    });
-    if (!order) return validation;
+    if (packing.status !== 'packed') {
+      const outcome: ScanOutcome = {
+        result: 'invalid_state',
+        message:
+          'This bundle is still being packed — finish packing it before collection.',
+        order: this.shapePackingAsOrder(packing, orders, items),
+      };
+      await this.log(
+        scannedValue,
+        orders[0]?.id,
+        actor.id,
+        'invalid_state',
+        outcome.message,
+      );
+      return outcome;
+    }
 
-    order.collectedAt = new Date();
-    order.collectedById = actor.id;
-    order.status = 'collected';
-    const saved = await this.orders.save(order);
+    if (!opts.mark) {
+      return {
+        result: 'success',
+        message: 'Ready to mark as collected.',
+        order: this.shapePackingAsOrder(packing, orders, items),
+      };
+    }
 
+    const { packing: saved } = await this.packingsService.markCollected(
+      packing.id,
+      actor,
+    );
+    // Reload orders post-cascade so the response shows status='collected'.
+    const refreshedOrders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
     await this.log(
-      scannedValue.trim(),
-      saved.id,
+      scannedValue,
+      orders[0]?.id,
       actor.id,
       'success',
-      `Marked as collected by ${actor.role}.`,
+      `Bundle of ${orderIds.length} order(s) marked as collected by ${actor.role}.`,
     );
-
     return {
       result: 'success',
-      message: `Order ${saved.number} marked as collected.`,
-      order: this.shapeOrder(saved),
+      message: `Bundle marked as collected (${refreshedOrders.length} order(s)).`,
+      order: this.shapePackingAsOrder(saved, refreshedOrders, items),
     };
   }
 
   /**
-   * Collection orders waiting to be picked up. Filters down to the
-   * paid/fulfilled, not-yet-collected, fulfilment=collection set;
-   * `mode` decides whether we want the in-window ("ready") or overdue
-   * ("uncollected") subset, where the boundary is `thresholdDays`
-   * since the order was placed.
+   * Packings ready / overdue for collection. Replaces the prior
+   * order-based listing — "Ready for collection" only shows packings
+   * that have actually been marked PACKED (so unpacked items don't
+   * surface), and the threshold splits packed-but-uncollected
+   * packings into Ready vs. Uncollected based on packedAt.
    *
-   * Vendors are scoped to orders containing at least one of their
+   * Vendors are scoped to packings containing at least one of their
    * items; admins/managers see everything.
    */
-  async listCollectionOrders(opts: {
+  async listCollectionPackings(opts: {
     actor: { id: string; role: Role };
     mode: 'ready' | 'uncollected';
     thresholdDays: number;
-  }): Promise<Order[]> {
+  }): Promise<Packing[]> {
     const { actor, mode, thresholdDays } = opts;
     const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000);
-    const qb = this.orders
-      .createQueryBuilder('o')
-      .leftJoinAndSelect('o.items', 'items')
-      .leftJoinAndSelect('items.vendor', 'itemVendor')
-      .leftJoinAndSelect('o.customer', 'customer')
-      .where("o.fulfilmentMethod = 'collection'")
-      .andWhere("o.status IN ('paid', 'fulfilled')")
-      .andWhere('o.collectedAt IS NULL');
+
+    const qb = this.packings
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.customer', 'customer')
+      .where("p.fulfilmentMethod = 'collection'")
+      .andWhere("p.status = 'packed'");
+
     if (mode === 'ready') {
-      qb.andWhere('o.createdAt > :cutoff', { cutoff });
+      qb.andWhere('(p.packedAt IS NULL OR p.packedAt > :cutoff)', { cutoff });
     } else {
-      qb.andWhere('o.createdAt <= :cutoff', { cutoff });
+      qb.andWhere('p.packedAt <= :cutoff', { cutoff });
     }
     if (actor.role === Role.VENDOR) {
-      // EXISTS subquery so an order with no items of theirs is excluded
-      // entirely (otherwise the leftJoin would still return the row).
       qb.andWhere(
-        `EXISTS (SELECT 1 FROM order_items oi WHERE oi."orderId" = o.id AND oi."vendorId" = :vid)`,
+        `EXISTS (SELECT 1 FROM order_items oi WHERE oi."packingId" = p.id AND oi."vendorId" = :vid)`,
         { vid: actor.id },
       );
     }
-    qb.orderBy('o.createdAt', mode === 'ready' ? 'DESC' : 'ASC');
+    qb.orderBy('p.packedAt', mode === 'ready' ? 'DESC' : 'ASC');
     return qb.getMany();
+  }
+
+  /**
+   * Hydrate a list of packings with the orders + items they cover.
+   * Done in two extra queries so the page can iterate `packing.orders`
+   * directly instead of calling back into the service per row.
+   */
+  async expandPackings(packings: Packing[]): Promise<
+    Array<Packing & { _orders: Order[]; _items: OrderItem[] }>
+  > {
+    if (!packings.length) return [];
+    const ids = packings.map((p) => p.id);
+    const items = await this.orderItems.find({
+      where: { packingId: In(ids) },
+    });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    return packings.map((p) => {
+      const ownItems = items.filter((i) => i.packingId === p.id);
+      const ownOrderIds = new Set(ownItems.map((i) => i.orderId));
+      const ownOrders = orders.filter((o) => ownOrderIds.has(o.id));
+      return Object.assign(p, { _orders: ownOrders, _items: ownItems });
+    });
   }
 
   /**
@@ -247,19 +322,44 @@ export class CollectionService {
     await this.logs.save(row);
   }
 
-  private shapeOrder(order: Order): ScanOutcome['order'] {
+  /**
+   * Render a packing as the existing per-order ScanOutcome shape so
+   * the scanner UI doesn't need to know about packings. The "number"
+   * lists every order in the bundle (newline-separated) and the items
+   * array is flattened across them; totals are summed. The packing.id
+   * is exposed via the `id` field so the action button can pass it
+   * straight back to /api/collection/mark for the cascade.
+   */
+  private shapePackingAsOrder(
+    packing: Packing,
+    orders: Order[],
+    items: OrderItem[],
+  ): ScanOutcome['order'] {
+    const totalCents = orders.reduce((s, o) => s + (o.totalCents || 0), 0);
+    const pointsTotal = orders.reduce((s, o) => s + (o.pointsTotal || 0), 0);
+    const earliest = orders.reduce<Date | undefined>(
+      (acc, o) =>
+        !acc || (o.createdAt && o.createdAt < acc) ? o.createdAt : acc,
+      undefined,
+    );
+    const numbers = orders.map((o) => o.number).join('\n');
     return {
-      id: order.id,
-      number: order.number,
-      status: order.status,
-      customerName: order.customer?.name,
-      customerEmail: order.customer?.email,
-      customerContact: (order.customer as any)?.contact,
-      customerPpzId: order.customer?.ppzId,
-      fulfilmentMethod: order.fulfilmentMethod,
-      totalCents: order.totalCents,
-      pointsTotal: order.pointsTotal,
-      items: (order.items || []).map((i) => ({
+      id: packing.id,
+      number: numbers || `Bundle ${packing.id.slice(0, 8)}`,
+      status:
+        packing.status === 'collected'
+          ? 'collected'
+          : packing.status === 'packed'
+            ? 'paid'
+            : packing.status,
+      customerName: packing.customer?.name,
+      customerEmail: packing.customer?.email,
+      customerContact: (packing.customer as any)?.contact,
+      customerPpzId: packing.customer?.ppzId,
+      fulfilmentMethod: packing.fulfilmentMethod || 'collection',
+      totalCents,
+      pointsTotal,
+      items: items.map((i) => ({
         productName: i.productName,
         vendorId: i.vendorId,
         vendorName: i.vendor
@@ -268,9 +368,9 @@ export class CollectionService {
         quantity: i.quantity,
         pricingMode: i.pricingMode,
       })),
-      collectedAt: order.collectedAt,
-      collectedByName: order.collectedBy?.name,
-      placedAt: order.createdAt,
+      collectedAt: packing.collectedAt,
+      collectedByName: packing.collectedBy?.name,
+      placedAt: earliest || packing.createdAt,
     };
   }
 }

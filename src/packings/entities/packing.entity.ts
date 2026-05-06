@@ -10,7 +10,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export type PackingStatus = 'open' | 'packed';
+export type PackingStatus = 'open' | 'packed' | 'collected';
+export type PackingFulfilment = 'delivery' | 'collection';
 
 /**
  * A "packing" is a per-customer bundle of OrderItems that staff
@@ -27,7 +28,7 @@ export type PackingStatus = 'open' | 'packed';
  * `items` query in the service via packingId.
  */
 @Entity('packings')
-@Index(['customerId', 'status'])
+@Index(['customerId', 'fulfilmentMethod', 'status'])
 export class Packing {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -38,6 +39,13 @@ export class Packing {
 
   @Column({ nullable: true })
   customerId?: string;
+
+  // Each packing is now scoped to a single fulfilment path so the
+  // collection workflow (QR pickup) and delivery workflow (ship) don't
+  // bleed into each other. Nullable for legacy rows from before this
+  // column existed; new packings always set it from the order.
+  @Column({ type: 'varchar', nullable: true })
+  fulfilmentMethod?: PackingFulfilment;
 
   @Column({ default: 'open' })
   status: PackingStatus;
@@ -51,6 +59,20 @@ export class Packing {
 
   @Column({ nullable: true })
   packedById?: string;
+
+  // Set when the customer's collection bundle is scanned at the pickup
+  // counter. The packing itself moves to 'collected' and every
+  // constituent order also flips to status='collected' so existing
+  // sales / order screens stay consistent.
+  @Column({ type: 'timestamptz', nullable: true })
+  collectedAt?: Date;
+
+  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'collectedById' })
+  collectedBy?: User;
+
+  @Column({ nullable: true })
+  collectedById?: string;
 
   @CreateDateColumn()
   createdAt: Date;
