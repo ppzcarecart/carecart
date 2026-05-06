@@ -10,6 +10,7 @@ import { In, Repository } from 'typeorm';
 import { Packing } from './entities/packing.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderItem } from '../orders/entities/order-item.entity';
+import { CollectionLog } from '../collection/entities/collection-log.entity';
 import { Role } from '../common/enums/role.enum';
 
 export interface PackingListRow {
@@ -48,6 +49,8 @@ export class PackingsService {
     private readonly orderItems: Repository<OrderItem>,
     @InjectRepository(Order)
     private readonly orders: Repository<Order>,
+    @InjectRepository(CollectionLog)
+    private readonly collectionLogs: Repository<CollectionLog>,
   ) {}
 
   /**
@@ -754,6 +757,22 @@ export class PackingsService {
     packing.forfeitedAt = now;
     packing.forfeitedById = actor.id;
     const saved = await this.packings.save(packing);
+
+    // Audit trail: surface the forfeit alongside scan logs in the
+    // Manage Collection > Logs tab. The "scannedValue" carries the
+    // packing.id since there's no QR involved, and we attach the
+    // first order so listLogs can hydrate customer/PPZ/team and
+    // resolve the bundle of order numbers.
+    await this.collectionLogs.save(
+      this.collectionLogs.create({
+        scannedValue: saved.id,
+        orderId: orders[0]?.id,
+        scannedById: actor.id,
+        result: 'forfeited',
+        notes: `Bundle of ${orderNumbers.length} order(s) forfeited by ${actor.role}. No refund, no points return.`,
+      }),
+    );
+
     return { packing: saved, orderNumbers };
   }
 

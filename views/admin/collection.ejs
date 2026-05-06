@@ -237,6 +237,7 @@ function ageInDays(ts) {
                     unauthorized_vendor: 'badge-status cancelled',
                     not_found: 'badge-status cancelled',
                     invalid_state: 'badge-status awaiting_payment',
+                    forfeited: 'badge-status refunded',
                   }[log.result] || 'badge-status';
                   const customer = log.order && log.order.customer;
                   const customerName = customer ? customer.name : '';

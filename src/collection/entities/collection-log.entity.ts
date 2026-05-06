@@ -14,7 +14,10 @@ export type CollectionResult =
   | 'duplicate'
   | 'unauthorized_vendor'
   | 'not_found'
-  | 'invalid_state';
+  | 'invalid_state'
+  // Admin/manager/vendor explicitly forfeits an uncollected bundle.
+  // No refund, no PPZ points return — recorded here for audit.
+  | 'forfeited';
 
 @Entity('collection_logs')
 export class CollectionLog {
