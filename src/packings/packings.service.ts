@@ -110,6 +110,31 @@ export class PackingsService {
   }
 
   /**
+   * Sweep up any paid/fulfilled/collected order whose items still
+   * have NULL packingId — those are orders that were paid before
+   * the packing-assignment hook existed (pre-feature) or fell
+   * through a code path that didn't trigger assignFromOrder. Running
+   * each through assignFromOrder routes them into the right
+   * (customer, method) bundle. Idempotent: an order whose items
+   * already carry a packingId is skipped inside assignFromOrder.
+   */
+  async backfillUnpackedPaidOrders(): Promise<void> {
+    const rows = await this.orderItems
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'o')
+      .select('DISTINCT item.orderId', 'orderId')
+      .where('item.packingId IS NULL')
+      .andWhere("o.status IN ('paid', 'fulfilled', 'collected')")
+      .andWhere('o.customerId IS NOT NULL')
+      .getRawMany<{ orderId: string }>();
+    for (const row of rows) {
+      const order = await this.orders.findOne({ where: { id: row.orderId } });
+      if (!order) continue;
+      await this.assignFromOrder(order);
+    }
+  }
+
+  /**
    * Walk every (customer, method) that currently has more than one
    * open packing and merge them. Cheap when there's nothing to do
    * (a single grouped query) so it's safe to call on every list
@@ -185,9 +210,15 @@ export class PackingsService {
   }): Promise<PackingListRow[]> {
     const status = opts.status || 'open';
 
-    // Self-heal: any customers with multiple open packings (legacy
-    // per-vendor split) get merged before we render the list.
+    // Self-heal in two passes:
+    //  1. Pull in any paid/fulfilled orders whose items never got a
+    //     packingId (pre-feature data or a code path that bypassed
+    //     assignFromOrder). They land in the correct (customer,
+    //     method) bundle automatically.
+    //  2. Merge any legacy duplicate open packings for a single
+    //     (customer, method) into one row.
     if (status === 'open') {
+      await this.backfillUnpackedPaidOrders();
       await this.consolidateAllOpen();
     }
 
