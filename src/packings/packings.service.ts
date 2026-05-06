@@ -556,6 +556,39 @@ export class PackingsService {
     return { packed: count };
   }
 
+  /**
+   * Hydrate a list of packings with their items + parent orders for
+   * the CSV export. The `vendor` and `variant` relations on OrderItem
+   * are eager so each row already has display-friendly names; orders
+   * are fetched in one batched query keyed by id.
+   */
+  async expandPackingsForExport(
+    packings: Packing[],
+    vendorId?: string,
+  ): Promise<Array<{ packing: Packing; items: OrderItem[]; orders: Order[] }>> {
+    if (!packings.length) return [];
+    const ids = packings.map((p) => p.id);
+    const allItems = await this.orderItems.find({
+      where: { packingId: In(ids) },
+    });
+    const orderIds = Array.from(new Set(allItems.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    return packings.map((p) => {
+      const own = allItems.filter(
+        (i) =>
+          i.packingId === p.id && (!vendorId || i.vendorId === vendorId),
+      );
+      const ownOrderIds = new Set(own.map((i) => i.orderId));
+      return {
+        packing: p,
+        items: own,
+        orders: orders.filter((o) => ownOrderIds.has(o.id)),
+      };
+    });
+  }
+
   async findDetail(id: string, vendorId?: string): Promise<PackingDetail> {
     const packing = await this.packings.findOne({ where: { id } });
     if (!packing) throw new NotFoundException('Packing not found');

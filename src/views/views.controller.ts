@@ -141,6 +141,89 @@ function sendSalesCsv(
 }
 
 /**
+ * Per-item CSV body for the Packings export. One row per order item
+ * inside a packing (most useful for the warehouse — they pick by
+ * SKU). Sections include a header line and a UTF-8 BOM is stamped
+ * by sendSalesCsv so Excel renders symbols cleanly.
+ */
+interface PackingExportRow {
+  packing: any;
+  items: any[];
+  orders: any[];
+}
+function buildPackingsCsv(input: {
+  title: string;
+  bundles: PackingExportRow[];
+  isAdmin: boolean;
+}): string {
+  const out: string[] = [];
+  out.push(csvRow([input.title]));
+  out.push(csvRow([`Generated: ${fmtDate(new Date())}`]));
+  out.push('');
+
+  const header = [
+    'Customer',
+    'PPZ ID',
+    'Team',
+    'Contact',
+    'Type',
+    'Order',
+    'Product',
+    'Variant',
+    ...(input.isAdmin ? ['Vendor'] : []),
+    'Qty',
+    'Pricing',
+    'Unit price (SGD)',
+    'Unit points',
+    'Packed at',
+    'Packing ID',
+  ];
+  out.push(csvRow(header));
+
+  for (const b of input.bundles) {
+    const p = b.packing;
+    const c = p.customer;
+    const customerName = c?.name || '';
+    const customerPpz = c?.ppzId || '';
+    const customerTeam = c?.team != null ? c.team : '';
+    const customerContact = c?.contact || '';
+    const typeKey = p.fulfilmentMethod || '';
+    const typeLabel = typeKey === 'delivery' ? 'Delivery' : 'Collection';
+    const ordersById = new Map(b.orders.map((o) => [o.id, o]));
+    for (const it of b.items) {
+      const o = ordersById.get(it.orderId);
+      const row: any[] = [
+        customerName,
+        customerPpz,
+        customerTeam,
+        customerContact,
+        typeLabel,
+        o?.number || '',
+        it.productName || '',
+        it.variant?.name || '',
+      ];
+      if (input.isAdmin) {
+        row.push(
+          it.vendor
+            ? it.vendor.vendorStoreName || it.vendor.name
+            : '',
+        );
+      }
+      row.push(
+        it.quantity || 0,
+        it.pricingMode || 'price',
+        ((it.unitPriceCents || 0) / 100).toFixed(2),
+        it.unitPoints || 0,
+        fmtDate(p.packedAt),
+        p.id,
+      );
+      out.push(csvRow(row));
+    }
+  }
+  return out.join('\r\n');
+}
+
+/**
  * Compact yyyymmdd-hhmm timestamp for export filenames so a single
  * folder of downloads sorts chronologically without colliding.
  */
@@ -662,6 +745,50 @@ export class ViewsController {
       isAdmin: true,
       activePath: '/admin/packings',
     };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/packings/export.csv')
+  async adminPackingsExport(
+    @Res() res: Response,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'open' ? 'open' : 'packed';
+    const rows = await this.packings.listByCustomer({ status: safe });
+    const allPackings = rows.flatMap((r) => r.packings);
+    const bundles = await this.packings.expandPackingsForExport(allPackings);
+    const csv = buildPackingsCsv({
+      title: `Packings — ${safe === 'packed' ? 'Packed bundles' : 'Open bundles'}`,
+      bundles,
+      isAdmin: true,
+    });
+    sendSalesCsv(res, `packings-${safe}-${stamp()}.csv`, csv);
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/packings/export.csv')
+  async vendorPackingsExport(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'open' ? 'open' : 'packed';
+    const vendorId = user.role === Role.VENDOR ? user.id : undefined;
+    const rows = await this.packings.listByCustomer({
+      status: safe,
+      vendorId,
+    });
+    const allPackings = rows.flatMap((r) => r.packings);
+    const bundles = await this.packings.expandPackingsForExport(
+      allPackings,
+      vendorId,
+    );
+    const csv = buildPackingsCsv({
+      title: `${user.vendorStoreName || user.name} — Packings (${safe})`,
+      bundles,
+      isAdmin: false,
+    });
+    sendSalesCsv(res, `packings-${safe}-${stamp()}.csv`, csv);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)

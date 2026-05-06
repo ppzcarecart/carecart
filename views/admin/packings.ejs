@@ -22,6 +22,15 @@ const tabs = [
             the right fulfilment lane.
           </p>
         </div>
+        <% if (activeStatus === 'packed' && rows.length) { %>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="<%= baseHref %>/export.csv?status=packed"
+              class="cc-btn cc-btn-outline"
+              title="Download a UTF-8 CSV that opens directly in Excel">
+              ↓ Export to Excel
+            </a>
+          </div>
+        <% } %>
       </div>
 
       <div class="admin-panel" style="margin-bottom: 14px;">
