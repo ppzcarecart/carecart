@@ -119,14 +119,25 @@ function ageInDays(ts) {
                     <th class="num">Total</th>
                     <th>Packed</th>
                     <th class="num">Age</th>
+                    <th class="actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <% const isScanner = user && user.role === 'scanner'; %>
                   <% ready.forEach(p => { const r = renderBundleRow(p); %>
+                    <%
+                    const bundleHref = '/admin/packings/customer/' + p.customerId + '?status=packed';
+                    %>
                     <tr>
                       <td data-label="Order(s)">
                         <% r.ownOrders.forEach((o, idx) => { %>
-                          <% const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id; %>
+                          <%
+                          // Scanner can't reach /admin/orders/:id, so route them to
+                          // the bundle detail (which they can read).
+                          const orderHref = isScanner
+                            ? bundleHref
+                            : ((isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id);
+                          %>
                           <strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong>
                           <% if (idx < r.ownOrders.length - 1) { %><br><% } %>
                         <% }); %>
@@ -143,6 +154,9 @@ function ageInDays(ts) {
                       <td class="num" data-label="Total">$<%= (r.totalCents/100).toFixed(2) %></td>
                       <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
                       <td class="num" data-label="Age"><%= r.age %>d</td>
+                      <td class="actions">
+                        <a href="<%= bundleHref %>" class="cc-btn cc-btn-outline" style="padding:6px 12px; font-size:.82rem;">View</a>
+                      </td>
                     </tr>
                   <% }); %>
                 </tbody>
@@ -178,11 +192,18 @@ function ageInDays(ts) {
                 </thead>
                 <tbody>
                   <% uncollected.forEach(p => { const r = renderBundleRow(p); %>
+                    <%
+                    const bundleHrefU = '/admin/packings/customer/' + p.customerId + '?status=packed';
+                    %>
                     <tr id="packing-row-<%= p.id %>">
                       <td data-label="Order(s)">
                         <% r.ownOrders.forEach((o, idx) => { %>
-                          <% const orderHref = (isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id; %>
-                          <strong><a href="<%= orderHref %>" class="text-reset"><%= o.number %></a></strong>
+                          <%
+                          const orderHrefU = isScanner
+                            ? bundleHrefU
+                            : ((isVendor ? '/vendor/orders/' : '/admin/orders/') + o.id);
+                          %>
+                          <strong><a href="<%= orderHrefU %>" class="text-reset"><%= o.number %></a></strong>
                           <% if (idx < r.ownOrders.length - 1) { %><br><% } %>
                         <% }); %>
                       </td>
@@ -199,14 +220,13 @@ function ageInDays(ts) {
                       <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
                       <td class="num" data-label="Age"><span class="text-danger"><strong><%= r.age %>d</strong></span></td>
                       <td class="actions">
+                        <a href="<%= bundleHrefU %>" class="cc-btn cc-btn-outline" style="padding:6px 12px; font-size:.82rem;">View</a>
                         <% if (user.role !== 'scanner') { %>
                           <button class="cc-btn cc-btn-danger" style="padding:6px 12px; font-size:.82rem;"
                             onclick="ppz.markForfeit('<%= p.id %>', this)"
                             title="No refund, no points return">
                             Forfeit
                           </button>
-                        <% } else { %>
-                          <span class="text-muted" style="font-size:.82rem;">—</span>
                         <% } %>
                       </td>
                     </tr>

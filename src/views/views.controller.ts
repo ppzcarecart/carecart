@@ -791,7 +791,7 @@ export class ViewsController {
     sendSalesCsv(res, `packings-${safe}-${stamp()}.csv`, csv);
   }
 
-  @Roles(Role.ADMIN, Role.MANAGER)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.SCANNER)
   @Get('admin/packings/customer/:customerId')
   @Render('admin/packing-customer')
   async adminPackingCustomer(
@@ -804,14 +804,17 @@ export class ViewsController {
       customerId,
       status: safe,
     });
+    // Scanner is read-only on this page — they need it to peek at
+    // bundle contents from Ready for Collection but can't pack /
+    // ship / forfeit. The template gates buttons by user.role.
     return {
       title: 'Packing detail',
       user,
       detail,
       activeStatus: safe,
-      isAdmin: true,
-      backHref: '/admin/packings',
-      activePath: '/admin/packings',
+      isAdmin: user.role !== 'scanner',
+      backHref: user.role === 'scanner' ? '/admin/collection' : '/admin/packings',
+      activePath: user.role === 'scanner' ? '/admin/collection' : '/admin/packings',
     };
   }
 

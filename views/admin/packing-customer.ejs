@@ -72,14 +72,19 @@ const customerContact = customer && customer.contact ? customer.contact : '–';
               <%= b.orders.length %> order<%= b.orders.length === 1 ? '' : 's' %>
             </h3>
             <div class="d-flex gap-2 flex-wrap">
+              <% const isScanner = user && user.role === 'scanner'; %>
               <% if (p.status === 'open') { %>
-                <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
-                  onclick="ppz.markPacked('<%= p.id %>', this)">
-                  ✓ Mark this bundle packed
-                </button>
+                <% if (!isScanner) { %>
+                  <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
+                    onclick="ppz.markPacked('<%= p.id %>', this)">
+                    ✓ Mark this bundle packed
+                  </button>
+                <% } else { %>
+                  <span class="tag" style="padding:6px 12px;">Open</span>
+                <% } %>
               <% } else if (p.status === 'packed') { %>
                 <span class="tag tag-active" style="padding:6px 12px;">Packed <%= p.packedAt ? '· ' + fmtSg(p.packedAt) : '' %></span>
-                <% if (typeKey === 'delivery') { %>
+                <% if (typeKey === 'delivery' && !isScanner) { %>
                   <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
                     onclick="ppz.markShipped('<%= p.id %>', this, '<%= backHref %>')">
                     ✈ Mark as shipped
@@ -96,12 +101,17 @@ const customerContact = customer && customer.contact ? customer.contact : '–';
             <% b.orders.forEach(order => {
               const items = itemsByOrder.get(order.id) || [];
               const ship = order.shippingAddress || {};
+              const scannerView = user && user.role === 'scanner';
               const orderHref = (isAdmin ? '/admin/orders/' : '/vendor/orders/') + order.id;
             %>
               <div style="border-bottom: 1px solid var(--line); padding: 14px 18px;">
                 <div class="d-flex flex-wrap gap-2 align-items-baseline" style="margin-bottom: 8px;">
                   <strong>
-                    Order <a href="<%= orderHref %>" class="text-reset"><%= order.number %></a>
+                    <% if (scannerView) { %>
+                      Order <%= order.number %>
+                    <% } else { %>
+                      Order <a href="<%= orderHref %>" class="text-reset"><%= order.number %></a>
+                    <% } %>
                   </strong>
                   <small class="text-muted" style="font-size:.85rem;">
                     · <%= fmtSg(order.createdAt) %>
