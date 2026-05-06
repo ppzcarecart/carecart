@@ -265,7 +265,38 @@ export class PackingsService {
         vendorIds,
       };
     });
-    return rows.filter((r) => status === 'packed' || r.itemCount > 0);
+    const filtered = rows.filter(
+      (r) => status === 'packed' || r.itemCount > 0,
+    );
+
+    // Group rows by customer so each customer renders as a single
+    // contiguous block in the table. Within a group we keep
+    // collection above delivery (collection is the workflow with the
+    // tighter timeline), and we sort customers by their group's most
+    // recent activity so newly active customers float to the top.
+    const order = (m?: string) => (m === 'collection' ? 0 : 1);
+    const byCustomer = new Map<string, PackingListRow[]>();
+    for (const r of filtered) {
+      const key = r.packing.customerId || '__no_customer__';
+      const arr = byCustomer.get(key) || [];
+      arr.push(r);
+      byCustomer.set(key, arr);
+    }
+    const sortedGroups = Array.from(byCustomer.values()).sort((a, b) => {
+      const aTs = Math.max(...a.map((r) => +new Date(r.packing.updatedAt)));
+      const bTs = Math.max(...b.map((r) => +new Date(r.packing.updatedAt)));
+      return bTs - aTs;
+    });
+    const out: PackingListRow[] = [];
+    for (const group of sortedGroups) {
+      group.sort(
+        (a, b) =>
+          order(a.packing.fulfilmentMethod) -
+          order(b.packing.fulfilmentMethod),
+      );
+      out.push(...group);
+    }
+    return out;
   }
 
   async findDetail(id: string, vendorId?: string): Promise<PackingDetail> {

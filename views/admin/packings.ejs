@@ -68,6 +68,7 @@ const tabs = [
                   <th>PPZ ID</th>
                   <th class="num">Team</th>
                   <th>Contact</th>
+                  <th>Type</th>
                   <th class="num">Items</th>
                   <th class="num">Orders</th>
                   <th><%= activeStatus === 'packed' ? 'Packed' : 'Updated' %></th>
@@ -75,8 +76,8 @@ const tabs = [
                 </tr>
               </thead>
               <tbody>
-                <% rows.forEach(r => { %>
-                  <%
+                <% let prevCustomerId = null; %>
+                <% rows.forEach(r => {
                   const p = r.packing;
                   const detailHref = (isAdmin ? '/admin/packings/' : '/vendor/packings/') + p.id;
                   const customerName = p.customer ? p.customer.name : '—';
@@ -84,17 +85,28 @@ const tabs = [
                   const customerTeam = p.customer && p.customer.team != null ? p.customer.team : '–';
                   const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
                   const ts = activeStatus === 'packed' && p.packedAt ? p.packedAt : p.updatedAt;
-                  %>
-                  <tr id="packing-row-<%= p.id %>">
+                  const sameAsPrev = prevCustomerId === p.customerId;
+                  prevCustomerId = p.customerId;
+                  const typeKey = p.fulfilmentMethod || 'collection';
+                  const typeLabel = typeKey === 'delivery' ? 'Delivery' : 'Collection';
+                %>
+                  <tr id="packing-row-<%= p.id %>" class="<%= sameAsPrev ? 'cc-row-continuation' : '' %>">
                     <td data-label="Customer">
-                      <strong><a href="<%= detailHref %>" class="text-reset"><%= customerName %></a></strong>
-                      <% if (p.customer && p.customer.email) { %>
-                        <div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div>
+                      <% if (!sameAsPrev) { %>
+                        <strong><%= customerName %></strong>
+                        <% if (p.customer && p.customer.email) { %>
+                          <div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div>
+                        <% } %>
+                      <% } else { %>
+                        <span class="text-muted" style="font-size:.85rem;">↳</span>
                       <% } %>
                     </td>
-                    <td data-label="PPZ ID"><%= customerPpz %></td>
-                    <td class="num" data-label="Team"><%= customerTeam %></td>
-                    <td data-label="Contact"><%= customerContact %></td>
+                    <td data-label="PPZ ID"><%= sameAsPrev ? '' : customerPpz %></td>
+                    <td class="num" data-label="Team"><%= sameAsPrev ? '' : customerTeam %></td>
+                    <td data-label="Contact"><%= sameAsPrev ? '' : customerContact %></td>
+                    <td data-label="Type">
+                      <span class="ftype-tag ftype-<%= typeKey === 'delivery' ? 'd' : 'c' %>"><%= typeLabel %></span>
+                    </td>
                     <td class="num" data-label="Items"><%= r.itemCount %></td>
                     <td class="num" data-label="Orders"><%= r.orderCount %></td>
                     <td data-label="<%= activeStatus === 'packed' ? 'Packed' : 'Updated' %>" class="text-muted">

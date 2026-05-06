@@ -685,6 +685,12 @@ a.admin-stat:hover {
 .ftype-tag.ftype-d { background: #fef3c7; color: #92400e; }
 .ftype-tag.ftype-c { background: #d1fae5; color: #065f46; }
 
+/* Continuation row inside a same-customer group on the Packings list:
+   the customer columns are blanked so the eye reads the group as one
+   block. A faded top border keeps the rows visually tied without a
+   hard separator. */
+.cc-row-continuation > td { border-top: 1px dashed var(--line-soft, #eef2f7); }
+
 /* ---------- Vendor avatar/thumb in table ---------- */
 .row-thumb {
   display: inline-flex; align-items: center; gap: 12px;
