@@ -143,6 +143,90 @@ export class PackingsService {
    * (customer, method) bundle. Idempotent: an order whose items
    * already carry a packingId is skipped inside assignFromOrder.
    */
+  /**
+   * Reconcile open packings against the underlying orders. Two
+   * possible mismatches exist after the packing feature was retro-fit
+   * onto an already-running shop:
+   *
+   *   1. Every order in an open bundle is already 'collected' — the
+   *      bundle was physically packed *and* picked up before the
+   *      packing system existed. Flip the packing to 'collected' with
+   *      historical timestamps so it stops showing in Open.
+   *   2. Some orders in an open bundle are collected but others are
+   *      still pending — detach the collected items so the bundle
+   *      represents only the pending work that still needs packing.
+   *
+   * Idempotent — second call is a no-op.
+   */
+  async healCollectedInOpenPackings(): Promise<void> {
+    // Cover both Open AND Packed packings — a packed bundle whose
+    // orders are all already collected should also flip to
+    // 'collected' so the Manage Collection list doesn't keep listing
+    // it as "ready for pickup".
+    const openPackings = await this.packings.find({
+      where: [{ status: 'open' }, { status: 'packed' }],
+    });
+    if (!openPackings.length) return;
+    const ids = openPackings.map((p) => p.id);
+    const items = await this.orderItems.find({
+      where: { packingId: In(ids) },
+    });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    const orderById = new Map(orders.map((o) => [o.id, o]));
+
+    for (const p of openPackings) {
+      const own = items.filter((i) => i.packingId === p.id);
+      if (!own.length) continue;
+      const ownOrders = Array.from(new Set(own.map((i) => i.orderId)))
+        .map((oid) => orderById.get(oid))
+        .filter(Boolean) as Order[];
+      if (!ownOrders.length) continue;
+
+      const collectedOrders = ownOrders.filter(
+        (o) => o.status === 'collected',
+      );
+      if (!collectedOrders.length) continue;
+
+      if (collectedOrders.length === ownOrders.length) {
+        // Every order already collected → close the packing out.
+        const times = collectedOrders
+          .map((o) => o.collectedAt)
+          .filter((t): t is Date => !!t)
+          .map((t) => +t);
+        const earliest = times.length ? new Date(Math.min(...times)) : new Date();
+        const latest = times.length ? new Date(Math.max(...times)) : new Date();
+        const actorId = collectedOrders.find((o) => o.collectedById)
+          ?.collectedById;
+        p.status = 'collected';
+        p.packedAt = p.packedAt || earliest;
+        p.packedById = p.packedById || actorId || undefined;
+        p.collectedAt = latest;
+        p.collectedById = actorId || undefined;
+        await this.packings.save(p);
+      } else if (p.status === 'open') {
+        // Mixed: detach the items from already-collected orders so
+        // the open bundle reflects only pending work. Only do this
+        // for OPEN bundles — a packed bundle was physically prepared
+        // as a unit, so we don't disturb it mid-pickup.
+        const collectedOrderIds = new Set(
+          collectedOrders.map((o) => o.id),
+        );
+        const detachIds = own
+          .filter((i) => collectedOrderIds.has(i.orderId))
+          .map((i) => i.id);
+        if (detachIds.length) {
+          await this.orderItems.update(
+            { id: In(detachIds) },
+            { packingId: null as any },
+          );
+        }
+      }
+    }
+  }
+
   async backfillUnpackedPaidOrders(): Promise<void> {
     // Only paid/fulfilled — never 'collected' (already picked up so it
     // doesn't belong in an open bundle), 'cancelled', or 'refunded'.
@@ -237,15 +321,20 @@ export class PackingsService {
   }): Promise<PackingListRow[]> {
     const status = opts.status || 'open';
 
-    // Self-heal in two passes:
+    // Self-heal pipeline (only for the Open tab — Packed/Collected
+    // are historical):
     //  1. Pull in any paid/fulfilled orders whose items never got a
     //     packingId (pre-feature data or a code path that bypassed
     //     assignFromOrder). They land in the correct (customer,
     //     method) bundle automatically.
-    //  2. Merge any legacy duplicate open packings for a single
+    //  2. Reconcile open bundles against already-collected orders —
+    //     fully-collected bundles flip to 'collected', mixed ones
+    //     have the collected items detached.
+    //  3. Merge any legacy duplicate open packings for a single
     //     (customer, method) into one row.
     if (status === 'open') {
       await this.backfillUnpackedPaidOrders();
+      await this.healCollectedInOpenPackings();
       await this.consolidateAllOpen();
     }
 

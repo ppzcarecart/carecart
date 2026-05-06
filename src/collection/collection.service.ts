@@ -232,9 +232,11 @@ export class CollectionService {
   }): Promise<Packing[]> {
     const { actor, mode, thresholdDays } = opts;
     // Self-heal so any paid order whose items lack a packingId gets
-    // pulled into its customer's open bundle before we render the
-    // collection lists. Cheap when there's nothing to do.
+    // pulled into its customer's open bundle, and any packing whose
+    // orders are all already collected gets flipped out of the
+    // ready/uncollected list. Cheap when there's nothing to do.
     await this.packingsService.backfillUnpackedPaidOrders();
+    await this.packingsService.healCollectedInOpenPackings();
     const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000);
 
     const qb = this.packings
