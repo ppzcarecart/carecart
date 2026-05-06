@@ -1,7 +1,13 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
 <%
-const sidebar = isAdmin ? '../partials/admin-sidebar' : '../partials/vendor-sidebar';
+// Sidebar selection is driven by the actual user role, not the
+// isAdmin display flag — a scanner is not "admin" but they still
+// belong on the admin-sidebar (which auto-filters to just Manage
+// Collection for them) rather than the vendor menu.
+const sidebar = user && user.role === 'vendor'
+  ? '../partials/vendor-sidebar'
+  : '../partials/admin-sidebar';
 const customer = detail.customer;
 const customerName = customer ? customer.name : '—';
 const customerEmail = customer ? customer.email : '';
