@@ -296,7 +296,14 @@ function ageInDays(ts) {
                           </dd>
                         <% } %>
                         <dt>By</dt>
-                        <dd><%= log.scannedBy ? log.scannedBy.name : '—' %></dd>
+                        <dd>
+                          <% if (log.scannedBy) { %>
+                            <%= log.scannedBy.name %>
+                            <% if (log.scannedBy.role) { %>
+                              <span class="text-muted" style="font-size:.82rem;">· <%= log.scannedBy.role %></span>
+                            <% } %>
+                          <% } else { %>—<% } %>
+                        </dd>
                         <dt>Notes</dt>
                         <dd><%= log.notes || '—' %></dd>
                         <dt>When</dt>
