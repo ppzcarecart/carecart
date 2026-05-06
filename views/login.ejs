@@ -29,8 +29,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
   });
-  if (res.ok) location.href = '/';
-  else document.getElementById('err').innerText = (await res.json()).message || 'Login failed';
+  if (res.ok) {
+    const data = await res.json().catch(() => ({}));
+    // Scanners only have Manage Collection access — drop them
+    // straight onto the scanner page so they aren't confused by the
+    // shop home or the storefront chrome.
+    const role = data?.user?.role;
+    location.href = role === 'scanner' ? '/admin/collection' : '/';
+  } else {
+    document.getElementById('err').innerText = (await res.json()).message || 'Login failed';
+  }
 });
 </script>
 <%- include('partials/foot') %>

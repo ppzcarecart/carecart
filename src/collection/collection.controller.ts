@@ -5,7 +5,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CollectionService } from './collection.service';
 
-@Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+@Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR, Role.SCANNER)
 @Controller('api/collection')
 export class CollectionController {
   constructor(private collection: CollectionService) {}

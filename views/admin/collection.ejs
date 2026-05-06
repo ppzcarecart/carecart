@@ -199,11 +199,15 @@ function ageInDays(ts) {
                       <td data-label="Packed" class="text-muted"><%= fmtSg(p.packedAt || p.createdAt) %></td>
                       <td class="num" data-label="Age"><span class="text-danger"><strong><%= r.age %>d</strong></span></td>
                       <td class="actions">
-                        <button class="cc-btn cc-btn-danger" style="padding:6px 12px; font-size:.82rem;"
-                          onclick="ppz.markForfeit('<%= p.id %>', this)"
-                          title="No refund, no points return">
-                          Forfeit
-                        </button>
+                        <% if (user.role !== 'scanner') { %>
+                          <button class="cc-btn cc-btn-danger" style="padding:6px 12px; font-size:.82rem;"
+                            onclick="ppz.markForfeit('<%= p.id %>', this)"
+                            title="No refund, no points return">
+                            Forfeit
+                          </button>
+                        <% } else { %>
+                          <span class="text-muted" style="font-size:.82rem;">—</span>
+                        <% } %>
                       </td>
                     </tr>
                   <% }); %>

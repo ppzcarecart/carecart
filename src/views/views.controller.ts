@@ -1076,7 +1076,8 @@ export class ViewsController {
 
   // Camera-based QR scanner for collection. Admin/manager can collect
   // for any vendor; the vendor variant below limits scope server-side.
-  @Roles(Role.ADMIN, Role.MANAGER)
+  // Scanner role lives here too — collection is its only access.
+  @Roles(Role.ADMIN, Role.MANAGER, Role.SCANNER)
   @Get('admin/collection')
   @Render('admin/collection')
   async adminCollection(

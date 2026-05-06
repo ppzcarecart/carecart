@@ -36,7 +36,7 @@
               <label class="text-muted" style="font-size:.78rem;">Role</label>
               <select class="form-select" name="role">
                 <option value="" <%= filters.role === '' ? 'selected' : '' %>>Any role</option>
-                <% ['admin','manager','vendor','customer'].forEach(function(r) { %>
+                <% ['admin','manager','vendor','scanner','customer'].forEach(function(r) { %>
                   <% if (!(user.role === 'manager' && r === 'admin')) { %>
                     <option value="<%= r %>" <%= filters.role === r ? 'selected' : '' %>><%= r %></option>
                   <% } %>
@@ -110,8 +110,8 @@
                       <%
                       // Manager can never assign admin; everything else is allowed.
                       const allowedRoles = user.role === 'admin'
-                        ? ['admin','manager','vendor','customer']
-                        : ['manager','vendor','customer'];
+                        ? ['admin','manager','vendor','scanner','customer']
+                        : ['manager','vendor','scanner','customer'];
                       %>
                       <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
                         <% allowedRoles.forEach(r => { %>

@@ -1,28 +1,37 @@
 <%
 // activePath is set by the page including this partial.
-const items = [
-  { href: '/admin',                   label: 'Dashboard',          icon: '◰' },
-  { href: '/admin/users',             label: 'Users',              icon: '◉' },
-  { href: '/admin/categories',        label: 'Categories',         icon: '◇' },
-  { href: '/admin/products',          label: 'Products',           icon: '▣' },
-  { href: '/admin/products/disabled', label: 'Disabled products',  icon: '⌽' },
-  { href: '/admin/orders',            label: 'Orders',             icon: '⌘' },
-  { href: '/admin/packings',          label: 'Packings',           icon: '◫' },
-  { href: '/admin/collection',        label: 'Manage Collection',  icon: '⊞' },
-  { href: '/admin/pages',             label: 'Page Edit',          icon: '✎' },
-  { href: '/admin/sales',             label: 'Sales report',       icon: '⌗' },
-  { href: '/admin/import',            label: 'Bulk import',        icon: '↥' },
-  { href: '/admin/settings',          label: 'Settings',           icon: '⚙' },
-];
+// Scanner is a scoped staff role with access only to Manage
+// Collection — every other admin tool is hidden from them.
+const isScanner = user && user.role === 'scanner';
+const items = isScanner
+  ? [
+      { href: '/admin/collection', label: 'Manage Collection', icon: '⊞' },
+    ]
+  : [
+      { href: '/admin',                   label: 'Dashboard',          icon: '◰' },
+      { href: '/admin/users',             label: 'Users',              icon: '◉' },
+      { href: '/admin/categories',        label: 'Categories',         icon: '◇' },
+      { href: '/admin/products',          label: 'Products',           icon: '▣' },
+      { href: '/admin/products/disabled', label: 'Disabled products',  icon: '⌽' },
+      { href: '/admin/orders',            label: 'Orders',             icon: '⌘' },
+      { href: '/admin/packings',          label: 'Packings',           icon: '◫' },
+      { href: '/admin/collection',        label: 'Manage Collection',  icon: '⊞' },
+      { href: '/admin/pages',             label: 'Page Edit',          icon: '✎' },
+      { href: '/admin/sales',             label: 'Sales report',       icon: '⌗' },
+      { href: '/admin/import',            label: 'Bulk import',        icon: '↥' },
+      { href: '/admin/settings',          label: 'Settings',           icon: '⚙' },
+    ];
 %>
 <aside class="admin-sidebar">
-  <div class="group-label">Admin</div>
+  <div class="group-label"><%= isScanner ? 'Scanner' : 'Admin' %></div>
   <% items.forEach(it => { %>
     <a href="<%= it.href %>" class="<%= activePath === it.href ? 'is-active' : '' %>">
       <span class="icon"><%= it.icon %></span>
       <span><%= it.label %></span>
     </a>
   <% }); %>
-  <div class="group-label">Storefront</div>
-  <a href="/"><span class="icon">↗</span><span>View shop</span></a>
+  <% if (!isScanner) { %>
+    <div class="group-label">Storefront</div>
+    <a href="/"><span class="icon">↗</span><span>View shop</span></a>
+  <% } %>
 </aside>
