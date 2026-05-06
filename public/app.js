@@ -1826,6 +1826,27 @@ window.ppz = (function () {
         alert(e.message || 'Could not mark packed');
       }
     },
+    // Mark a packed delivery bundle as shipped. Cascades to every
+    // constituent order (status='fulfilled') and bumps the packing
+    // out of the Packed list. Used from the customer-scoped packing
+    // detail page; bounces back to the list afterwards.
+    async markShipped(id, btn, redirectHref) {
+      if (!confirm('Mark this bundle as shipped? Orders inside will move to status "fulfilled".')) return;
+      const original = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Saving…'; }
+      try {
+        await api('/api/packings/' + id + '/ship', { method: 'POST' });
+        if (redirectHref) {
+          window.location.href = redirectHref;
+          return;
+        }
+        const row = document.getElementById('packing-row-' + id);
+        if (row) row.remove();
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+        alert(e.message || 'Could not mark shipped');
+      }
+    },
     // Mark a packing bundle as packed. Optimistic-ish: the row updates
     // in place when the call succeeds. If a redirectHref is passed
     // (used from the detail page), bounce back to the list so the

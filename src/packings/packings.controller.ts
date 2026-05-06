@@ -30,6 +30,22 @@ export class PackingsController {
   }
 
   @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post(':id/ship')
+  async ship(@Param('id') id: string, @CurrentUser() user: any) {
+    if (!id) throw new BadRequestException('id required');
+    const result = await this.packings.markShipped(id, {
+      id: user.id,
+      role: user.role,
+    });
+    return {
+      id: result.packing.id,
+      status: result.packing.status,
+      shippedAt: result.packing.shippedAt,
+      orderNumbers: result.orderNumbers,
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
   @Post('customer/:customerId/pack')
   async packAllForCustomer(
     @Param('customerId') customerId: string,

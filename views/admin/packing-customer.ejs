@@ -79,6 +79,14 @@ const customerContact = customer && customer.contact ? customer.contact : '–';
                 </button>
               <% } else if (p.status === 'packed') { %>
                 <span class="tag tag-active" style="padding:6px 12px;">Packed <%= p.packedAt ? '· ' + fmtSg(p.packedAt) : '' %></span>
+                <% if (typeKey === 'delivery') { %>
+                  <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
+                    onclick="ppz.markShipped('<%= p.id %>', this, '<%= backHref %>')">
+                    ✈ Mark as shipped
+                  </button>
+                <% } %>
+              <% } else if (p.status === 'shipped') { %>
+                <span class="tag tag-active" style="padding:6px 12px;">Shipped <%= p.shippedAt ? '· ' + fmtSg(p.shippedAt) : '' %></span>
               <% } else if (p.status === 'collected') { %>
                 <span class="tag tag-active" style="padding:6px 12px;">Collected <%= p.collectedAt ? '· ' + fmtSg(p.collectedAt) : '' %></span>
               <% } %>

@@ -659,6 +659,63 @@ export class PackingsService {
     return { packing: saved, orderNumbers };
   }
 
+  /**
+   * Mark a packed delivery bundle as shipped — the courier has it,
+   * staff are done with it. Cascades to every constituent order:
+   * order.status = 'fulfilled'. Status moves to 'shipped' so the
+   * bundle drops out of the Packed list.
+   */
+  async markShipped(
+    id: string,
+    actor: { id: string; role: Role },
+  ): Promise<{ packing: Packing; orderNumbers: string[] }> {
+    const packing = await this.packings.findOne({ where: { id } });
+    if (!packing) throw new NotFoundException('Packing not found');
+    if (packing.status === 'shipped') {
+      throw new BadRequestException('Bundle is already shipped');
+    }
+    if (packing.status !== 'packed') {
+      throw new BadRequestException(
+        'Only packed bundles can be marked shipped',
+      );
+    }
+    if (actor.role === Role.VENDOR) {
+      const owned = await this.orderItems.findOne({
+        where: { packingId: id, vendorId: actor.id },
+      });
+      if (!owned) {
+        throw new ForbiddenException('This packing has none of your items');
+      }
+    }
+    const items = await this.orderItems.find({ where: { packingId: id } });
+    const orderIds = Array.from(new Set(items.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+    const now = new Date();
+    const orderNumbers: string[] = [];
+    for (const o of orders) {
+      orderNumbers.push(o.number);
+      // Idempotent at the order level — anything already in a
+      // terminal state (collected/refunded/cancelled) is left alone.
+      if (
+        o.status === 'fulfilled' ||
+        o.status === 'collected' ||
+        o.status === 'cancelled' ||
+        o.status === 'refunded'
+      ) {
+        continue;
+      }
+      o.status = 'fulfilled';
+      await this.orders.save(o);
+    }
+    packing.status = 'shipped';
+    packing.shippedAt = now;
+    packing.shippedById = actor.id;
+    const saved = await this.packings.save(packing);
+    return { packing: saved, orderNumbers };
+  }
+
   async markPacked(
     id: string,
     actor: { id: string; role: Role },

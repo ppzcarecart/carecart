@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export type PackingStatus = 'open' | 'packed' | 'collected';
+export type PackingStatus = 'open' | 'packed' | 'collected' | 'shipped';
 export type PackingFulfilment = 'delivery' | 'collection';
 
 /**
@@ -73,6 +73,19 @@ export class Packing {
 
   @Column({ nullable: true })
   collectedById?: string;
+
+  // Set when a delivery bundle has been handed off to the courier.
+  // Status moves to 'shipped' and the constituent orders cascade to
+  // status='fulfilled' so existing dashboards/reports stay accurate.
+  @Column({ type: 'timestamptz', nullable: true })
+  shippedAt?: Date;
+
+  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'shippedById' })
+  shippedBy?: User;
+
+  @Column({ nullable: true })
+  shippedById?: string;
 
   @CreateDateColumn()
   createdAt: Date;
