@@ -289,26 +289,91 @@ export class CollectionService {
    * List collection logs visible to the actor. Vendors see only logs
    * tied to orders that contain their items (or that they themselves
    * scanned). Admins/managers see everything.
+   *
+   * Each log is enriched with the bundle of order numbers covered by
+   * the same packing, so the Logs view can show every order that one
+   * scan collected — not just the single orderId the row carries.
    */
   async listLogs(actor: { id: string; role: Role }, limit = 100) {
+    let rows: CollectionLog[];
     if (actor.role === Role.ADMIN || actor.role === Role.MANAGER) {
-      return this.logs.find({
+      rows = await this.logs.find({
         order: { createdAt: 'DESC' },
         take: limit,
       });
+    } else {
+      // Vendor: logs they scanned, OR logs on orders containing their items.
+      rows = await this.logs
+        .createQueryBuilder('log')
+        .leftJoinAndSelect('log.order', 'order')
+        .leftJoinAndSelect('order.items', 'items')
+        .leftJoinAndSelect('log.scannedBy', 'scannedBy')
+        .where('log.scannedById = :uid', { uid: actor.id })
+        .orWhere('items.vendorId = :uid', { uid: actor.id })
+        .orderBy('log.createdAt', 'DESC')
+        .take(limit)
+        .getMany();
     }
-    // Vendor: logs they scanned, OR logs on orders containing their items.
-    const rows = await this.logs
-      .createQueryBuilder('log')
-      .leftJoinAndSelect('log.order', 'order')
-      .leftJoinAndSelect('order.items', 'items')
-      .leftJoinAndSelect('log.scannedBy', 'scannedBy')
-      .where('log.scannedById = :uid', { uid: actor.id })
-      .orWhere('items.vendorId = :uid', { uid: actor.id })
-      .orderBy('log.createdAt', 'DESC')
-      .take(limit)
-      .getMany();
-    return rows;
+
+    const orderIds = rows
+      .map((r) => r.orderId)
+      .filter((id): id is string => !!id);
+    const bundleByLogOrderId = new Map<string, string[]>();
+    if (orderIds.length) {
+      const items = await this.orderItems
+        .createQueryBuilder('item')
+        .select(['item.orderId', 'item.packingId'])
+        .where('item.orderId IN (:...ids)', { ids: orderIds })
+        .andWhere('item.packingId IS NOT NULL')
+        .getMany();
+      const orderToPacking = new Map<string, string>();
+      for (const it of items) {
+        if (it.packingId && !orderToPacking.has(it.orderId)) {
+          orderToPacking.set(it.orderId, it.packingId);
+        }
+      }
+      const packingIds = Array.from(new Set(orderToPacking.values()));
+      if (packingIds.length) {
+        const sibling = await this.orderItems
+          .createQueryBuilder('item')
+          .select(['item.orderId', 'item.packingId'])
+          .where('item.packingId IN (:...pids)', { pids: packingIds })
+          .getMany();
+        const packingOrderIds = new Map<string, Set<string>>();
+        for (const it of sibling) {
+          if (!it.packingId) continue;
+          const set = packingOrderIds.get(it.packingId) || new Set<string>();
+          set.add(it.orderId);
+          packingOrderIds.set(it.packingId, set);
+        }
+        const allBundleOrderIds = new Set<string>();
+        for (const set of packingOrderIds.values()) {
+          for (const id of set) allBundleOrderIds.add(id);
+        }
+        const orderRecords = allBundleOrderIds.size
+          ? await this.orders.find({
+              where: { id: In(Array.from(allBundleOrderIds)) },
+            })
+          : [];
+        const numberById = new Map(orderRecords.map((o) => [o.id, o.number]));
+        for (const [orderId, packingId] of orderToPacking) {
+          const ids = Array.from(packingOrderIds.get(packingId) || []);
+          const numbers = ids
+            .map((id) => numberById.get(id))
+            .filter((n): n is string => !!n)
+            .sort();
+          bundleByLogOrderId.set(orderId, numbers);
+        }
+      }
+    }
+
+    return rows.map((r) =>
+      Object.assign(r, {
+        bundleOrderNumbers: r.orderId
+          ? bundleByLogOrderId.get(r.orderId) || (r.order ? [r.order.number] : [])
+          : [],
+      }),
+    );
   }
 
   private async log(

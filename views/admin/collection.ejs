@@ -230,12 +230,33 @@ function ageInDays(ts) {
                     not_found: 'badge-status cancelled',
                     invalid_state: 'badge-status awaiting_payment',
                   }[log.result] || 'badge-status';
+                  const customer = log.order && log.order.customer;
+                  const customerName = customer ? customer.name : '';
+                  const customerPpz = customer && customer.ppzId ? customer.ppzId : '';
+                  const customerTeam = customer && customer.team != null ? customer.team : '';
+                  const bundle = (log.bundleOrderNumbers && log.bundleOrderNumbers.length)
+                    ? log.bundleOrderNumbers
+                    : (log.order ? [log.order.number] : []);
                   %>
                   <details class="cc-log-row">
                     <summary>
                       <span class="cc-log-order">
-                        <% if (log.order) { %>
-                          <strong><a href="/admin/orders/<%= log.order.id %>" class="text-reset" onclick="event.stopPropagation()"><%= log.order.number %></a></strong>
+                        <% if (bundle.length) { %>
+                          <strong>
+                            <% if (log.order) { %>
+                              <a href="/admin/orders/<%= log.order.id %>" class="text-reset" onclick="event.stopPropagation()"><%= bundle[0] %></a>
+                            <% } else { %>
+                              <%= bundle[0] %>
+                            <% } %>
+                          </strong>
+                          <% if (bundle.length > 1) { %>
+                            <span class="text-muted" style="font-size:.82rem;"> · +<%= bundle.length - 1 %> more</span>
+                          <% } %>
+                          <% if (customerName) { %>
+                            <div class="text-muted" style="font-size:.82rem;">
+                              <%= customerName %><% if (customerPpz) { %> · PPZ <%= customerPpz %><% } %><% if (customerTeam !== '') { %> · Team <%= customerTeam %><% } %>
+                            </div>
+                          <% } %>
                         <% } else { %>
                           <span class="text-muted"><%= log.scannedValue %></span>
                         <% } %>
@@ -244,6 +265,27 @@ function ageInDays(ts) {
                     </summary>
                     <div class="cc-log-body">
                       <dl class="profile-dl">
+                        <% if (customerName) { %>
+                          <dt>Customer</dt>
+                          <dd><%= customerName %></dd>
+                        <% } %>
+                        <% if (customerPpz) { %>
+                          <dt>PPZ ID</dt>
+                          <dd><%= customerPpz %></dd>
+                        <% } %>
+                        <% if (customerTeam !== '') { %>
+                          <dt>Team</dt>
+                          <dd><%= customerTeam %></dd>
+                        <% } %>
+                        <% if (bundle.length) { %>
+                          <dt>Bundle (<%= bundle.length %>)</dt>
+                          <dd>
+                            <% bundle.forEach((n, i) => { %>
+                              <% if (i > 0) { %><br><% } %>
+                              <%= n %>
+                            <% }); %>
+                          </dd>
+                        <% } %>
                         <dt>By</dt>
                         <dd><%= log.scannedBy ? log.scannedBy.name : '—' %></dd>
                         <dt>Notes</dt>
