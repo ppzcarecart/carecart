@@ -29,12 +29,17 @@
                 <label>Product name</label>
                 <input class="form-control" name="name" value="<%= product.name %>" required>
               </div>
-              <div class="col-md-4 mb-3">
+              <div class="col-md-2 mb-3">
                 <label>Active</label>
                 <select class="form-select" name="active">
                   <option value="true"  <%= product.active ? 'selected' : '' %>>Active</option>
                   <option value="false" <%= !product.active ? 'selected' : '' %>>Inactive</option>
                 </select>
+              </div>
+              <div class="col-md-2 mb-3">
+                <label title="Lower numbers display first in the storefront. Default 0.">Display order</label>
+                <input type="number" min="0" step="1" class="form-control" name="sortOrder"
+                  value="<%= product.sortOrder ?? 0 %>" placeholder="0">
               </div>
             </div>
             <div class="mb-3">

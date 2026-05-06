@@ -27,6 +27,7 @@
             <table class="admin-table" data-mobile="cards">
               <thead>
                 <tr>
+                  <th class="num" title="Lower numbers display first in the storefront">Sort</th>
                   <th>Product</th>
                   <th class="num">Price</th>
                   <th class="num">Points</th>
@@ -39,6 +40,13 @@
               <tbody>
               <% products.forEach(p => { %>
                 <tr>
+                  <td class="num" data-label="Sort">
+                    <input type="number" min="0" step="1"
+                      value="<%= p.sortOrder ?? 0 %>"
+                      style="width: 70px; padding:4px 6px; text-align:right;"
+                      onchange="ppz.setSortOrder('<%= p.id %>', this.value, this)"
+                      title="Lower numbers come first">
+                  </td>
                   <td>
                     <div class="row-thumb">
                       <div class="thumb"><%- include('../partials/product-thumb', { product: p }) %></div>

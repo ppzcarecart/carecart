@@ -58,6 +58,8 @@ export class CreateProductDto {
 
   @IsOptional() @IsBoolean() active?: boolean;
 
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
+
   @IsOptional() @IsString() categoryId?: string;
 
   // Admin/manager may pass vendorId; vendors always create under their own id

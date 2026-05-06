@@ -110,7 +110,7 @@ export class ProductsService {
     }
     return this.products.find({
       where,
-      order: { createdAt: 'DESC' },
+      order: { sortOrder: 'ASC', createdAt: 'DESC' },
       take: opts.limit,
     });
   }
@@ -183,6 +183,7 @@ export class ProductsService {
       collectionSource: dto.collectionSource ?? null,
       stock: dto.stock ?? 0,
       active: dto.active ?? true,
+      sortOrder: dto.sortOrder ?? 0,
       vendorId,
       categoryId: dto.categoryId,
       variants: (dto.variants || []).map((v) =>
@@ -240,6 +241,7 @@ export class ProductsService {
     }
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;
+    if (dto.sortOrder !== undefined) product.sortOrder = dto.sortOrder;
     if (dto.categoryId !== undefined) product.categoryId = dto.categoryId;
 
     if (dto.imageUrls) {

@@ -92,6 +92,14 @@ export class Product {
   @Column({ default: false })
   featured: boolean;
 
+  // Storefront display order — lower numbers come first. Defaults to
+  // 0 so newly created products fall at the top of the unsorted set;
+  // ties are broken by createdAt DESC so within the same sortOrder
+  // the newest products sit first. Admin/manager-editable from the
+  // product edit form.
+  @Column({ type: 'integer', default: 0 })
+  sortOrder: number;
+
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vendorId' })
   vendor: User;

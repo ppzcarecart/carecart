@@ -22,6 +22,7 @@ export class UpdateProductDto {
   @IsOptional() @IsIn(['admin', 'vendor', null]) collectionSource?: 'admin' | 'vendor' | null;
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
   @IsOptional() @IsString() categoryId?: string | null;
   @IsOptional() @IsArray() @IsString({ each: true }) imageUrls?: string[];
 }

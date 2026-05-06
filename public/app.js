@@ -309,6 +309,7 @@ window.ppz = (function () {
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
+      sortOrder: intOrUndef(fd.get('sortOrder')) ?? 0,
     };
     try {
       await api('/api/products/' + productId, {
@@ -370,6 +371,7 @@ window.ppz = (function () {
       stock: intOrUndef(fd.get('stock')) ?? 0,
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',
+      sortOrder: intOrUndef(fd.get('sortOrder')) ?? 0,
       imageUrls: ppz._newPage.imageUrls.slice(),
       variants,
     };
@@ -1807,6 +1809,28 @@ window.ppz = (function () {
         });
       } catch (e) {
         if (checkbox) checkbox.checked = !active;
+        alert(e.message);
+      }
+    },
+    // Inline display-order edit on the products list. Lower numbers
+    // come first in the storefront. Refreshes the list afterwards so
+    // the row visibly slots into its new position.
+    async setSortOrder(id, value, input) {
+      const v = parseInt(value, 10);
+      if (!Number.isFinite(v) || v < 0) {
+        if (input) input.value = '0';
+        return;
+      }
+      try {
+        await api('/api/products/' + id, {
+          method: 'PATCH',
+          body: JSON.stringify({ sortOrder: v }),
+        });
+        if (input) {
+          input.style.background = 'var(--brand-soft, #ecfdf5)';
+          setTimeout(() => { input.style.background = ''; }, 600);
+        }
+      } catch (e) {
         alert(e.message);
       }
     },
