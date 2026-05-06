@@ -1958,6 +1958,57 @@ window.ppz = (function () {
         alert(e.message || 'Could not mark packed');
       }
     },
+    // Inline role change on the users list. When admin promotes a
+    // user to 'scanner' we prompt for a days-until-expiry so the
+    // role auto-reverts. Cancelling the prompt rolls the dropdown
+    // back to the previous value. Moving away from 'scanner' clears
+    // any active expiry so the new role doesn't inherit it.
+    async setUserRole(userId, newRole, sel) {
+      const currentRole = sel ? (sel.dataset.currentRole || '') : '';
+      if (newRole === currentRole) return;
+      let roleExpiresAt = undefined;
+      if (newRole === 'scanner') {
+        const ans = prompt(
+          'Expire scanner role after how many days? Leave blank for forever.',
+          '30',
+        );
+        if (ans === null) {
+          if (sel) sel.value = currentRole;
+          return;
+        }
+        const trimmed = (ans || '').trim();
+        if (trimmed === '') {
+          roleExpiresAt = null;
+        } else {
+          const days = parseInt(trimmed, 10);
+          if (!Number.isFinite(days) || days <= 0) {
+            alert('Days must be a positive integer.');
+            if (sel) sel.value = currentRole;
+            return;
+          }
+          roleExpiresAt = new Date(
+            Date.now() + days * 24 * 60 * 60 * 1000,
+          ).toISOString();
+        }
+      } else if (currentRole === 'scanner') {
+        // Moving back to a permanent role — clear any leftover expiry.
+        roleExpiresAt = null;
+      }
+      try {
+        await api('/api/users/' + userId, {
+          method: 'PATCH',
+          body: JSON.stringify({ role: newRole, roleExpiresAt }),
+        });
+        if (sel) sel.dataset.currentRole = newRole;
+        // Reload so the expiry hint under the dropdown reflects the
+        // fresh value (or disappears when the role goes back to a
+        // permanent one).
+        location.reload();
+      } catch (e) {
+        if (sel) sel.value = currentRole;
+        alert(e.message || 'Could not update role');
+      }
+    },
     async updateUser(id, patch) {
       await api('/api/users/' + id, { method: 'PATCH', body: JSON.stringify(patch) });
     },

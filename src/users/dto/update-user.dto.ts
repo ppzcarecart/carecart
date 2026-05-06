@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { Role } from '../../common/enums/role.enum';
 import { PPZ_ROLES, PpzRole } from '../ppz-role';
 
@@ -6,6 +6,10 @@ export class UpdateUserDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() contact?: string;
   @IsOptional() @IsEnum(Role) role?: Role;
+  // ISO 8601 datetime string; null clears the expiry (role is permanent).
+  // When set together with `role`, defines when the temporary role
+  // auto-reverts to the previous default (e.g. customer).
+  @IsOptional() @IsDateString() roleExpiresAt?: string | null;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsString() vendorStoreName?: string;
   @IsOptional() @IsString() vendorBio?: string;

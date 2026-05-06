@@ -113,11 +113,20 @@
                         ? ['admin','manager','vendor','scanner','customer']
                         : ['manager','vendor','scanner','customer'];
                       %>
-                      <select onchange="ppz.updateUser('<%= u.id %>', { role: this.value })">
+                      <select data-current-role="<%= u.role %>"
+                        onchange="ppz.setUserRole('<%= u.id %>', this.value, this)">
                         <% allowedRoles.forEach(r => { %>
                           <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r %></option>
                         <% }); %>
                       </select>
+                      <% if (u.roleExpiresAt) { %>
+                        <div class="text-muted" style="font-size:.78rem; margin-top:2px;">
+                          expires <%= fmtSg(u.roleExpiresAt) %>
+                          <% if (u.roleBeforeOverride) { %>
+                            → <%= u.roleBeforeOverride %>
+                          <% } %>
+                        </div>
+                      <% } %>
                     </td>
                     <td data-label="PPZ Role">
                       <% if (u.ppzId) { %>

@@ -54,16 +54,46 @@ export class UsersService {
     @InjectRepository(Product) private productsRepo: Repository<Product>,
   ) {}
 
-  findById(id: string) {
-    return this.repo.findOne({ where: { id } });
+  /**
+   * Auto-revert a temporary role override the moment it expires. Called
+   * by every read path (findById / findByEmail / findByPpzId / list)
+   * so the data layer is the source of truth — JWT validate, admin
+   * lists, and points-sync all see the post-revert state without
+   * needing a scheduled job.
+   *
+   * No-op when roleExpiresAt is null (permanent role) or still in the
+   * future. On expiry: role flips to roleBeforeOverride (or CUSTOMER
+   * if the snapshot is missing), both bookkeeping fields are wiped,
+   * and the row is persisted once. Subsequent calls find no expiry
+   * and return immediately.
+   */
+  private async revertIfExpired(user: User | null): Promise<User | null> {
+    if (!user || !user.roleExpiresAt) return user;
+    const exp = user.roleExpiresAt instanceof Date
+      ? user.roleExpiresAt
+      : new Date(user.roleExpiresAt as any);
+    if (Number.isNaN(exp.getTime()) || exp.getTime() > Date.now()) {
+      return user;
+    }
+    user.role = user.roleBeforeOverride || Role.CUSTOMER;
+    user.roleBeforeOverride = null;
+    user.roleExpiresAt = null;
+    return this.repo.save(user);
   }
 
-  findByEmail(email: string) {
-    return this.repo.findOne({ where: { email: email.toLowerCase() } });
+  async findById(id: string) {
+    const user = await this.repo.findOne({ where: { id } });
+    return this.revertIfExpired(user);
   }
 
-  findByPpzId(ppzId: string) {
-    return this.repo.findOne({ where: { ppzId } });
+  async findByEmail(email: string) {
+    const user = await this.repo.findOne({ where: { email: email.toLowerCase() } });
+    return this.revertIfExpired(user);
+  }
+
+  async findByPpzId(ppzId: string) {
+    const user = await this.repo.findOne({ where: { ppzId } });
+    return this.revertIfExpired(user);
   }
 
   /**
@@ -73,7 +103,7 @@ export class UsersService {
    *     the same search bar works for each of those identifiers.
    * Empty filter returns every user (existing call-sites unchanged).
    */
-  list(filter?: {
+  async list(filter?: {
     role?: Role;
     active?: boolean;
     ppzRole?: PpzRole | string;
@@ -84,23 +114,29 @@ export class UsersService {
     if (filter?.active !== undefined) exact.active = filter.active;
     if (filter?.ppzRole) exact.ppzRole = filter.ppzRole;
     const q = (filter?.q || '').trim();
+    let rows: User[];
     if (!q) {
-      return this.repo.find({
+      rows = await this.repo.find({
         where: exact,
         order: { createdAt: 'DESC' },
       });
+    } else {
+      // OR across the four searchable columns. Each branch carries the
+      // same exact-match constraints so role / ppzRole still narrow
+      // the results when the user is also searching.
+      const like = ILike(`%${q}%`);
+      const where = (
+        ['name', 'email', 'contact', 'ppzId'] as const
+      ).map((col) => ({ ...exact, [col]: like }));
+      rows = await this.repo.find({
+        where,
+        order: { createdAt: 'DESC' },
+      });
     }
-    // OR across the four searchable columns. Each branch carries the
-    // same exact-match constraints so role / ppzRole still narrow the
-    // results when the user is also searching.
-    const like = ILike(`%${q}%`);
-    const where = (
-      ['name', 'email', 'contact', 'ppzId'] as const
-    ).map((col) => ({ ...exact, [col]: like }));
-    return this.repo.find({
-      where,
-      order: { createdAt: 'DESC' },
-    });
+    // Self-heal expired role overrides as the admin views the list —
+    // a row that looks like 'scanner' but expired yesterday should
+    // already read as 'customer' on this render.
+    return Promise.all(rows.map((u) => this.revertIfExpired(u)));
   }
 
   /**
@@ -183,6 +219,18 @@ export class UsersService {
     const wasFulfilmentVendor =
       user.email === PPZ_FULFILMENT_EMAIL && user.role === Role.VENDOR;
     const previousStoreName = user.vendorStoreName;
+    const previousRole = user.role;
+    // Normalise roleExpiresAt — accept ISO string from the DTO. Empty
+    // string / explicit null clears the expiry (role is permanent).
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'roleExpiresAt') &&
+      patch.roleExpiresAt != null
+    ) {
+      const v: any = (patch as any).roleExpiresAt;
+      if (typeof v === 'string') {
+        (patch as any).roleExpiresAt = v ? new Date(v) : null;
+      }
+    }
     // IMPORTANT: skip undefined values when copying the patch onto the
     // user. With TypeScript target ES2022 + class-validator, every
     // declared optional field on UpdateUserDto becomes an own
@@ -197,6 +245,28 @@ export class UsersService {
     for (const [k, v] of Object.entries(patch)) {
       if (v !== undefined) (user as any)[k] = v;
     }
+
+    // Temporary-role bookkeeping. When admin/manager promotes a user
+    // to a different role, record the role they had BEFORE the
+    // override so the auto-revert helper knows where to send them
+    // back to when roleExpiresAt passes. If they're flipped right
+    // back to that previous role manually (or roleBeforeOverride is
+    // explicitly cleared), wipe the bookkeeping so the row reads as
+    // a permanent role again.
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'role') &&
+      user.role !== previousRole
+    ) {
+      if (user.role === user.roleBeforeOverride) {
+        user.roleBeforeOverride = null;
+        user.roleExpiresAt = null;
+      } else if (!user.roleBeforeOverride) {
+        user.roleBeforeOverride = previousRole;
+      }
+    }
+    // If the patch only adjusts expiry on an already-overridden
+    // role, leave roleBeforeOverride alone — the existing snapshot
+    // is still the correct revert target.
 
     // Lock manager rows to the PPZ Fulfilment store name. Catches both
     // a customer/vendor being promoted to manager AND an existing

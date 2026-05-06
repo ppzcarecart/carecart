@@ -31,6 +31,16 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.CUSTOMER })
   role: Role;
 
+  // When non-null, the user's current `role` is a temporary override
+  // that auto-reverts to `roleBeforeOverride` (or CUSTOMER if null)
+  // the first time UsersService.findById is called past this
+  // timestamp. NULL = no expiry (forever).
+  @Column({ type: 'timestamptz', nullable: true })
+  roleExpiresAt?: Date | null;
+
+  @Column({ type: 'enum', enum: Role, nullable: true })
+  roleBeforeOverride?: Role | null;
+
   @Column({ default: true })
   active: boolean;
 
