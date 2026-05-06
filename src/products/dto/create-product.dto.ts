@@ -60,6 +60,9 @@ export class CreateProductDto {
 
   @IsOptional() @IsInt() @Min(0) sortOrder?: number;
 
+  @IsOptional() @IsInt() @Min(0) redeemLimitPerCustomer?: number;
+  @IsOptional() @IsInt() @Min(0) redeemLimitWindowDays?: number;
+
   @IsOptional() @IsString() categoryId?: string;
 
   // Admin/manager may pass vendorId; vendors always create under their own id

@@ -60,6 +60,26 @@ window.ppz = (function () {
     return Number.isFinite(n) ? n : undefined;
   }
 
+  // Pull the redemption-limit window out of either the preset
+  // dropdown (week/2weeks/month/quarter/lifetime) or the custom-days
+  // input. Returns null for "lifetime" so the server interprets it as
+  // no rolling reset; returns undefined when neither field is in the
+  // form (so a partial PATCH leaves the existing value alone).
+  function resolveRedeemWindowDays(fd) {
+    const preset = (fd.get('redeemLimitWindowPreset') || '').toString();
+    if (!preset) return undefined;
+    if (preset === 'lifetime') return null;
+    if (preset === 'week') return 7;
+    if (preset === '2weeks') return 14;
+    if (preset === 'month') return 30;
+    if (preset === 'quarter') return 90;
+    if (preset === 'custom') {
+      const v = intOrUndef(fd.get('redeemLimitWindowDays'));
+      return v && v > 0 ? v : null;
+    }
+    return null;
+  }
+
   async function uploadAndAttachOne(file) {
     const productId = ppz._editPage.productId;
     const { url } = await uploadFile(file);
@@ -310,6 +330,8 @@ window.ppz = (function () {
       categoryId: fd.get('categoryId') || null,
       active: fd.get('active') === 'true',
       sortOrder: intOrUndef(fd.get('sortOrder')) ?? 0,
+      redeemLimitPerCustomer: intOrUndef(fd.get('redeemLimitPerCustomer')) ?? null,
+      redeemLimitWindowDays: resolveRedeemWindowDays(fd),
     };
     try {
       await api('/api/products/' + productId, {
@@ -372,6 +394,8 @@ window.ppz = (function () {
       categoryId: fd.get('categoryId') || undefined,
       active: fd.get('active') === 'true',
       sortOrder: intOrUndef(fd.get('sortOrder')) ?? 0,
+      redeemLimitPerCustomer: intOrUndef(fd.get('redeemLimitPerCustomer')),
+      redeemLimitWindowDays: resolveRedeemWindowDays(fd),
       imageUrls: ppz._newPage.imageUrls.slice(),
       variants,
     };

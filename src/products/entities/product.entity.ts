@@ -100,6 +100,16 @@ export class Product {
   @Column({ type: 'integer', default: 0 })
   sortOrder: number;
 
+  // Per-customer cap on POINTS redemptions of this product. Cash
+  // purchases are unlimited. NULL = no cap. The window below is the
+  // rolling lookback window in days (e.g. 30 = "1 redemption every
+  // 30 days"); NULL = lifetime cap.
+  @Column({ type: 'integer', nullable: true })
+  redeemLimitPerCustomer?: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  redeemLimitWindowDays?: number | null;
+
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vendorId' })
   vendor: User;

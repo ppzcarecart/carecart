@@ -184,6 +184,8 @@ export class ProductsService {
       stock: dto.stock ?? 0,
       active: dto.active ?? true,
       sortOrder: dto.sortOrder ?? 0,
+      redeemLimitPerCustomer: dto.redeemLimitPerCustomer ?? null,
+      redeemLimitWindowDays: dto.redeemLimitWindowDays ?? null,
       vendorId,
       categoryId: dto.categoryId,
       variants: (dto.variants || []).map((v) =>
@@ -242,6 +244,12 @@ export class ProductsService {
     if (dto.stock !== undefined) product.stock = dto.stock;
     if (dto.active !== undefined) product.active = dto.active;
     if (dto.sortOrder !== undefined) product.sortOrder = dto.sortOrder;
+    if (dto.redeemLimitPerCustomer !== undefined) {
+      product.redeemLimitPerCustomer = dto.redeemLimitPerCustomer;
+    }
+    if (dto.redeemLimitWindowDays !== undefined) {
+      product.redeemLimitWindowDays = dto.redeemLimitWindowDays;
+    }
     if (dto.categoryId !== undefined) product.categoryId = dto.categoryId;
 
     if (dto.imageUrls) {

@@ -357,6 +357,41 @@ export class OrdersService {
   }
 
   /**
+   * Count how many units of a product a single customer has redeemed
+   * with POINTS in the rolling window. Used by the cart to enforce
+   * per-product redemption caps. Cash purchases are not counted —
+   * the cap only applies to pricingMode='points'. Cancelled,
+   * refunded, and forfeited orders are excluded so a chargeback / no-
+   * show doesn't permanently lock the customer out.
+   */
+  async countCustomerPointsRedemptions(opts: {
+    productId: string;
+    customerId: string;
+    sinceDays?: number | null;
+  }): Promise<number> {
+    const qb = this.orderItems
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'o')
+      .where('item.productId = :pid', { pid: opts.productId })
+      .andWhere("item.pricingMode = 'points'")
+      .andWhere('o.customerId = :cid', { cid: opts.customerId })
+      .andWhere(
+        "o.status NOT IN ('cancelled', 'refunded', 'forfeited')",
+      );
+    if (opts.sinceDays && opts.sinceDays > 0) {
+      const since = new Date(
+        Date.now() - opts.sinceDays * 24 * 60 * 60 * 1000,
+      );
+      qb.andWhere('o.createdAt >= :since', { since });
+    }
+    // Sum quantities, not just row count — a single order line for
+    // qty 3 should consume 3 of the cap, not 1.
+    qb.select('COALESCE(SUM(item.quantity), 0)', 'total');
+    const row = await qb.getRawOne<{ total: string }>();
+    return parseInt(row?.total || '0', 10) || 0;
+  }
+
+  /**
    * Aggregated product sales for the Sales Report views.
    *   vendorId — scope to one vendor (vendor's own report). Omit for
    *              the marketplace-wide admin report.

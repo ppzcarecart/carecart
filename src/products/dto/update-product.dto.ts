@@ -23,6 +23,8 @@ export class UpdateProductDto {
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsInt() @Min(0) sortOrder?: number;
+  @IsOptional() @IsInt() @Min(0) redeemLimitPerCustomer?: number | null;
+  @IsOptional() @IsInt() @Min(0) redeemLimitWindowDays?: number | null;
   @IsOptional() @IsString() categoryId?: string | null;
   @IsOptional() @IsArray() @IsString({ each: true }) imageUrls?: string[];
 }

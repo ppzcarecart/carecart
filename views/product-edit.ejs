@@ -81,6 +81,44 @@
                 <input type="number" min="0" step="1" class="form-control" name="stock" value="<%= product.stock %>">
               </div>
             </div>
+            <%
+            // Surface the redemption-limit window as a friendly preset
+            // dropdown plus a "custom" days input. Server stores raw
+            // days; weeks/months are just convenient multiples (7 / 30).
+            const _rlDays = product.redeemLimitWindowDays;
+            const _rlPreset = _rlDays == null ? 'lifetime'
+              : _rlDays === 7 ? 'week'
+              : _rlDays === 14 ? '2weeks'
+              : _rlDays === 30 ? 'month'
+              : _rlDays === 90 ? 'quarter'
+              : 'custom';
+            %>
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <label title="Cap how many times one customer can redeem this with points. Cash purchases are unlimited.">
+                  Redeem limit per customer
+                </label>
+                <input type="number" min="0" step="1" class="form-control" name="redeemLimitPerCustomer"
+                  value="<%= product.redeemLimitPerCustomer ?? '' %>" placeholder="Blank → unlimited">
+              </div>
+              <div class="col-md-3 mb-3">
+                <label>Limit window</label>
+                <select class="form-select" name="redeemLimitWindowPreset" id="redeemLimitWindowPreset"
+                  onchange="document.getElementById('redeemLimitWindowCustom').style.display = this.value === 'custom' ? '' : 'none';">
+                  <option value="lifetime" <%= _rlPreset === 'lifetime' ? 'selected' : '' %>>Lifetime (no rolling reset)</option>
+                  <option value="week"     <%= _rlPreset === 'week'     ? 'selected' : '' %>>1 week (7 days)</option>
+                  <option value="2weeks"   <%= _rlPreset === '2weeks'   ? 'selected' : '' %>>2 weeks (14 days)</option>
+                  <option value="month"    <%= _rlPreset === 'month'    ? 'selected' : '' %>>1 month (30 days)</option>
+                  <option value="quarter"  <%= _rlPreset === 'quarter'  ? 'selected' : '' %>>3 months (90 days)</option>
+                  <option value="custom"   <%= _rlPreset === 'custom'   ? 'selected' : '' %>>Custom days…</option>
+                </select>
+              </div>
+              <div class="col-md-3 mb-3" id="redeemLimitWindowCustom" style="<%= _rlPreset === 'custom' ? '' : 'display: none;' %>">
+                <label>Custom days</label>
+                <input type="number" min="1" step="1" class="form-control" name="redeemLimitWindowDays"
+                  value="<%= _rlPreset === 'custom' ? _rlDays : '' %>" placeholder="e.g. 45">
+              </div>
+            </div>
             <div class="row">
               <div class="col-md-8 mb-3">
                 <label>Category</label>

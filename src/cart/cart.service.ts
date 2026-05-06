@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 
 import { Cart } from './entities/cart.entity';
 import { CartItem, PricingMode } from './entities/cart-item.entity';
+import { OrderItem } from '../orders/entities/order-item.entity';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
 import { FulfilmentService, CollectionPoint } from '../fulfilment/fulfilment.service';
@@ -19,11 +20,42 @@ export class CartService {
   constructor(
     @InjectRepository(Cart) private carts: Repository<Cart>,
     @InjectRepository(CartItem) private items: Repository<CartItem>,
+    @InjectRepository(OrderItem) private orderItems: Repository<OrderItem>,
     private products: ProductsService,
     private users: UsersService,
     private fulfilment: FulfilmentService,
     private settings: SettingsService,
   ) {}
+
+  /**
+   * How many units of `productId` has the customer redeemed with
+   * POINTS within the rolling window (or lifetime when `sinceDays` is
+   * null/undefined)? Used by the redemption-limit enforcement in
+   * addItem. Cancelled / refunded / forfeited orders are excluded
+   * so a chargeback / no-show doesn't permanently lock them out.
+   */
+  private async countRedeemedUnits(
+    productId: string,
+    customerId: string,
+    sinceDays?: number | null,
+  ): Promise<number> {
+    const qb = this.orderItems
+      .createQueryBuilder('item')
+      .innerJoin('item.order', 'o')
+      .where('item.productId = :pid', { pid: productId })
+      .andWhere("item.pricingMode = 'points'")
+      .andWhere('o.customerId = :cid', { cid: customerId })
+      .andWhere(
+        "o.status NOT IN ('cancelled', 'refunded', 'forfeited')",
+      );
+    if (sinceDays && sinceDays > 0) {
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+      qb.andWhere('o.createdAt >= :since', { since });
+    }
+    qb.select('COALESCE(SUM(item.quantity), 0)', 'total');
+    const row = await qb.getRawOne<{ total: string }>();
+    return parseInt(row?.total || '0', 10) || 0;
+  }
 
   /**
    * Resolve the per-unit split for one cart line. For 'price' mode the
@@ -121,6 +153,37 @@ export class CartService {
       const { pointsPrice } = this.products.resolvePricing(product, variant, true);
       if (pointsPrice === null || pointsPrice === undefined) {
         throw new BadRequestException('This item cannot be purchased with points');
+      }
+      // Per-product redemption cap (admin/manager/vendor-set). Cash
+      // purchases ignore this. Counts already-redeemed units within
+      // the rolling window plus any currently in this customer's
+      // cart for the same product, so a single user can't double-up
+      // by stacking the cart.
+      const cap = product.redeemLimitPerCustomer;
+      if (cap != null && cap > 0) {
+        const windowDays = product.redeemLimitWindowDays ?? null;
+        const past = await this.countRedeemedUnits(
+          productId,
+          userId,
+          windowDays,
+        );
+        const cartExisting = await this.getOrCreate(userId);
+        const inCart = cartExisting.items
+          .filter(
+            (i) => i.productId === productId && i.pricingMode === 'points',
+          )
+          .reduce((s, i) => s + (i.quantity || 0), 0);
+        if (past + inCart + quantity > cap) {
+          const remaining = Math.max(0, cap - past - inCart);
+          const window = windowDays
+            ? ` every ${windowDays} day${windowDays === 1 ? '' : 's'}`
+            : '';
+          throw new BadRequestException(
+            remaining > 0
+              ? `You can only redeem this product ${cap} time(s)${window} — you have ${remaining} left right now.`
+              : `You've already reached the redemption limit (${cap}${window}) for this product.`,
+          );
+        }
       }
     }
 
