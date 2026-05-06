@@ -20,6 +20,19 @@ export interface PackingListRow {
   vendorIds: string[];
 }
 
+/** One-row-per-customer view used by the Packings list page. */
+export interface CustomerPackingRow {
+  customerId: string;
+  customer?: any;
+  packings: Packing[];
+  itemCount: number;
+  orderCount: number;
+  fulfilmentMethods: Array<'delivery' | 'collection'>;
+  vendorIds: string[];
+  latestUpdatedAt: Date;
+  earliestPackedAt?: Date;
+}
+
 export interface PackingDetail {
   packing: Packing;
   items: OrderItem[];
@@ -47,6 +60,18 @@ export class PackingsService {
    */
   async assignFromOrder(order: Order): Promise<void> {
     if (!order || !order.customerId || !order.items?.length) return;
+    // Defensive: never bundle items from an already-collected,
+    // cancelled, or refunded order. The order may carry a paid status
+    // when assignFromOrder runs from setPayment, but a webhook replay
+    // after collection could revisit this with a stale order, so we
+    // re-check here.
+    if (
+      order.status === 'collected' ||
+      order.status === 'cancelled' ||
+      order.status === 'refunded'
+    ) {
+      return;
+    }
 
     const itemIds = order.items
       .filter((i) => !i.packingId)
@@ -119,12 +144,14 @@ export class PackingsService {
    * already carry a packingId is skipped inside assignFromOrder.
    */
   async backfillUnpackedPaidOrders(): Promise<void> {
+    // Only paid/fulfilled — never 'collected' (already picked up so it
+    // doesn't belong in an open bundle), 'cancelled', or 'refunded'.
     const rows = await this.orderItems
       .createQueryBuilder('item')
       .innerJoin('item.order', 'o')
       .select('DISTINCT item.orderId', 'orderId')
       .where('item.packingId IS NULL')
-      .andWhere("o.status IN ('paid', 'fulfilled', 'collected')")
+      .andWhere("o.status IN ('paid', 'fulfilled')")
       .andWhere('o.customerId IS NOT NULL')
       .getRawMany<{ orderId: string }>();
     for (const row of rows) {
@@ -297,6 +324,147 @@ export class PackingsService {
       out.push(...group);
     }
     return out;
+  }
+
+  /**
+   * Customer-grouped roll-up of `list()`. Each row is a single
+   * customer with the array of packings they currently have in the
+   * given status (open or packed). Counts add across all the
+   * customer's bundles so the row reflects everything the warehouse
+   * needs to do for that customer.
+   */
+  async listByCustomer(opts: {
+    status?: 'open' | 'packed';
+    vendorId?: string;
+  }): Promise<CustomerPackingRow[]> {
+    const flat = await this.list(opts);
+    const byCustomer = new Map<string, CustomerPackingRow>();
+    for (const r of flat) {
+      const key = r.packing.customerId || '';
+      if (!key) continue;
+      let row = byCustomer.get(key);
+      if (!row) {
+        row = {
+          customerId: key,
+          customer: r.packing.customer,
+          packings: [],
+          itemCount: 0,
+          orderCount: 0,
+          fulfilmentMethods: [],
+          vendorIds: [],
+          latestUpdatedAt: r.packing.updatedAt,
+          earliestPackedAt: r.packing.packedAt,
+        };
+        byCustomer.set(key, row);
+      }
+      row.packings.push(r.packing);
+      row.itemCount += r.itemCount;
+      row.orderCount += r.orderCount;
+      const m = r.packing.fulfilmentMethod;
+      if (m && !row.fulfilmentMethods.includes(m)) {
+        row.fulfilmentMethods.push(m);
+      }
+      for (const v of r.vendorIds) {
+        if (!row.vendorIds.includes(v)) row.vendorIds.push(v);
+      }
+      const u = new Date(r.packing.updatedAt);
+      if (u > row.latestUpdatedAt) row.latestUpdatedAt = u;
+      if (r.packing.packedAt) {
+        if (!row.earliestPackedAt || r.packing.packedAt < row.earliestPackedAt) {
+          row.earliestPackedAt = r.packing.packedAt;
+        }
+      }
+    }
+    return Array.from(byCustomer.values()).sort(
+      (a, b) => +b.latestUpdatedAt - +a.latestUpdatedAt,
+    );
+  }
+
+  /**
+   * Load every open packing for one customer plus their items/orders,
+   * for the customer-scoped detail page. Vendors only see bundles
+   * containing at least one of their items, and only their own items
+   * in those bundles.
+   */
+  async findCustomerDetail(opts: {
+    customerId: string;
+    vendorId?: string;
+    status?: 'open' | 'packed';
+  }): Promise<{
+    customer?: any;
+    bundles: Array<{
+      packing: Packing;
+      items: OrderItem[];
+      orders: Order[];
+    }>;
+  }> {
+    const status = opts.status || 'open';
+    const packings = await this.packings.find({
+      where: { customerId: opts.customerId, status },
+      order: { fulfilmentMethod: 'ASC', createdAt: 'ASC' },
+    });
+    if (!packings.length) {
+      return { customer: undefined, bundles: [] };
+    }
+    const ids = packings.map((p) => p.id);
+    const allItems = await this.orderItems.find({
+      where: { packingId: In(ids) },
+    });
+    const orderIds = Array.from(new Set(allItems.map((i) => i.orderId)));
+    const orders = orderIds.length
+      ? await this.orders.find({ where: { id: In(orderIds) } })
+      : [];
+
+    const visiblePackings = opts.vendorId
+      ? packings.filter((p) =>
+          allItems.some(
+            (i) => i.packingId === p.id && i.vendorId === opts.vendorId,
+          ),
+        )
+      : packings;
+
+    const bundles = visiblePackings.map((p) => {
+      const own = allItems.filter(
+        (i) =>
+          i.packingId === p.id &&
+          (!opts.vendorId || i.vendorId === opts.vendorId),
+      );
+      const ownOrderIds = new Set(own.map((i) => i.orderId));
+      return {
+        packing: p,
+        items: own,
+        orders: orders.filter((o) => ownOrderIds.has(o.id)),
+      };
+    });
+    return { customer: packings[0].customer, bundles };
+  }
+
+  /**
+   * Mark every OPEN packing the customer currently has as packed in
+   * one click. Vendors are constrained to their own bundles.
+   */
+  async markAllPackedForCustomer(
+    customerId: string,
+    actor: { id: string; role: Role },
+  ): Promise<{ packed: number }> {
+    const open = await this.packings.find({
+      where: { customerId, status: 'open' },
+    });
+    if (!open.length) return { packed: 0 };
+    let count = 0;
+    for (const p of open) {
+      try {
+        await this.markPacked(p.id, actor);
+        count++;
+      } catch (e) {
+        // A vendor packing one customer's bundles may legitimately not
+        // own every bundle (e.g. another vendor has the delivery
+        // half) — skip rather than abort the whole batch.
+        if (e instanceof ForbiddenException) continue;
+        throw e;
+      }
+    }
+    return { packed: count };
   }
 
   async findDetail(id: string, vendorId?: string): Promise<PackingDetail> {

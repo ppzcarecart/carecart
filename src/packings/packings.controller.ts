@@ -28,4 +28,18 @@ export class PackingsController {
     });
     return { id: updated.id, status: updated.status, packedAt: updated.packedAt };
   }
+
+  @Roles(Role.ADMIN, Role.MANAGER, Role.VENDOR)
+  @Post('customer/:customerId/pack')
+  async packAllForCustomer(
+    @Param('customerId') customerId: string,
+    @CurrentUser() user: any,
+  ) {
+    if (!customerId) throw new BadRequestException('customerId required');
+    const result = await this.packings.markAllPackedForCustomer(customerId, {
+      id: user.id,
+      role: user.role,
+    });
+    return result;
+  }
 }

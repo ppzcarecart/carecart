@@ -1,0 +1,150 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+<%
+const sidebar = isAdmin ? '../partials/admin-sidebar' : '../partials/vendor-sidebar';
+const customer = detail.customer;
+const customerName = customer ? customer.name : '—';
+const customerEmail = customer ? customer.email : '';
+const customerPpz = customer && customer.ppzId ? customer.ppzId : '–';
+const customerTeam = customer && customer.team != null ? customer.team : '–';
+const customerContact = customer && customer.contact ? customer.contact : '–';
+%>
+<div class="container admin-shell">
+  <div class="admin-layout">
+    <%- include(sidebar, { activePath }) %>
+    <main class="admin-main">
+
+      <div class="admin-page-header">
+        <div>
+          <h1>Packing for <%= customerName %></h1>
+          <p class="lede"><a href="<%= backHref %>">← Back to packings</a></p>
+        </div>
+      </div>
+
+      <div class="admin-panel" style="margin-bottom: 14px;">
+        <div class="panel-head"><h3>Customer</h3></div>
+        <div class="panel-body padded">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Name</div>
+              <strong><%= customerName %></strong>
+              <% if (customerEmail) { %><div class="text-muted" style="font-size:.85rem;"><%= customerEmail %></div><% } %>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">PPZ ID</div>
+              <strong><%= customerPpz %></strong>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Team</div>
+              <strong><%= customerTeam %></strong>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;">Contact</div>
+              <strong><%= customerContact %></strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <% if (!detail.bundles.length) { %>
+        <div class="cc-empty">
+          No <%= activeStatus %> bundles for this customer.
+        </div>
+      <% } %>
+
+      <% detail.bundles.forEach(b => {
+        const p = b.packing;
+        const typeKey = p.fulfilmentMethod || 'collection';
+        const typeLabel = typeKey === 'delivery' ? 'Delivery' : 'Collection';
+        const orderById = new Map();
+        b.orders.forEach(o => orderById.set(o.id, o));
+        const itemsByOrder = new Map();
+        b.items.forEach(it => {
+          const arr = itemsByOrder.get(it.orderId) || [];
+          arr.push(it);
+          itemsByOrder.set(it.orderId, arr);
+        });
+      %>
+        <div class="admin-panel" style="margin-bottom: 18px;">
+          <div class="panel-head">
+            <h3>
+              <span class="ftype-tag ftype-<%= typeKey === 'delivery' ? 'd' : 'c' %>" style="margin-right:8px;"><%= typeLabel %></span>
+              <%= b.orders.length %> order<%= b.orders.length === 1 ? '' : 's' %>
+            </h3>
+            <div class="d-flex gap-2 flex-wrap">
+              <% if (p.status === 'open') { %>
+                <button class="cc-btn cc-btn-primary" style="padding:6px 14px; font-size:.85rem;"
+                  onclick="ppz.markPacked('<%= p.id %>', this)">
+                  ✓ Mark this bundle packed
+                </button>
+              <% } else if (p.status === 'packed') { %>
+                <span class="tag tag-active" style="padding:6px 12px;">Packed <%= p.packedAt ? '· ' + fmtSg(p.packedAt) : '' %></span>
+              <% } else if (p.status === 'collected') { %>
+                <span class="tag tag-active" style="padding:6px 12px;">Collected <%= p.collectedAt ? '· ' + fmtSg(p.collectedAt) : '' %></span>
+              <% } %>
+            </div>
+          </div>
+          <div class="panel-body">
+            <% b.orders.forEach(order => {
+              const items = itemsByOrder.get(order.id) || [];
+              const ship = order.shippingAddress || {};
+              const orderHref = (isAdmin ? '/admin/orders/' : '/vendor/orders/') + order.id;
+            %>
+              <div style="border-bottom: 1px solid var(--line); padding: 14px 18px;">
+                <div class="d-flex flex-wrap gap-2 align-items-baseline" style="margin-bottom: 8px;">
+                  <strong>
+                    Order <a href="<%= orderHref %>" class="text-reset"><%= order.number %></a>
+                  </strong>
+                  <small class="text-muted" style="font-size:.85rem;">
+                    · <%= fmtSg(order.createdAt) %>
+                  </small>
+                </div>
+                <% if (typeKey === 'delivery' && (ship.line1 || ship.postalCode)) { %>
+                  <div class="text-muted" style="font-size:.85rem; margin-bottom: 6px;">
+                    Ship to:
+                    <% if (ship.name) { %><%= ship.name %>, <% } %>
+                    <% if (ship.line1) { %><%= ship.line1 %><% } %><% if (ship.line2) { %>, <%= ship.line2 %><% } %>
+                    <% if (ship.postalCode) { %>, Singapore <%= ship.postalCode %><% } %>
+                    <% if (ship.contact) { %> · <%= ship.contact %><% } %>
+                  </div>
+                <% } %>
+                <table class="admin-table" data-mobile="cards" style="margin: 0;">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Variant</th>
+                      <% if (isAdmin) { %><th>Vendor</th><% } %>
+                      <th class="num">Qty</th>
+                      <th>Price / Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% items.forEach(it => { %>
+                      <tr>
+                        <td data-label="Product"><strong><%= it.productName %></strong></td>
+                        <td data-label="Variant"><%= it.variant ? it.variant.name : '—' %></td>
+                        <% if (isAdmin) { %>
+                          <td data-label="Vendor"><%= it.vendor ? (it.vendor.vendorStoreName || it.vendor.name) : '—' %></td>
+                        <% } %>
+                        <td class="num" data-label="Qty"><%= it.quantity %></td>
+                        <td data-label="Price">
+                          <% if (it.pricingMode === 'points') { %>
+                            <%= it.unitPoints %> pts<% if (it.unitPriceCents > 0) { %> + $<%= (it.unitPriceCents/100).toFixed(2) %><% } %>
+                          <% } else { %>
+                            $<%= (it.unitPriceCents/100).toFixed(2) %>
+                          <% } %>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+
+    </main>
+  </div>
+</div>
+<%- include('../partials/foot') %>

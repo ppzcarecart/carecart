@@ -17,10 +17,9 @@ const tabs = [
         <div>
           <h1>Packings</h1>
           <p class="lede">
-            Paid items grouped per customer so multiple orders pack
-            together. Mark a packing as <em>packed</em> when it's
-            physically ready — any new paid order from the same
-            customer afterwards starts a fresh packing.
+            One bundle per customer. Delivery and self-collection items
+            are kept on separate sub-bundles so the right items go down
+            the right fulfilment lane.
           </p>
         </div>
       </div>
@@ -36,7 +35,7 @@ const tabs = [
                 <%= t.label %>
               </a>
             <% }); %>
-            <span class="text-muted" style="font-size:.85rem;"> · <%= rows.length %> bundle<%= rows.length === 1 ? '' : 's' %></span>
+            <span class="text-muted" style="font-size:.85rem;"> · <%= rows.length %> customer<%= rows.length === 1 ? '' : 's' %></span>
           </div>
           <script>
             (function () {
@@ -76,36 +75,34 @@ const tabs = [
                 </tr>
               </thead>
               <tbody>
-                <% let prevCustomerId = null; %>
                 <% rows.forEach(r => {
-                  const p = r.packing;
-                  const detailHref = (isAdmin ? '/admin/packings/' : '/vendor/packings/') + p.id;
-                  const customerName = p.customer ? p.customer.name : '—';
-                  const customerPpz = p.customer && p.customer.ppzId ? p.customer.ppzId : '–';
-                  const customerTeam = p.customer && p.customer.team != null ? p.customer.team : '–';
-                  const customerContact = p.customer && p.customer.contact ? p.customer.contact : '–';
-                  const ts = activeStatus === 'packed' && p.packedAt ? p.packedAt : p.updatedAt;
-                  const sameAsPrev = prevCustomerId === p.customerId;
-                  prevCustomerId = p.customerId;
-                  const typeKey = p.fulfilmentMethod || 'collection';
-                  const typeLabel = typeKey === 'delivery' ? 'Delivery' : 'Collection';
+                  const customer = r.customer;
+                  const customerName = customer ? customer.name : '—';
+                  const customerEmail = customer ? customer.email : '';
+                  const customerPpz = customer && customer.ppzId ? customer.ppzId : '–';
+                  const customerTeam = customer && customer.team != null ? customer.team : '–';
+                  const customerContact = customer && customer.contact ? customer.contact : '–';
+                  const ts = activeStatus === 'packed' && r.earliestPackedAt ? r.earliestPackedAt : r.latestUpdatedAt;
+                  const detailHref = (isAdmin ? '/admin/packings/customer/' : '/vendor/packings/customer/') + r.customerId + '?status=' + activeStatus;
+                  const methods = r.fulfilmentMethods.length
+                    ? r.fulfilmentMethods
+                    : ['collection'];
                 %>
-                  <tr id="packing-row-<%= p.id %>" class="<%= sameAsPrev ? 'cc-row-continuation' : '' %>">
+                  <tr id="packing-row-<%= r.customerId %>">
                     <td data-label="Customer">
-                      <% if (!sameAsPrev) { %>
-                        <strong><%= customerName %></strong>
-                        <% if (p.customer && p.customer.email) { %>
-                          <div class="text-muted" style="font-size:.82rem;"><%= p.customer.email %></div>
-                        <% } %>
-                      <% } else { %>
-                        <span class="text-muted" style="font-size:.85rem;">↳</span>
+                      <strong><a href="<%= detailHref %>" class="text-reset"><%= customerName %></a></strong>
+                      <% if (customerEmail) { %>
+                        <div class="text-muted" style="font-size:.82rem;"><%= customerEmail %></div>
                       <% } %>
                     </td>
-                    <td data-label="PPZ ID"><%= sameAsPrev ? '' : customerPpz %></td>
-                    <td class="num" data-label="Team"><%= sameAsPrev ? '' : customerTeam %></td>
-                    <td data-label="Contact"><%= sameAsPrev ? '' : customerContact %></td>
+                    <td data-label="PPZ ID"><%= customerPpz %></td>
+                    <td class="num" data-label="Team"><%= customerTeam %></td>
+                    <td data-label="Contact"><%= customerContact %></td>
                     <td data-label="Type">
-                      <span class="ftype-tag ftype-<%= typeKey === 'delivery' ? 'd' : 'c' %>"><%= typeLabel %></span>
+                      <% methods.forEach(function(m, i) { %>
+                        <% if (i > 0) { %> <% } %>
+                        <span class="ftype-tag ftype-<%= m === 'delivery' ? 'd' : 'c' %>"><%= m === 'delivery' ? 'Delivery' : 'Collection' %></span>
+                      <% }); %>
                     </td>
                     <td class="num" data-label="Items"><%= r.itemCount %></td>
                     <td class="num" data-label="Orders"><%= r.orderCount %></td>
@@ -114,9 +111,9 @@ const tabs = [
                     </td>
                     <td class="actions">
                       <a href="<%= detailHref %>" class="cc-btn cc-btn-outline" style="padding:6px 12px; font-size:.82rem;">View</a>
-                      <% if (p.status === 'open') { %>
+                      <% if (activeStatus === 'open') { %>
                         <button class="cc-btn cc-btn-primary" style="padding:6px 12px; font-size:.82rem;"
-                          onclick="ppz.markPacked('<%= p.id %>', this)">
+                          onclick="ppz.markPackedForCustomer('<%= r.customerId %>', this)">
                           Mark packed
                         </button>
                       <% } else { %>

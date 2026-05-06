@@ -653,13 +653,37 @@ export class ViewsController {
     @Query('status') status?: string,
   ) {
     const safe = status === 'packed' ? 'packed' : 'open';
-    const rows = await this.packings.list({ status: safe });
+    const rows = await this.packings.listByCustomer({ status: safe });
     return {
       title: 'Packings',
       user,
       rows,
       activeStatus: safe,
       isAdmin: true,
+      activePath: '/admin/packings',
+    };
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('admin/packings/customer/:customerId')
+  @Render('admin/packing-customer')
+  async adminPackingCustomer(
+    @CurrentUser() user: any,
+    @Param('customerId') customerId: string,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'packed' ? 'packed' : 'open';
+    const detail = await this.packings.findCustomerDetail({
+      customerId,
+      status: safe,
+    });
+    return {
+      title: 'Packing detail',
+      user,
+      detail,
+      activeStatus: safe,
+      isAdmin: true,
+      backHref: '/admin/packings',
       activePath: '/admin/packings',
     };
   }
@@ -690,7 +714,7 @@ export class ViewsController {
     @Query('status') status?: string,
   ) {
     const safe = status === 'packed' ? 'packed' : 'open';
-    const rows = await this.packings.list({
+    const rows = await this.packings.listByCustomer({
       status: safe,
       vendorId: user.id,
     });
@@ -700,6 +724,31 @@ export class ViewsController {
       rows,
       activeStatus: safe,
       isAdmin: false,
+      activePath: '/vendor/packings',
+    };
+  }
+
+  @Roles(Role.VENDOR, Role.ADMIN, Role.MANAGER)
+  @Get('vendor/packings/customer/:customerId')
+  @Render('admin/packing-customer')
+  async vendorPackingCustomer(
+    @CurrentUser() user: any,
+    @Param('customerId') customerId: string,
+    @Query('status') status?: string,
+  ) {
+    const safe = status === 'packed' ? 'packed' : 'open';
+    const detail = await this.packings.findCustomerDetail({
+      customerId,
+      vendorId: user.role === Role.VENDOR ? user.id : undefined,
+      status: safe,
+    });
+    return {
+      title: 'Packing detail',
+      user,
+      detail,
+      activeStatus: safe,
+      isAdmin: false,
+      backHref: '/vendor/packings',
       activePath: '/vendor/packings',
     };
   }

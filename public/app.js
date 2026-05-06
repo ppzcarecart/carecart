@@ -1810,6 +1810,22 @@ window.ppz = (function () {
         alert(e.message);
       }
     },
+    // Mark every OPEN bundle for a customer as packed in one call.
+    // Used by the customer-grouped Packings list where one row spans
+    // both the delivery and collection bundles.
+    async markPackedForCustomer(customerId, btn) {
+      if (!confirm('Mark all of this customer\'s open bundles as packed?')) return;
+      const original = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Saving…'; }
+      try {
+        await api('/api/packings/customer/' + customerId + '/pack', { method: 'POST' });
+        const row = document.getElementById('packing-row-' + customerId);
+        if (row) row.remove();
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+        alert(e.message || 'Could not mark packed');
+      }
+    },
     // Mark a packing bundle as packed. Optimistic-ish: the row updates
     // in place when the call succeeds. If a redirectHref is passed
     // (used from the detail page), bounce back to the list so the
