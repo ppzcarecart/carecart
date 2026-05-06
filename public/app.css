@@ -324,7 +324,7 @@ a:hover { color: var(--brand-dark); }
   outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
-.cc-detail .cc-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.cc-detail .cc-gallery img { width: 100%; height: 100%; object-fit: contain; }
 
 /* ============================================================ */
 /* Image zoom lightbox (product detail page)                    */
