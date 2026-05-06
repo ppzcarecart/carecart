@@ -194,7 +194,12 @@ window.ppz = (function () {
           <button class="cc-btn cc-btn-ghost" style="padding:4px 8px; font-size:.72rem;" type="button">Upload</button>
         </div>
       </td>
-      <td><input type="text" name="name" placeholder="Size: M / Color: Black"></td>
+      <td>
+        <input type="text" name="name" placeholder="Size: M / Color: Black">
+        <textarea name="description" rows="2"
+          style="margin-top:4px; width:100%; font-size:.82rem; padding:6px 8px; resize:vertical;"
+          placeholder="Optional add-on description shown when selected"></textarea>
+      </td>
       <td><input type="text" name="sku" placeholder="Optional SKU"></td>
       <td class="num"><input type="number" step="0.01" min="0" name="priceOverride" placeholder="—"></td>
       <td class="num"><input type="number" step="0.01" min="0" name="ppzPriceOverride" placeholder="—"></td>
@@ -224,6 +229,8 @@ window.ppz = (function () {
       const el = getInput(n);
       return el ? el.value.trim() : '';
     };
+    const descEl = tr.querySelector('textarea[name="description"]');
+    const description = descEl ? descEl.value.trim() : '';
     return {
       id: tr.dataset.variantId || undefined,
       name: get('name'),
@@ -233,6 +240,7 @@ window.ppz = (function () {
       pointsPriceOverride: intOrUndef(get('pointsPriceOverride')),
       stock: intOrUndef(get('stock')) ?? 0,
       imageUrl: get('imageUrl') || null,
+      description: description || null,
     };
   }
 
@@ -955,6 +963,19 @@ window.ppz = (function () {
   // (and the lightbox source on next open) to that URL. Picking a
   // variant without a custom image — or the empty "— Choose —"
   // option — restores the original product hero.
+  // Toggle the variant description block on the storefront detail
+  // page. Reads data-description from the selected <option>; if blank,
+  // hides the block so the layout collapses naturally.
+  function swapVariantDescription(selectEl) {
+    const block = document.getElementById('variantDescription');
+    if (!block) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const desc = opt && opt.dataset ? (opt.dataset.description || '') : '';
+    block.textContent = desc;
+    if (desc) block.removeAttribute('hidden');
+    else block.setAttribute('hidden', '');
+  }
+
   function swapGalleryToVariant(selectEl) {
     const gallery = document.querySelector('.cc-detail .cc-gallery');
     if (!gallery) return;
@@ -1608,6 +1629,7 @@ window.ppz = (function () {
     deleteVariantRow,
     uploadVariantImage,
     swapGalleryToVariant,
+    swapVariantDescription,
     saveProduct,
     createProduct,
     deleteFromEdit,

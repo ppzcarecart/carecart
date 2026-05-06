@@ -101,10 +101,11 @@
           <div class="field">
             <label for="variantId">Variant <span class="text-danger">*</span></label>
             <select id="variantId" class="form-control" required
-              onchange="ppz.swapGalleryToVariant(this)">
+              onchange="ppz.swapGalleryToVariant(this); ppz.swapVariantDescription(this);">
               <% product.variants.forEach(v => { %>
                 <option value="<%= v.id %>"
                   data-image-url="<%= v.imageUrl || '' %>"
+                  data-description="<%= (v.description || '').replace(/"/g, '&quot;') %>"
                   <%= v.stock === 0 ? 'disabled' : '' %>
                   <%= firstInStockVariant && v.id === firstInStockVariant.id ? 'selected' : '' %>>
                   <%= v.name %><% if (v.priceCentsOverride) { %> · $<%= (v.priceCentsOverride/100).toFixed(2) %><% } %>
@@ -112,6 +113,11 @@
                 </option>
               <% }); %>
             </select>
+            <div id="variantDescription" class="cc-variant-desc"
+              <% const _firstDesc = firstInStockVariant && firstInStockVariant.description; %>
+              <% if (!_firstDesc) { %>hidden<% } %>>
+              <%= _firstDesc || '' %>
+            </div>
             <% if (outOfStock) { %>
               <small class="text-danger">All variants are sold out right now.</small>
             <% } %>
@@ -161,8 +167,12 @@
             (function () {
               function apply() {
                 const sel = document.getElementById('variantId');
-                if (sel && sel.value && window.ppz && window.ppz.swapGalleryToVariant) {
+                if (!sel || !sel.value || !window.ppz) return;
+                if (window.ppz.swapGalleryToVariant) {
                   window.ppz.swapGalleryToVariant(sel);
+                }
+                if (window.ppz.swapVariantDescription) {
+                  window.ppz.swapVariantDescription(sel);
                 }
               }
               if (document.readyState === 'loading') {

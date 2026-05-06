@@ -19,6 +19,7 @@ export class CreateVariantDto {
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsString() imageUrl?: string;
+  @IsOptional() @IsString() description?: string;
 }
 
 export class CreateProductDto {

@@ -47,4 +47,10 @@ export class ProductVariant {
   // the product's first image when null.
   @Column({ nullable: true })
   imageUrl?: string;
+
+  // Optional per-variant description. Shown as an add-on under the
+  // main product description on the storefront detail page whenever
+  // this variant is the active selection.
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 }

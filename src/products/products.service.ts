@@ -198,6 +198,7 @@ export class ProductsService {
           stock: v.stock ?? 0,
           active: v.active ?? true,
           imageUrl: v.imageUrl ?? null,
+          description: v.description ?? null,
         }),
       ),
       images: (dto.imageUrls || []).map((url, i) =>
@@ -292,6 +293,7 @@ export class ProductsService {
         stock: dto.stock ?? 0,
         active: dto.active ?? true,
         imageUrl: dto.imageUrl ?? null,
+        description: dto.description ?? null,
       });
     }
     return this.variants.save(variant);

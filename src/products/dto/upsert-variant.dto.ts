@@ -10,4 +10,5 @@ export class UpsertVariantDto {
   @IsOptional() @IsInt() @Min(0) stock?: number;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsString() imageUrl?: string | null;
+  @IsOptional() @IsString() description?: string | null;
 }

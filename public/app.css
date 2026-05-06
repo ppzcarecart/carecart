@@ -432,6 +432,20 @@ a:hover { color: var(--brand-dark); }
 .cc-detail .cc-info .price-row .amount { font-size: 2rem; font-weight: 700; color: var(--ink); }
 .cc-detail .cc-info .price-row .points { background: var(--brand-soft); color: var(--brand-dark); padding: 6px 12px; border-radius: 999px; font-weight: 500; font-size: 0.95rem; }
 .cc-detail .cc-info .desc { color: var(--ink-soft); line-height: 1.6; margin-bottom: 24px; }
+/* Variant-specific description shown as an add-on note when a
+   variant is selected. Soft-tinted background so it visually
+   reads as supplementary to the main product description. */
+.cc-variant-desc {
+  background: var(--brand-soft, #ecfdf5);
+  border-left: 3px solid var(--brand);
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 0 8px 8px 0;
+  margin-top: 8px;
+  font-size: .9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
 .cc-detail .cc-info .field { margin-bottom: 18px; }
 .cc-detail .cc-info .field label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
 .cc-detail .cc-info .field select,
