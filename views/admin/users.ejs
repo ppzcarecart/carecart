@@ -126,6 +126,10 @@
                             → <%= u.roleBeforeOverride %>
                           <% } %>
                         </div>
+                      <% } else if (u.role === 'scanner') { %>
+                        <div class="text-muted" style="font-size:.78rem; margin-top:2px;">
+                          permanent (no expiry)
+                        </div>
                       <% } %>
                     </td>
                     <td data-label="PPZ Role">

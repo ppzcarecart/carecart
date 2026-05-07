@@ -30,7 +30,18 @@
               <dt>Name</dt><dd><%= target.name %></dd>
               <dt>Email</dt><dd><%= target.email %></dd>
               <dt>Contact</dt><dd><%= target.contact || '—' %></dd>
-              <dt>Role</dt><dd><%= target.role %></dd>
+              <dt>Role</dt>
+              <dd>
+                <%= target.role %>
+                <% if (target.roleExpiresAt) { %>
+                  <div class="text-muted" style="font-size:.82rem;">
+                    expires <%= fmtSg(target.roleExpiresAt) %>
+                    <% if (target.roleBeforeOverride) { %>
+                      → reverts to <%= target.roleBeforeOverride %>
+                    <% } %>
+                  </div>
+                <% } %>
+              </dd>
               <dt>Status</dt><dd><%= target.active ? 'Active' : 'Disabled' %></dd>
               <dt>Password set</dt><dd><%= target.hasSetPassword ? 'Yes' : 'No (handoff)' %></dd>
               <dt>Created</dt><dd><%= fmtSg(target.createdAt) %></dd>
