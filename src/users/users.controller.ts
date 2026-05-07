@@ -10,10 +10,12 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request } from 'express';
 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -62,15 +64,22 @@ export class UsersController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
     @Body() dto: UpdateUserDto,
+    @Req() req: Request,
   ) {
-    // Diagnostic: confirms the PATCH actually reaches the controller
-    // after the auth + role guards. Logs the actor + target + the
-    // dto keys (so we can tell if ValidationPipe is keeping `active`
-    // on the way through). The roleExpiresAt + roleBeforeOverride
-    // fields are called out explicitly so a "permanent (no expiry)"
-    // bug shows up as e.g. `roleExpiresAt=undefined` here.
+    // Bypass: read roleExpiresAt straight off the raw body so the
+    // global ValidationPipe (whitelist + transform + implicit
+    // conversion) can't drop it on the way in. Mirror it back onto
+    // the dto so the service receives the value through its normal
+    // path.
+    const rawBody = (req as any).body || {};
+    if (Object.prototype.hasOwnProperty.call(rawBody, 'roleExpiresAt')) {
+      (dto as any).roleExpiresAt = rawBody.roleExpiresAt;
+    }
     this.logger.log(
-      `PATCH /api/users/${id} actor=${actor.email} (${actor.role}) body=${JSON.stringify(dto)} roleExpiresAt=${(dto as any).roleExpiresAt} hasOwn=${Object.prototype.hasOwnProperty.call(dto, 'roleExpiresAt')}`,
+      `PATCH /api/users/${id} actor=${actor.email} (${actor.role}) ` +
+        `dto=${JSON.stringify(dto)} ` +
+        `rawRoleExpiresAt=${JSON.stringify(rawBody.roleExpiresAt)} ` +
+        `rawHasOwn=${Object.prototype.hasOwnProperty.call(rawBody, 'roleExpiresAt')}`,
     );
     if (actor.role === Role.MANAGER) {
       const target = await this.users.findById(id);
