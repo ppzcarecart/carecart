@@ -296,7 +296,7 @@ export class UsersService {
     // (e.g. via the role dropdown on /admin/users) which makes the
     // cascade-on-disable correctly no-op.
     this.logger.log(
-      `users.update id=${saved.id} email=${saved.email} role=${saved.role} active=${wasActive}→${saved.active} patchKeys=[${Object.keys(patch).join(',')}]`,
+      `users.update id=${saved.id} email=${saved.email} role=${saved.role} active=${wasActive}→${saved.active} roleExpiresAt=${saved.roleExpiresAt ? new Date(saved.roleExpiresAt as any).toISOString() : 'null'} roleBeforeOverride=${saved.roleBeforeOverride || 'null'} patchKeys=[${Object.keys(patch).join(',')}]`,
     );
 
     // Cascade vendor enable/disable to their products.

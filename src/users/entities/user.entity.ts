@@ -34,11 +34,15 @@ export class User {
   // When non-null, the user's current `role` is a temporary override
   // that auto-reverts to `roleBeforeOverride` (or CUSTOMER if null)
   // the first time UsersService.findById is called past this
-  // timestamp. NULL = no expiry (forever).
+  // timestamp. NULL = no expiry (forever). roleBeforeOverride is a
+  // plain varchar (not the Role enum) so synchronize doesn't have to
+  // ALTER the Postgres users_role_enum type to add a second column —
+  // that ALTER fails silently on some hosts and was nuking the
+  // roleExpiresAt value at save time.
   @Column({ type: 'timestamptz', nullable: true })
   roleExpiresAt?: Date | null;
 
-  @Column({ type: 'enum', enum: Role, nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   roleBeforeOverride?: Role | null;
 
   @Column({ default: true })
