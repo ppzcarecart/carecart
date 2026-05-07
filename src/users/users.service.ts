@@ -246,27 +246,30 @@ export class UsersService {
       if (v !== undefined) (user as any)[k] = v;
     }
 
-    // Temporary-role bookkeeping. When admin/manager promotes a user
-    // to a different role, record the role they had BEFORE the
-    // override so the auto-revert helper knows where to send them
-    // back to when roleExpiresAt passes. If they're flipped right
-    // back to that previous role manually (or roleBeforeOverride is
-    // explicitly cleared), wipe the bookkeeping so the row reads as
-    // a permanent role again.
+    // Temporary-role bookkeeping. The pivot is whether the new role
+    // ends up with an expiry attached:
+    //
+    //   role changes + expiry SET     → snapshot the previous role as
+    //                                    the revert target (overwrite
+    //                                    any stale snapshot — the user
+    //                                    is starting a fresh override).
+    //   role changes + expiry CLEARED → permanent change; wipe the
+    //                                    snapshot so the row reads as
+    //                                    a clean permanent role.
+    //   role unchanged                → leave bookkeeping alone; an
+    //                                    expiry-only edit (extend / clear)
+    //                                    keeps the existing revert
+    //                                    target valid.
     if (
       Object.prototype.hasOwnProperty.call(patch, 'role') &&
       user.role !== previousRole
     ) {
-      if (user.role === user.roleBeforeOverride) {
-        user.roleBeforeOverride = null;
-        user.roleExpiresAt = null;
-      } else if (!user.roleBeforeOverride) {
+      if (user.roleExpiresAt) {
         user.roleBeforeOverride = previousRole;
+      } else {
+        user.roleBeforeOverride = null;
       }
     }
-    // If the patch only adjusts expiry on an already-overridden
-    // role, leave roleBeforeOverride alone — the existing snapshot
-    // is still the correct revert target.
 
     // Lock manager rows to the PPZ Fulfilment store name. Catches both
     // a customer/vendor being promoted to manager AND an existing
