@@ -66,9 +66,11 @@ export class UsersController {
     // Diagnostic: confirms the PATCH actually reaches the controller
     // after the auth + role guards. Logs the actor + target + the
     // dto keys (so we can tell if ValidationPipe is keeping `active`
-    // on the way through).
+    // on the way through). The roleExpiresAt + roleBeforeOverride
+    // fields are called out explicitly so a "permanent (no expiry)"
+    // bug shows up as e.g. `roleExpiresAt=undefined` here.
     this.logger.log(
-      `PATCH /api/users/${id} actor=${actor.email} (${actor.role}) body=${JSON.stringify(dto)}`,
+      `PATCH /api/users/${id} actor=${actor.email} (${actor.role}) body=${JSON.stringify(dto)} roleExpiresAt=${(dto as any).roleExpiresAt} hasOwn=${Object.prototype.hasOwnProperty.call(dto, 'roleExpiresAt')}`,
     );
     if (actor.role === Role.MANAGER) {
       const target = await this.users.findById(id);
